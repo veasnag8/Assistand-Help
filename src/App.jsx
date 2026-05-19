@@ -8,11 +8,13 @@ import {
   FileImage,
   MessageSquare,
   QrCode,
+  ScanText as ScanTextIcon,
 } from "lucide-react";
 import CommentTool from "./components/CommentTool";
 import ImageTools from "./components/ImageTools";
 import PdfTools from "./components/PdfTools";
 import QrStudio from "./components/QrStudio";
+import ScanTextTool from "./components/ScanTextTool";
 import mamLogo from "./image/mam-logo.png";
 
 const categories = [
@@ -50,6 +52,15 @@ const categories = [
     description: "Resize, compress, remove background, convert, crop, and enhance photos.",
     icon: FileImage,
     tone: "cyan",
+    enabled: true,
+  },
+  {
+    id: "scan-text",
+    title: "Scanned Text",
+    tabTitle: "Scanned Text",
+    description: "Scan text from images, pasted screenshots, and PDFs.",
+    icon: ScanTextIcon,
+    tone: "green",
     enabled: true,
   },
   {
@@ -235,8 +246,9 @@ function ToolView({ activeId, onBack }) {
       {activeId === "qr" ? <QrStudio /> : null}
       {activeId === "pdf" ? <PdfTools /> : null}
       {activeId === "image" ? <ImageTools /> : null}
+      {activeId === "scan-text" ? <ScanTextTool /> : null}
       {activeId === "comment" ? <CommentTool /> : null}
-      {activeId !== "timer" && activeId !== "qr" && activeId !== "pdf" && activeId !== "image" && activeId !== "comment" ? (
+      {activeId !== "timer" && activeId !== "qr" && activeId !== "pdf" && activeId !== "image" && activeId !== "scan-text" && activeId !== "comment" ? (
         <PlaceholderTool category={category} />
       ) : null}
     </section>

@@ -53,7 +53,13 @@ async function readRoom(roomId) {
 
   try {
     const store = await getBlobStore();
-    return (await store.get(key, { consistency: "strong", type: "json" })) || [];
+    const roomData = await store.get(key, { consistency: "strong", type: "json" });
+
+    if (Array.isArray(roomData)) {
+      return roomData;
+    }
+
+    return Array.isArray(roomData?.comments) ? roomData.comments : [];
   } catch {
     return fallbackRooms.get(key) || [];
   }
@@ -71,6 +77,19 @@ async function writeRoom(roomId, comments) {
   }
 
   return nextComments;
+}
+
+async function deleteRoom(roomId) {
+  const key = getRoomKey(roomId);
+
+  fallbackRooms.delete(key);
+
+  try {
+    const store = await getBlobStore();
+    await store.delete(key);
+  } catch {
+    // Local fallback is already cleared.
+  }
 }
 
 async function readJsonBody(event) {
@@ -102,8 +121,8 @@ export async function handler(event) {
   }
 
   if (event.httpMethod === "DELETE") {
-    await writeRoom(roomId, []);
-    return jsonResponse(200, { comments: [], roomId });
+    await deleteRoom(roomId);
+    return jsonResponse(200, { cleared: true, comments: [], roomId });
   }
 
   if (event.httpMethod !== "POST") {

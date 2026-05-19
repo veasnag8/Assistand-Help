@@ -64,6 +64,18 @@ function newestFirst(comments) {
   );
 }
 
+function mergeLiveComments(currentComments, incomingComments) {
+  const commentsById = new Map();
+
+  [...currentComments, ...incomingComments].forEach((comment) => {
+    if (comment?.id) {
+      commentsById.set(comment.id, comment);
+    }
+  });
+
+  return newestFirst(Array.from(commentsById.values()));
+}
+
 function getPhoneUrl(roomId) {
   const url = new URL(window.location.href);
 
@@ -80,8 +92,10 @@ function getScreenUrl(roomId) {
 
 function getCommentsEndpoint() {
   const { hostname, port, protocol } = window.location;
+  const isLocalVite =
+    ["localhost", "127.0.0.1"].includes(hostname) && port && port !== "8888";
 
-  if (port === "5173") {
+  if (isLocalVite) {
     return `${protocol}//${hostname}:8888${commentsEndpointPath}`;
   }
 
@@ -184,7 +198,7 @@ export default function CommentTool() {
         const result = await fetchComments(roomId);
 
         if (active) {
-          setComments(newestFirst(result.comments || []));
+          setComments((current) => mergeLiveComments(current, result.comments || []));
           setStatus("Live.");
         }
       } catch (error) {
@@ -213,7 +227,7 @@ export default function CommentTool() {
       const result = await postComment(roomId, { name, text });
 
       window.localStorage.setItem("comment-tool-name", name);
-      setComments(newestFirst(result.comments || []));
+      setComments((current) => mergeLiveComments(current, result.comments || []));
       setText("");
       setStatus("Sent.");
     } catch (error) {
@@ -230,7 +244,7 @@ export default function CommentTool() {
 
       const result = await fetchComments(roomId);
 
-      setComments(newestFirst(result.comments || []));
+      setComments((current) => mergeLiveComments(current, result.comments || []));
       setStatus("Live.");
     } catch (error) {
       setStatus(error?.message || "Could not refresh comments.");
@@ -244,9 +258,9 @@ export default function CommentTool() {
       setBusy(true);
       setStatus("Clearing...");
 
-      const result = await deleteComments(roomId);
+      await deleteComments(roomId);
 
-      setComments(newestFirst(result.comments || []));
+      setComments([]);
       setStatus("Cleared.");
     } catch (error) {
       setStatus(error?.message || "Could not clear comments.");
