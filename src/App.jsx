@@ -31,7 +31,7 @@ const categories = [
     id: "qr",
     title: "Prepare QR",
     tabTitle: "QR Code",
-    description: "Generate QR codes for attendance.",
+    description: "Prepare Template QR Code Canadia Bank for Report.",
     icon: QrCode,
     tone: "blue",
     enabled: true,
