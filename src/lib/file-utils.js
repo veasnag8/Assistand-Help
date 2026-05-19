@@ -1,6 +1,6 @@
 let pdfJsPromise;
 
-async function loadPdfJs() {
+export async function loadPdfJs() {
   if (!pdfJsPromise) {
     pdfJsPromise = Promise.all([
       import("pdfjs-dist"),

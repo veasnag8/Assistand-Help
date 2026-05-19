@@ -1,0 +1,3050 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
+    <title>Simple Timer (Break/Quiz) - Acumatica</title>
+    <style>
+         :root {
+            --bg: #070b14;
+            --text: #eef3ff;
+            --muted: #8ea0bf;
+            --primary: #10b981;
+            --primary2: #34d399;
+            --accent: #3b82f6;
+            --quiz: #8b5cf6;
+            --quiz2: #a78bfa;
+            --overtime: #ef4444;
+            --overtime2: #f87171;
+            --overtimeRing: rgba(239, 68, 68, .28);
+            --shadow: 0 18px 60px rgba(0, 0, 0, .55);
+            --safeTop: env(safe-area-inset-top, 0px);
+            --safeBottom: env(safe-area-inset-bottom, 0px);
+            --subSize: 13px;
+        }
+        
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+        
+        html,
+        body {
+            height: 100%;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
+            color: var(--text);
+            background: radial-gradient(1200px 800px at 50% 0%, rgba(16, 185, 129, .12), transparent 70%), radial-gradient(1100px 700px at 50% 100%, rgba(59, 130, 246, .10), transparent 70%), linear-gradient(180deg, #050812 0%, #070b14 45%, #0f172a 100%);
+            overflow-x: hidden;
+            overflow-y: auto;
+            -webkit-overflow-scrolling: touch;
+        }
+        
+        body.quiz-mode {
+            background: radial-gradient(1200px 800px at 50% 0%, rgba(139, 92, 246, .14), transparent 70%), radial-gradient(1100px 700px at 50% 100%, rgba(59, 130, 246, .10), transparent 70%), linear-gradient(180deg, #050812 0%, #070b14 45%, #0f172a 100%);
+        }
+        
+        body.overtime-mode {
+            background: radial-gradient(1200px 800px at 50% 0%, rgba(239, 68, 68, .18), transparent 70%), radial-gradient(1100px 700px at 50% 100%, rgba(245, 158, 11, .14), transparent 70%), linear-gradient(180deg, #0f0414 0%, #140707 45%, #2a0f0f 100%);
+        }
+        /* TOP BAR */
+        
+        .topbar {
+            position: sticky;
+            top: 0;
+            z-index: 200;
+            padding: calc(10px + var(--safeTop)) 12px 10px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 10px;
+            background: rgba(7, 11, 20, .55);
+            backdrop-filter: blur(18px);
+            border-bottom: 1px solid rgba(255, 255, 255, .08);
+        }
+        
+        .left-actions,
+        .right-actions {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .iconbtn {
+            width: 44px;
+            height: 44px;
+            border-radius: 14px;
+            border: 1px solid rgba(255, 255, 255, .14);
+            background: rgba(255, 255, 255, .06);
+            color: var(--text);
+            cursor: pointer;
+            display: grid;
+            place-items: center;
+            font-size: 18px;
+            transition: transform .12s ease, background .2s ease, border-color .2s ease;
+            user-select: none;
+            -webkit-tap-highlight-color: transparent;
+        }
+        
+        .iconbtn:active {
+            transform: scale(.96);
+        }
+        
+        .iconbtn.primary {
+            border-color: rgba(16, 185, 129, .35);
+            background: rgba(16, 185, 129, .14);
+        }
+        
+        body.quiz-mode .iconbtn.primary {
+            border-color: rgba(139, 92, 246, .35);
+            background: rgba(139, 92, 246, .14);
+        }
+        
+        body.overtime-mode .iconbtn.primary {
+            border-color: rgba(239, 68, 68, .35);
+            background: rgba(239, 68, 68, .14);
+        }
+        
+        .modes {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 4px;
+            border-radius: 16px;
+            border: 1px solid rgba(255, 255, 255, .14);
+            background: rgba(255, 255, 255, .05);
+        }
+        
+        .modebtn {
+            border: 0;
+            cursor: pointer;
+            padding: 10px 12px;
+            border-radius: 12px;
+            background: transparent;
+            color: var(--muted);
+            font-weight: 900;
+            font-size: 13px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            transition: background .2s ease, color .2s ease;
+            -webkit-tap-highlight-color: transparent;
+        }
+        
+        .modebtn.active {
+            background: rgba(255, 255, 255, .08);
+            color: var(--text);
+            box-shadow: 0 10px 24px rgba(0, 0, 0, .22);
+        }
+        
+        .modechip {
+            width: 10px;
+            height: 10px;
+            border-radius: 999px;
+            background: linear-gradient(135deg, var(--primary), var(--primary2));
+            box-shadow: 0 0 0 4px var(--ring);
+        }
+        
+        body.quiz-mode .modechip {
+            background: linear-gradient(135deg, var(--quiz), var(--quiz2));
+            box-shadow: 0 0 0 4px var(--ringQuiz);
+        }
+        
+        body.overtime-mode .modechip {
+            background: linear-gradient(135deg, var(--overtime), var(--overtime2));
+            box-shadow: 0 0 0 4px var(--overtimeRing);
+        }
+        /* MAIN */
+        
+        .wrap {
+            max-width: 980px;
+            margin: 0 auto;
+            padding: 14px 14px calc(120px + var(--safeBottom));
+        }
+        
+        .card {
+            border-radius: 26px;
+            padding: 18px 16px 16px;
+            background: linear-gradient(180deg, rgba(255, 255, 255, .06), rgba(255, 255, 255, .02));
+            border: 1px solid rgba(255, 255, 255, .10);
+            box-shadow: var(--shadow);
+            overflow: hidden;
+        }
+        
+        .header {
+            display: flex;
+            align-items: flex-start;
+            justify-content: space-between;
+            gap: 12px;
+            margin-bottom: 14px;
+        }
+        
+        .titleblock {
+            min-width: 0;
+        }
+        
+        .title {
+            font-weight: 950;
+            letter-spacing: .4px;
+            font-size: clamp(18px, 4.8vw, 32px);
+            background: linear-gradient(135deg, #fff 0%, var(--primary) 50%, var(--accent) 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            line-height: 1.05;
+        }
+        
+        body.quiz-mode .title {
+            background: linear-gradient(135deg, #fff 0%, var(--quiz) 55%, var(--accent) 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        
+        body.overtime-mode .title {
+            background: linear-gradient(135deg, #fff 0%, var(--overtime) 55%, #f59e0b 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        
+        .subtitle {
+            color: var(--muted);
+            margin-top: 6px;
+            font-weight: 800;
+            font-size: var(--subSize);
+            line-height: 1.25;
+        }
+        
+        .chips {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            flex-wrap: wrap;
+            justify-content: flex-end;
+        }
+        
+        .chip {
+            padding: 8px 10px;
+            border-radius: 999px;
+            border: 1px solid rgba(255, 255, 255, .12);
+            background: rgba(0, 0, 0, .22);
+            color: var(--text);
+            font-weight: 900;
+            font-size: 12px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            user-select: none;
+            white-space: nowrap;
+        }
+        
+        .chip small {
+            color: var(--muted);
+            font-weight: 900;
+        }
+        
+        .dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 999px;
+            background: rgba(255, 255, 255, .22);
+        }
+        
+        .chip.running .dot {
+            background: var(--primary);
+            box-shadow: 0 0 0 4px var(--ring);
+        }
+        
+        body.quiz-mode .chip.running .dot {
+            background: var(--quiz);
+            box-shadow: 0 0 0 4px var(--ringQuiz);
+        }
+        
+        body.overtime-mode .chip.running .dot {
+            background: var(--overtime);
+            box-shadow: 0 0 0 4px var(--overtimeRing);
+        }
+        
+        .chip.paused .dot {
+            background: #f59e0b;
+            box-shadow: 0 0 0 4px rgba(245, 158, 11, .20);
+        }
+        
+        .chip.done .dot {
+            background: #ef4444;
+            box-shadow: 0 0 0 4px rgba(239, 68, 68, .16);
+        }
+        
+        .chip.overtime .dot {
+            background: var(--overtime);
+            box-shadow: 0 0 0 4px var(--overtimeRing);
+        }
+        
+        .stage {
+            display: grid;
+            grid-template-columns: 1.2fr .8fr;
+            gap: 14px;
+            align-items: stretch;
+        }
+        /* CIRCLE TIMER */
+        
+        .circleCard {
+            border-radius: 22px;
+            border: 1px solid rgba(255, 255, 255, .10);
+            background: rgba(0, 0, 0, .14);
+            padding: 16px;
+            display: grid;
+            place-items: center;
+            position: relative;
+            min-height: 320px;
+        }
+        
+        .ringWrap {
+            width: min(440px, 86vw);
+            aspect-ratio: 1 / 1;
+            position: relative;
+            display: grid;
+            place-items: center;
+            user-select: none;
+            -webkit-tap-highlight-color: transparent;
+        }
+        
+        svg {
+            width: 100%;
+            height: 100%;
+            transform: rotate(-90deg);
+        }
+        
+        .track {
+            stroke: rgba(255, 255, 255, .12);
+            stroke-width: 14;
+            fill: transparent;
+        }
+        
+        .progress {
+            stroke: url(#gradBreak);
+            stroke-width: 14;
+            fill: transparent;
+            stroke-linecap: round;
+            stroke-dasharray: var(--circ, 1000);
+            stroke-dashoffset: var(--dash, 1000);
+            transition: stroke-dashoffset .25s linear;
+            filter: drop-shadow(0 0 18px rgba(16, 185, 129, .18));
+        }
+        
+        body.quiz-mode .progress {
+            stroke: url(#gradQuiz);
+            filter: drop-shadow(0 0 18px rgba(139, 92, 246, .18));
+        }
+        
+        body.overtime-mode .progress {
+            stroke: url(#gradOvertime);
+            filter: drop-shadow(0 0 18px rgba(239, 68, 68, .28));
+        }
+        /* Finish flash */
+        
+        .ringWrap.finishFlash .progress {
+            animation: ringGlow 900ms ease-in-out 2;
+        }
+        
+        @keyframes ringGlow {
+            0% {
+                filter: drop-shadow(0 0 10px rgba(255, 255, 255, .10));
+            }
+            50% {
+                filter: drop-shadow(0 0 40px rgba(16, 185, 129, .40));
+            }
+            100% {
+                filter: drop-shadow(0 0 12px rgba(255, 255, 255, .10));
+            }
+        }
+        
+        body.quiz-mode .ringWrap.finishFlash .progress {
+            animation: ringGlowQuiz 900ms ease-in-out 2;
+        }
+        
+        @keyframes ringGlowQuiz {
+            0% {
+                filter: drop-shadow(0 0 10px rgba(255, 255, 255, .10));
+            }
+            50% {
+                filter: drop-shadow(0 0 40px rgba(139, 92, 246, .40));
+            }
+            100% {
+                filter: drop-shadow(0 0 12px rgba(255, 255, 255, .10));
+            }
+        }
+        
+        body.overtime-mode .ringWrap.finishFlash .progress {
+            animation: ringGlowOvertime 900ms ease-in-out 2;
+        }
+        
+        @keyframes ringGlowOvertime {
+            0% {
+                filter: drop-shadow(0 0 10px rgba(255, 255, 255, .10));
+            }
+            50% {
+                filter: drop-shadow(0 0 40px rgba(239, 68, 68, .50));
+            }
+            100% {
+                filter: drop-shadow(0 0 12px rgba(255, 255, 255, .10));
+            }
+        }
+        
+        .center {
+            position: absolute;
+            inset: 10%;
+            border-radius: 999px;
+            background: radial-gradient(60% 60% at 50% 40%, rgba(255, 255, 255, .08), rgba(0, 0, 0, .18));
+            border: 1px solid rgba(255, 255, 255, .10);
+            box-shadow: inset 0 2px 16px rgba(0, 0, 0, .35);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            padding: 10px;
+            text-align: center;
+        }
+        
+        .centerLabel {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            flex-wrap: wrap;
+            padding: 10px 12px;
+            border-radius: 999px;
+            border: 1px solid rgba(255, 255, 255, .12);
+            background: rgba(0, 0, 0, .20);
+            color: var(--text);
+            font-weight: 1000;
+            font-size: 13px;
+            letter-spacing: .3px;
+            line-height: 1;
+            box-shadow: 0 12px 30px rgba(0, 0, 0, .28);
+            transform-origin: center;
+        }
+        
+        body.overtime-mode .centerLabel {
+            background: rgba(239, 68, 68, .15);
+            border-color: rgba(239, 68, 68, .30);
+        }
+        
+        .centerLabel .emoji {
+            font-size: 18px;
+            filter: drop-shadow(0 8px 20px rgba(0, 0, 0, .35));
+        }
+        
+        .centerLabel .desc {
+            color: var(--muted);
+            font-weight: 900;
+            font-size: 12px;
+            letter-spacing: .2px;
+        }
+        
+        body.overtime-mode .centerLabel .desc {
+            color: #fca5a5;
+        }
+        /* Overtime badge */
+        
+        .overtimeBadge {
+            position: absolute;
+            top: -6px;
+            right: -6px;
+            background: linear-gradient(135deg, var(--overtime), var(--overtime2));
+            color: white;
+            font-size: 11px;
+            font-weight: 1000;
+            padding: 4px 8px;
+            border-radius: 999px;
+            border: 2px solid rgba(255, 255, 255, .25);
+            z-index: 10;
+            box-shadow: 0 4px 20px rgba(239, 68, 68, .35);
+            display: none;
+        }
+        /* Time over animation */
+        
+        .finishAnim .centerLabel {
+            animation: pop 650ms cubic-bezier(.2, 1.3, .2, 1) 1;
+        }
+        
+        .finishAnim .bigTime {
+            animation: timeBoom 900ms ease-in-out 1;
+        }
+        
+        @keyframes pop {
+            0% {
+                transform: scale(.92);
+                opacity: .85;
+            }
+            60% {
+                transform: scale(1.08);
+                opacity: 1;
+            }
+            100% {
+                transform: scale(1);
+            }
+        }
+        
+        @keyframes timeBoom {
+            0% {
+                transform: scale(1);
+            }
+            35% {
+                transform: scale(1.08);
+            }
+            60% {
+                transform: scale(0.99);
+            }
+            100% {
+                transform: scale(1);
+            }
+        }
+        
+        .bigTime {
+            font-variant-numeric: tabular-nums;
+            font-weight: 1000;
+            letter-spacing: 2px;
+            font-size: clamp(40px, 10vw, 92px);
+            line-height: 1;
+            text-shadow: 0 16px 60px rgba(0, 0, 0, .55);
+            transform-origin: center;
+        }
+        
+        body.overtime-mode .bigTime {
+            color: #fca5a5;
+        }
+        
+        .miniMeta {
+            color: var(--muted);
+            font-weight: 900;
+            font-size: 12px;
+            line-height: 1.3;
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+        
+        body.overtime-mode .miniMeta {
+            color: #fca5a5;
+        }
+        
+        .miniMeta b {
+            color: var(--text);
+        }
+        
+        body.overtime-mode .miniMeta b {
+            color: #fff;
+        }
+        /* ACTIONS */
+        
+        .actionsCard {
+            border-radius: 22px;
+            border: 1px solid rgba(255, 255, 255, .10);
+            background: rgba(0, 0, 0, .14);
+            padding: 16px;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+        
+        .btnrow {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+        }
+        
+        .btn {
+            border: 1px solid rgba(255, 255, 255, .14);
+            background: rgba(255, 255, 255, .07);
+            color: var(--text);
+            padding: 14px 12px;
+            border-radius: 16px;
+            font-weight: 950;
+            font-size: 14px;
+            cursor: pointer;
+            transition: transform .12s ease, background .2s ease, border-color .2s ease, opacity .2s ease;
+            user-select: none;
+            -webkit-tap-highlight-color: transparent;
+        }
+        
+        .btn:active {
+            transform: scale(.98);
+        }
+        
+        .btn.primary {
+            background: linear-gradient(135deg, rgba(16, 185, 129, .92), rgba(16, 185, 129, .55));
+            border-color: rgba(16, 185, 129, .55);
+            box-shadow: 0 12px 32px rgba(16, 185, 129, .16);
+        }
+        
+        body.quiz-mode .btn.primary {
+            background: linear-gradient(135deg, rgba(139, 92, 246, .92), rgba(139, 92, 246, .55));
+            border-color: rgba(139, 92, 246, .55);
+            box-shadow: 0 12px 32px rgba(139, 92, 246, .16);
+        }
+        
+        body.overtime-mode .btn.primary {
+            background: linear-gradient(135deg, rgba(239, 68, 68, .92), rgba(239, 68, 68, .55));
+            border-color: rgba(239, 68, 68, .55);
+            box-shadow: 0 12px 32px rgba(239, 68, 68, .16);
+        }
+        
+        .btn.good {
+            background: linear-gradient(135deg, rgba(59, 130, 246, .92), rgba(59, 130, 246, .55));
+            border-color: rgba(59, 130, 246, .55);
+        }
+        
+        .btn.danger {
+            background: linear-gradient(135deg, rgba(239, 68, 68, .92), rgba(239, 68, 68, .55));
+            border-color: rgba(239, 68, 68, .55);
+        }
+        
+        .btn:disabled {
+            opacity: .45;
+            cursor: not-allowed;
+            transform: none !important;
+        }
+        /* Overtime stop button */
+        
+        .btn.overtime-stop {
+            background: linear-gradient(135deg, rgba(245, 158, 11, .92), rgba(239, 68, 68, .55));
+            border-color: rgba(245, 158, 11, .55);
+            box-shadow: 0 12px 32px rgba(245, 158, 11, .16);
+        }
+        
+        .rowline {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 10px;
+            padding: 10px 10px;
+            border-radius: 16px;
+            border: 1px solid rgba(255, 255, 255, .10);
+            background: rgba(0, 0, 0, .10);
+            color: var(--text);
+            font-weight: 950;
+            font-size: 13px;
+        }
+        
+        .rowline small {
+            color: var(--muted);
+            font-weight: 900;
+        }
+        
+        .toggle {
+            width: 50px;
+            height: 28px;
+            border-radius: 999px;
+            background: rgba(255, 255, 255, .12);
+            border: 1px solid rgba(255, 255, 255, .16);
+            position: relative;
+            cursor: pointer;
+            flex: 0 0 auto;
+        }
+        
+        .toggle::after {
+            content: "";
+            position: absolute;
+            top: 3px;
+            left: 3px;
+            width: 22px;
+            height: 22px;
+            border-radius: 999px;
+            background: rgba(255, 255, 255, .85);
+            transition: transform .18s ease, background .2s ease;
+        }
+        
+        .toggle.on {
+            background: rgba(16, 185, 129, .22);
+            border-color: rgba(16, 185, 129, .32);
+        }
+        
+        body.quiz-mode .toggle.on {
+            background: rgba(139, 92, 246, .22);
+            border-color: rgba(139, 92, 246, .32);
+        }
+        
+        body.overtime-mode .toggle.on {
+            background: rgba(239, 68, 68, .22);
+            border-color: rgba(239, 68, 68, .32);
+        }
+        
+        .toggle.on::after {
+            transform: translateX(22px);
+            background: #fff;
+        }
+        /* Bottom sheet (settings) */
+        
+        .sheetBack {
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, .55);
+            backdrop-filter: blur(4px);
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity .18s ease;
+            z-index: 500;
+        }
+        
+        .sheetBack.show {
+            opacity: 1;
+            pointer-events: auto;
+        }
+        
+        .sheet {
+            position: fixed;
+            left: 50%;
+            transform: translateX(-50%);
+            bottom: 10px;
+            width: min(720px, calc(100% - 16px));
+            max-height: calc(86vh - var(--safeTop));
+            border-radius: 22px;
+            background: linear-gradient(180deg, rgba(17, 26, 44, .98), rgba(7, 11, 20, .98));
+            border: 1px solid rgba(255, 255, 255, .14);
+            box-shadow: var(--shadow);
+            z-index: 600;
+            translate: 0 120%;
+            transition: translate .22s cubic-bezier(.2, .9, .2, 1);
+            overflow: hidden;
+            padding-bottom: var(--safeBottom);
+        }
+        
+        .sheet.show {
+            translate: 0 0;
+        }
+
+        /* Fast mode: hide settings UI */
+        .topbar #openSheetBtn,
+        #sheetBack,
+        #sheet {
+            display: none !important;
+        }
+
+        /* Quick title popup */
+        .popBack {
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, .55);
+            backdrop-filter: blur(4px);
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity .18s ease;
+            z-index: 650;
+        }
+
+        .popBack.show {
+            opacity: 1;
+            pointer-events: auto;
+        }
+
+        .pop {
+            position: fixed;
+            left: 50%;
+            top: 50%;
+            transform: translate(-50%, -50%) scale(.98);
+            width: min(720px, calc(100% - 16px));
+            max-height: min(78vh, 620px);
+            border-radius: 22px;
+            background: linear-gradient(180deg, rgba(17, 26, 44, .98), rgba(7, 11, 20, .98));
+            border: 1px solid rgba(255, 255, 255, .14);
+            box-shadow: var(--shadow);
+            z-index: 700;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity .18s ease, transform .2s cubic-bezier(.2, .9, .2, 1);
+            overflow: hidden;
+            padding-bottom: var(--safeBottom);
+        }
+
+        .pop.show {
+            opacity: 1;
+            pointer-events: auto;
+            transform: translate(-50%, -50%) scale(1);
+        }
+
+        .popHead {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 10px;
+            padding: 12px 12px 10px;
+            border-bottom: 1px solid rgba(255, 255, 255, .10);
+            position: relative;
+        }
+
+        .popTitle {
+            font-weight: 1000;
+            font-size: 14px;
+            letter-spacing: .2px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .popBody {
+            padding: 12px;
+            overflow: auto;
+            max-height: calc(86vh - 56px - var(--safeTop));
+            -webkit-overflow-scrolling: touch;
+        }
+
+        .pop {
+            width: min(560px, calc(100% - 20px));
+            max-height: min(78vh, 560px);
+            border-radius: 18px;
+        }
+
+        .popHead {
+            padding: 10px 10px 8px;
+        }
+
+        .popTitle {
+            font-size: 13px;
+        }
+
+        .popBody {
+            padding: 10px;
+            max-height: calc(min(78vh, 560px) - 50px);
+        }
+
+        .pop .section {
+            margin-bottom: 10px;
+            padding: 10px;
+            border-radius: 14px;
+        }
+
+        .pop .section h3 {
+            margin-bottom: 8px;
+            font-size: 11px;
+        }
+
+        .pop .field {
+            gap: 5px;
+        }
+
+        .pop .field label {
+            font-size: 10px;
+        }
+
+        .pop .num,
+        .pop .select {
+            padding: 9px 10px;
+            border-radius: 12px;
+            font-size: 14px;
+        }
+
+        .pop .seg {
+            gap: 6px;
+            border-radius: 14px;
+        }
+
+        .pop .segBtn {
+            padding: 8px 10px;
+            border-radius: 10px;
+            font-size: 12px;
+        }
+
+        .emojiChoiceGroup {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 8px;
+        }
+
+        .emojiChoice {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            min-height: 42px;
+            border: 1px solid rgba(255, 255, 255, .12);
+            border-radius: 12px;
+            background: rgba(255, 255, 255, .05);
+            color: var(--muted);
+            font-weight: 1000;
+            cursor: pointer;
+        }
+
+        .emojiChoice.active {
+            border-color: rgba(16, 185, 129, .42);
+            background: rgba(16, 185, 129, .14);
+            color: var(--text);
+            box-shadow: 0 10px 24px rgba(16, 185, 129, .08);
+        }
+        
+        .sheetHead {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 10px;
+            padding: 12px 12px 10px;
+            border-bottom: 1px solid rgba(255, 255, 255, .10);
+            position: relative;
+        }
+        
+        .grab {
+            position: absolute;
+            left: 50%;
+            top: 8px;
+            transform: translateX(-50%);
+            width: 44px;
+            height: 5px;
+            border-radius: 999px;
+            background: rgba(255, 255, 255, .20);
+        }
+        
+        .sheetTitle {
+            font-weight: 1000;
+            font-size: 14px;
+            letter-spacing: .2px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .sheetBody {
+            padding: 12px;
+            overflow: auto;
+            max-height: calc(86vh - 56px - var(--safeTop));
+            -webkit-overflow-scrolling: touch;
+        }
+        
+        .section {
+            margin-bottom: 12px;
+            padding: 12px;
+            border-radius: 18px;
+            border: 1px solid rgba(255, 255, 255, .10);
+            background: rgba(0, 0, 0, .14);
+        }
+        
+        .section h3 {
+            font-size: 12px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: var(--muted);
+            margin-bottom: 10px;
+            font-weight: 1000;
+        }
+        
+        .presets {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 10px;
+        }
+
+        .presetsTop {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+
+        .pbtn.small {
+            padding: 8px 10px;
+            border-radius: 999px;
+            font-weight: 1000;
+            font-size: 12px;
+        }
+
+        .customPreset {
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            min-height: 34px;
+            padding: 3px;
+            border-radius: 999px;
+            border: 1px solid rgba(255, 255, 255, .14);
+            background: rgba(255, 255, 255, .06);
+        }
+
+        .customPreset input {
+            width: 54px;
+            min-height: 28px;
+            border: 0;
+            border-radius: 999px;
+            background: rgba(0, 0, 0, .22);
+            color: var(--text);
+            padding: 0 8px;
+            font-size: 12px;
+            font-weight: 1000;
+            outline: none;
+            text-align: center;
+        }
+
+        .customPreset input:focus {
+            box-shadow: 0 0 0 3px var(--ring);
+        }
+
+        .customPreset button {
+            min-height: 28px;
+            border: 0;
+            border-radius: 999px;
+            background: rgba(16, 185, 129, .18);
+            color: var(--text);
+            padding: 0 10px;
+            font-size: 12px;
+            font-weight: 1000;
+            cursor: pointer;
+        }
+
+        .seg {
+            display: flex;
+            gap: 8px;
+            padding: 4px;
+            border-radius: 16px;
+            border: 1px solid rgba(255, 255, 255, .14);
+            background: rgba(255, 255, 255, .05);
+        }
+
+        .segBtn {
+            border: 0;
+            cursor: pointer;
+            padding: 10px 12px;
+            border-radius: 12px;
+            background: transparent;
+            color: var(--muted);
+            font-weight: 1000;
+            font-size: 13px;
+            transition: background .2s ease, color .2s ease;
+            flex: 1 1 0;
+        }
+
+        .segBtn.active {
+            background: rgba(255, 255, 255, .08);
+            color: var(--text);
+            box-shadow: 0 10px 24px rgba(0, 0, 0, .22);
+        }
+
+        .pop[data-type="break"] .quizOnly,
+        .pop[data-type="quiz"] .breakOnly {
+            display: none !important;
+        }
+
+        .pbtn {
+            border: 1px solid rgba(255, 255, 255, .14);
+            background: rgba(255, 255, 255, .06);
+            color: var(--text);
+            padding: 12px 10px;
+            border-radius: 16px;
+            font-weight: 1000;
+            cursor: pointer;
+            font-size: 13px;
+            -webkit-tap-highlight-color: transparent;
+        }
+        
+        .pbtn:active {
+            transform: scale(.98);
+        }
+        
+        .grid3 {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            gap: 10px;
+            margin-top: 10px;
+        }
+        
+        .field {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+        
+        .field label {
+            font-size: 11px;
+            color: var(--muted);
+            font-weight: 1000;
+            letter-spacing: .8px;
+            text-transform: uppercase;
+        }
+        
+        .num,
+        .select,
+        .range {
+            width: 100%;
+            padding: 12px 12px;
+            border-radius: 14px;
+            border: 1px solid rgba(255, 255, 255, .12);
+            background: rgba(0, 0, 0, .26);
+            color: var(--text);
+            font-size: 16px;
+            font-weight: 1000;
+            outline: none;
+        }
+        
+        .num:focus,
+        .range:focus {
+            box-shadow: 0 0 0 4px var(--ring);
+            border-color: rgba(16, 185, 129, .55);
+        }
+        
+        body.quiz-mode .num:focus,
+        body.quiz-mode .range:focus {
+            box-shadow: 0 0 0 4px var(--ringQuiz);
+            border-color: rgba(139, 92, 246, .55);
+        }
+        
+        body.overtime-mode .num:focus,
+        body.overtime-mode .range:focus {
+            box-shadow: 0 0 0 4px var(--overtimeRing);
+            border-color: rgba(239, 68, 68, .55);
+        }
+        /* Toast */
+        
+        .toast {
+            position: fixed;
+            left: 50%;
+            transform: translateX(-50%);
+            bottom: calc(18px + var(--safeBottom));
+            z-index: 800;
+            background: rgba(7, 11, 20, .92);
+            border: 1px solid rgba(255, 255, 255, .14);
+            border-radius: 16px;
+            padding: 12px 14px;
+            max-width: min(560px, calc(100% - 16px));
+            color: var(--text);
+            font-weight: 900;
+            display: none;
+            box-shadow: 0 12px 40px rgba(0, 0, 0, .55);
+            backdrop-filter: blur(14px);
+            line-height: 1.25;
+            text-align: center;
+        }
+        
+        .toast.show {
+            display: block;
+            animation: toastIn .18s ease;
+        }
+        
+        @keyframes toastIn {
+            from {
+                opacity: 0;
+                transform: translateX(-50%) translateY(12px);
+            }
+            to {
+                opacity: 1;
+                transform: translateX(-50%) translateY(0px);
+            }
+        }
+        /* Fullscreen mode */
+        
+        body.fullscreen-mode {
+            overflow: hidden;
+        }
+        
+        body.fullscreen-mode .topbar,
+        body.fullscreen-mode .header,
+        body.fullscreen-mode .actionsCard,
+        body.fullscreen-mode .sheetBack,
+        body.fullscreen-mode .sheet,
+        body.fullscreen-mode .toast {
+            display: none !important;
+        }
+        
+        body.fullscreen-mode .wrap {
+            max-width: none;
+            padding: 0;
+            height: 100vh;
+            display: grid;
+            place-items: center;
+        }
+        
+        body.fullscreen-mode .card {
+            width: 100%;
+            height: 100%;
+            border-radius: 0;
+            border: 0;
+            box-shadow: none;
+            background: transparent;
+            padding: 0;
+            display: grid;
+            place-items: center;
+        }
+        
+        body.fullscreen-mode .stage {
+            width: 100%;
+            height: 100%;
+            grid-template-columns: 1fr;
+            place-items: center;
+            margin: 0;
+        }
+        
+        body.fullscreen-mode .circleCard {
+            width: 100%;
+            height: 100%;
+            border-radius: 0;
+            border: 0;
+            background: transparent;
+            padding: 0;
+            display: grid;
+            place-items: center;
+        }
+        
+        body.fullscreen-mode .ringWrap {
+            width: min(92vmin, 820px);
+        }
+        
+        body.fullscreen-mode .center {
+            inset: 12%;
+            gap: 14px;
+        }
+        
+        body.fullscreen-mode .bigTime {
+            font-size: clamp(56px, 12vmin, 140px);
+            letter-spacing: 3px;
+        }
+        
+        body.fullscreen-mode .miniMeta {
+            display: none;
+        }
+        
+        body.fullscreen-mode .centerLabel {
+            font-size: 15px;
+            padding: 12px 14px;
+            background: rgba(0, 0, 0, .28);
+            border-color: rgba(255, 255, 255, .16);
+        }
+        
+        body.fullscreen-mode .centerLabel .emoji {
+            font-size: 40px;
+        }
+        
+        body.fullscreen-mode .centerLabel .desc {
+            font-size: 35px;
+        }
+
+        body.fullscreen-mode .presetsTop {
+            display: none !important;
+        }
+        
+        body.fullscreen-mode.overtime-mode .centerLabel {
+            background: rgba(239, 68, 68, .25);
+            border-color: rgba(239, 68, 68, .40);
+        }
+        /* Responsive layout */
+        
+        @media (max-width: 880px) {
+            .stage {
+                grid-template-columns: 1fr;
+            }
+            .circleCard {
+                min-height: 300px;
+            }
+            .presets {
+                grid-template-columns: repeat(2, 1fr);
+            }
+            .grid3 {
+                grid-template-columns: 1fr 1fr;
+            }
+        }
+        
+        @media (prefers-reduced-motion: reduce) {
+            .progress {
+                transition: none !important;
+            }
+            .finishAnim .centerLabel,
+            .finishAnim .bigTime,
+            .ringWrap.finishFlash .progress {
+                animation: none !important;
+            }
+        }
+
+        /* Compact embedded layout for Assistand Help */
+        @media (min-width: 760px) {
+            html,
+            body {
+                min-height: 100%;
+            }
+
+            body {
+                background: #07101d;
+                overflow: hidden;
+            }
+
+            .topbar {
+                position: static;
+                min-height: 48px;
+                padding: 7px 10px;
+                border-bottom: 1px solid rgba(148, 163, 184, .12);
+                background: rgba(5, 11, 20, .58);
+                backdrop-filter: blur(16px);
+            }
+
+            .iconbtn {
+                width: 36px;
+                height: 36px;
+                border-radius: 12px;
+            }
+
+            .modes {
+                padding: 3px;
+            }
+
+            .modebtn {
+                padding: 8px 10px;
+                font-size: 13px;
+            }
+
+            .wrap {
+                max-width: 100%;
+                height: calc(100vh - 48px);
+                padding: 10px;
+            }
+
+            .card {
+                height: 100%;
+                display: grid;
+                grid-template-rows: auto minmax(0, 1fr);
+                padding: 0;
+                border: 0;
+                border-radius: 18px;
+                background: transparent;
+                box-shadow: none;
+            }
+
+            .header {
+                display: none;
+            }
+
+            .title {
+                font-size: clamp(20px, 3vw, 28px);
+            }
+
+            .subtitle {
+                margin-top: 4px;
+                font-size: 12px;
+            }
+
+            .chips {
+                gap: 6px;
+            }
+
+            .chip {
+                padding: 6px 9px;
+                font-size: 12px;
+            }
+
+            .stage {
+                grid-template-columns: minmax(0, 1.2fr) minmax(280px, .68fr);
+                gap: 12px;
+                min-height: 0;
+            }
+
+            .circleCard {
+                min-height: 0;
+                padding: 14px;
+                border-radius: 22px;
+                background:
+                    radial-gradient(circle at 50% 45%, rgba(20, 184, 166, .10), transparent 48%),
+                    rgba(6, 13, 24, .66);
+                border-color: rgba(148, 163, 184, .14);
+            }
+
+            .ringWrap {
+                width: min(500px, 58vw);
+            }
+
+            .center {
+                inset: 11%;
+                gap: 8px;
+            }
+
+            .centerLabel {
+                gap: 8px;
+                padding: 8px 10px;
+            }
+
+            .bigTime {
+                font-size: clamp(64px, 8.8vw, 104px);
+                letter-spacing: 1px;
+            }
+
+            .miniMeta {
+                font-size: 11px;
+            }
+
+            .presetsTop {
+                gap: 6px;
+            }
+
+            .pbtn.small {
+                padding: 6px 9px;
+                font-size: 11px;
+            }
+
+            .actionsCard {
+                gap: 10px;
+                padding: 14px;
+                border-radius: 22px;
+                background: rgba(6, 13, 24, .66);
+                border-color: rgba(148, 163, 184, .14);
+            }
+
+            .btnrow {
+                gap: 9px;
+            }
+
+            .btn {
+                padding: 11px 10px;
+                font-size: 14px;
+            }
+
+            .rowline {
+                padding: 10px 12px;
+                font-size: 13px;
+            }
+
+            .rowline small {
+                font-size: 11px;
+            }
+        }
+
+        @media (min-width: 760px) and (max-height: 720px) {
+            .topbar {
+                min-height: 44px;
+                padding: 6px 10px;
+            }
+
+            .wrap {
+                height: calc(100vh - 44px);
+                padding: 8px;
+            }
+
+            .card {
+                padding: 0;
+            }
+
+            .header {
+                display: none;
+            }
+
+            .circleCard {
+                min-height: 0;
+                padding: 12px;
+            }
+
+            .ringWrap {
+                width: min(450px, 56vw);
+            }
+
+            .bigTime {
+                font-size: clamp(58px, 8vw, 92px);
+            }
+
+            .actionsCard {
+                gap: 8px;
+            }
+
+            .btn {
+                padding: 9px 10px;
+            }
+
+            .rowline {
+                padding: 8px 10px;
+            }
+        }
+
+        @media (max-width: 640px) {
+            .pop {
+                width: calc(100% - 20px);
+                max-height: calc(100vh - 28px - var(--safeTop) - var(--safeBottom));
+                border-radius: 16px;
+            }
+
+            .popBody {
+                max-height: calc(100vh - 92px - var(--safeTop) - var(--safeBottom));
+            }
+
+            .pop .seg {
+                flex-direction: column;
+            }
+
+            .emojiChoiceGroup {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <!-- TOP BAR -->
+    <div class="topbar">
+        <div class="left-actions">
+            <button class="iconbtn" id="fullscreenBtn" title="Fullscreen">⛶</button>
+            <button class="iconbtn primary" id="openSheetBtn" title="Settings">⚙️</button>
+        </div>
+
+        <div class="modes" role="tablist" aria-label="Mode">
+            <button class="modebtn active" id="breakModeBtn" data-mode="break" role="tab" aria-selected="true">
+        <span class="modechip" aria-hidden="true"></span> ☕ Break
+      </button>
+            <button class="modebtn" id="quizModeBtn" data-mode="quiz" role="tab" aria-selected="false">
+        <span class="modechip" aria-hidden="true"></span> 📝 Quiz
+      </button>
+        </div>
+
+        <div class="right-actions">
+            <button class="iconbtn" id="openTitleBtn" title="Title / Text">✎</button>
+            <button class="iconbtn" id="muteBtn" title="Sound On/Off">🔊</button>
+        </div>
+    </div>
+
+    <div class="wrap">
+        <div class="card">
+            <div class="header">
+                <div class="titleblock">
+                    <div class="title" id="titleText">Break Time</div>
+                    <div class="subtitle" id="subtitleText">Time for coffee and snack</div>
+                </div>
+                <div class="chips">
+                    <div class="chip" id="statusChip"><span class="dot"></span><span id="statusLabel">Ready</span></div>
+                    <div class="chip"><small>Cycle</small> <span id="cycleText">—</span></div>
+                    <!-- Overtime chip -->
+                    <div class="chip overtime" id="overtimeChip" style="display:none">
+                        <span class="dot"></span><span id="overtimeLabel">Overtime</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="stage">
+                <!-- CIRCLE TIMER -->
+                <div class="circleCard">
+                    <div class="ringWrap" id="ringWrap" title="Double click/tap to toggle fullscreen">
+                        <!-- Overtime badge -->
+                        <div class="overtimeBadge" id="overtimeBadge">OVERTIME</div>
+
+                        <svg viewBox="0 0 200 200" aria-hidden="true">
+              <defs>
+                <linearGradient id="gradBreak" x1="0" x2="1" y1="0" y2="1">
+                  <stop offset="0" stop-color="#10b981"></stop>
+                  <stop offset="0.55" stop-color="#34d399"></stop>
+                  <stop offset="1" stop-color="#3b82f6"></stop>
+                </linearGradient>
+                <linearGradient id="gradQuiz" x1="0" x2="1" y1="0" y2="1">
+                  <stop offset="0" stop-color="#8b5cf6"></stop>
+                  <stop offset="0.55" stop-color="#a78bfa"></stop>
+                  <stop offset="1" stop-color="#3b82f6"></stop>
+                </linearGradient>
+                <!-- Overtime gradient -->
+                <linearGradient id="gradOvertime" x1="0" x2="1" y1="0" y2="1">
+                  <stop offset="0" stop-color="#ef4444"></stop>
+                  <stop offset="0.55" stop-color="#f87171"></stop>
+                  <stop offset="1" stop-color="#f59e0b"></stop>
+                </linearGradient>
+              </defs>
+
+              <!-- r=82 -> circumference ~ 515.66 -->
+              <circle class="track" cx="100" cy="100" r="82"></circle>
+              <circle class="progress" id="ring" cx="100" cy="100" r="82"></circle>
+            </svg>
+
+                        <div class="center" id="center" data-mode="break">
+                            <div class="centerLabel" id="centerLabel">
+                                <span class="emoji" id="centerEmoji">☕</span>
+                                <span class="text" id="centerText">Break Time</span>
+                                <span class="desc" id="centerDesc">Coffee and snack</span>
+                            </div>
+
+                            <div class="presetsTop" id="presetWrapTop" aria-label="Quick presets">
+                                <button class="pbtn small" data-h="0" data-m="5" data-s="0">5m</button>
+                                <button class="pbtn small" data-h="0" data-m="10" data-s="0">10m</button>
+                                <button class="pbtn small" data-h="0" data-m="15" data-s="0">15m</button>
+                                <button class="pbtn small" data-h="0" data-m="30" data-s="0">30m</button>
+                                <div class="customPreset" aria-label="Custom minutes">
+                                    <input id="customMinutesTop" type="number" min="1" max="999" placeholder="Min" inputmode="numeric" />
+                                    <button id="customMinutesBtnTop" type="button">Set</button>
+                                </div>
+                            </div>
+
+                            <div class="bigTime" id="timeDisplay">00:05:00</div>
+
+                            <div class="miniMeta">
+                                <div>Total: <b id="totalText">00:05:00</b></div>
+                                <div>Remaining: <b id="remainText">00:05:00</b></div>
+                                <!-- Overtime counter -->
+                                <div id="overtimeCounter" style="display:none">Overtime: <b id="overtimeText">+00:00</b></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ACTIONS -->
+                <div class="actionsCard">
+                    <div class="btnrow">
+                        <button class="btn primary" id="startBtn">▶ Start</button>
+                        <button class="btn good" id="pauseBtn" disabled>⏸ Pause</button>
+                    </div>
+                    <div class="btnrow">
+                        <button class="btn good" id="resumeBtn" disabled>▶ Resume</button>
+                        <button class="btn danger" id="resetBtn" disabled>↻ Reset</button>
+                    </div>
+
+                    <!-- Overtime stop button -->
+                    <button class="btn overtime-stop" id="stopOvertimeBtn" style="display:none">⏹ Stop Alarm</button>
+
+                    <div class="rowline" title="Auto-restart when finished">
+                        <div>🔁 Auto-repeat<br><small>Runs again when finished</small></div>
+                        <div class="toggle" id="repeatToggle" role="switch" aria-checked="false"></div>
+                    </div>
+
+                    <div class="rowline" title="Vibrate on finish (phones)">
+                        <div>📳 Vibrate<br><small>On finish</small></div>
+                        <div class="toggle" id="vibrateToggle" role="switch" aria-checked="false"></div>
+                    </div>
+
+                    <div class="rowline" title="Notification on finish">
+                        <div>🔔 Notify<br><small>On finish</small></div>
+                        <div class="toggle" id="notifyToggle" role="switch" aria-checked="false"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- SETTINGS SHEET -->
+    <div class="sheetBack" id="sheetBack" aria-hidden="true"></div>
+    <div class="sheet" id="sheet" aria-hidden="true" role="dialog" aria-label="Timer settings">
+        <div class="sheetHead">
+            <div class="grab" aria-hidden="true"></div>
+            <div class="sheetTitle">⚙️ Timer Settings</div>
+            <button class="iconbtn" id="closeSheetBtn" title="Close">✕</button>
+        </div>
+
+        <div class="sheetBody">
+            <div class="section">
+                <h3>Quick Presets</h3>
+                <div class="presets" id="presetWrap">
+                    <button class="pbtn" data-h="0" data-m="5" data-s="0">5 min</button>
+                    <button class="pbtn" data-h="0" data-m="10" data-s="0">10 min</button>
+                    <button class="pbtn" data-h="0" data-m="15" data-s="0">15 min</button>
+                    <button class="pbtn" data-h="0" data-m="30" data-s="0">30 min</button>
+                </div>
+
+                <div class="grid3" style="margin-top:12px">
+                    <div class="field">
+                        <label for="hours">Hours</label>
+                        <input class="num" id="hours" type="number" min="0" max="23" value="0" inputmode="numeric" />
+                    </div>
+                    <div class="field">
+                        <label for="minutes">Minutes</label>
+                        <input class="num" id="minutes" type="number" min="0" max="59" value="5" inputmode="numeric" />
+                    </div>
+                    <div class="field">
+                        <label for="seconds">Seconds</label>
+                        <input class="num" id="seconds" type="number" min="0" max="59" value="0" inputmode="numeric" />
+                    </div>
+                </div>
+            </div>
+
+            <div class="section">
+                <h3>Sound</h3>
+                <div class="field">
+                    <label for="soundSelect">Finish sound</label>
+                    <select class="select" id="soundSelect">
+            <option value="beep">Beep</option>
+            <option value="chime">Chime</option>
+            <option value="pop">Pop</option>
+            <option value="radial">Radial Alert</option>
+            <option value="none">None</option>
+          </select>
+                </div>
+                <div class="field" style="margin-top:10px">
+                    <label for="volume">Volume (0-100)</label>
+                    <input class="num" id="volume" type="number" min="0" max="100" value="70" inputmode="numeric" />
+                </div>
+                <div style="margin-top:10px">
+                    <button class="btn good" id="testSoundBtn" style="width:100%">▶ Test Sound</button>
+                </div>
+            </div>
+
+            <!-- Overtime settings -->
+            <div class="section">
+                <h3>Overtime Alarm</h3>
+                <div class="rowline">
+                    <div>Enable Overtime Alarm<br><small>Sound alert after time ends</small></div>
+                    <div class="toggle" id="overtimeAlarmToggle" role="switch" aria-checked="true"></div>
+                </div>
+                <div class="field" style="margin-top:10px">
+                    <label for="overtimeDuration">Alarm Duration (seconds)</label>
+                    <input class="num" id="overtimeDuration" type="number" min="5" max="60" value="10" inputmode="numeric" />
+                </div>
+                <div class="rowline" style="margin-top:10px">
+                    <div>Show Overtime Counter<br><small>Display +00:00 after time</small></div>
+                    <div class="toggle" id="overtimeCounterToggle" role="switch" aria-checked="true"></div>
+                </div>
+            </div>
+
+            <!-- Text & Subtitle -->
+            <div class="section">
+                <h3>Text & Subtitle</h3>
+                <div class="field">
+                    <label for="subtitleSize">Subtitle size (10 - 22)</label>
+                    <input class="num" id="subtitleSize" type="number" min="10" max="22" value="13" inputmode="numeric" />
+                </div>
+                <div class="rowline" style="margin-top:10px" title="When running, subtitle shows remaining time like 'Remaining 00:01:12'">
+                    <div>⏳ Subtitle shows remaining<br><small>Auto update while running</small></div>
+                    <div class="toggle" id="subTimeToggle" role="switch" aria-checked="false"></div>
+                </div>
+            </div>
+
+            <div class="section">
+                <h3>Titles</h3>
+                <div class="field">
+                    <label for="titleInput">Title</label>
+                    <input class="num" id="titleInput" type="text" value="Break Time" />
+                </div>
+                <div class="field" style="margin-top:10px">
+                    <label for="subtitleInput">Subtitle</label>
+                    <input class="num" id="subtitleInput" type="text" value="Time for coffee and snack" />
+                </div>
+                <div class="field" style="margin-top:10px">
+                    <label for="breakDescInput">Break center text</label>
+                    <input class="num" id="breakDescInput" type="text" value="Coffee and snack" />
+                </div>
+                <div class="field" style="margin-top:10px">
+                    <label for="quizDescInput">Quiz center text</label>
+                    <input class="num" id="quizDescInput" type="text" value="Focus &amp; answer" />
+                </div>
+                <div style="margin-top:10px; display:flex; gap:10px;">
+                    <button class="btn" id="applyTitleBtn" style="flex:1">✅ Apply</button>
+                    <button class="btn" id="resetTitleBtn" style="flex:1">↩ Default</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- QUICK TITLE POPUP -->
+    <div class="popBack" id="popBack" aria-hidden="true"></div>
+    <div class="pop" id="pop" aria-hidden="true" role="dialog" aria-label="Title settings">
+        <div class="popHead">
+            <div class="grab" aria-hidden="true"></div>
+            <div class="popTitle">✎ Title &amp; Text</div>
+            <button class="iconbtn" id="closePopBtn" title="Close">✕</button>
+        </div>
+        <div class="popBody">
+            <div class="section">
+                <h3>Type</h3>
+                <div class="seg" role="tablist" aria-label="Text type">
+                    <button class="segBtn active" id="popTypeBreak" type="button" role="tab" aria-selected="true">Break</button>
+                    <button class="segBtn" id="popTypeQuiz" type="button" role="tab" aria-selected="false">Quiz</button>
+                </div>
+            </div>
+
+            <div class="section breakOnly">
+                <h3>Break</h3>
+                <div class="field">
+                    <label for="titleInput2">Title</label>
+                    <input class="num" id="titleInput2" type="text" placeholder="Break Time" />
+                </div>
+                <div class="field" style="margin-top:10px">
+                    <label for="breakDescInput2">Center text</label>
+                    <input class="num" id="breakDescInput2" type="text" placeholder="Coffee and snack" />
+                </div>
+                <div class="field" style="margin-top:10px">
+                    <label>Break emoji</label>
+                    <div class="emojiChoiceGroup" aria-label="Break emoji">
+                        <button class="emojiChoice active" id="breakCoffeeEmoji" type="button" aria-pressed="true" data-emoji="☕">
+                            <span aria-hidden="true">☕</span> Coffee
+                        </button>
+                        <button class="emojiChoice active" id="breakSnackEmoji" type="button" aria-pressed="true" data-emoji="🍪">
+                            <span aria-hidden="true">🍪</span> Snack
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="section quizOnly">
+                <h3>Quiz</h3>
+                <div class="field">
+                    <label for="quizTitleInput2">Title</label>
+                    <input class="num" id="quizTitleInput2" type="text" placeholder="Quiz Time" />
+                </div>
+                <div class="field" style="margin-top:10px">
+                    <label for="quizDescInput2">Center text</label>
+                    <input class="num" id="quizDescInput2" type="text" placeholder="Focus &amp; answer" />
+                </div>
+            </div>
+
+            <div style="margin-top:10px; display:flex; gap:10px;">
+                <button class="btn good" id="applyTitleBtn2" style="flex:1">✅ Apply</button>
+                <button class="btn" id="resetTitleBtn2" style="flex:1">↩ Default</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+    <script>
+        const $ = (id) => document.getElementById(id);
+
+        function clampInt(v, min, max, fallback = 0) {
+            const n = Number(v);
+            if (!Number.isFinite(n)) return fallback;
+            return Math.max(min, Math.min(max, Math.trunc(n)));
+        }
+
+        function formatTime(totalSeconds) {
+            const s = Math.max(0, Math.trunc(totalSeconds));
+            const hh = String(Math.floor(s / 3600)).padStart(2, "0");
+            const mm = String(Math.floor((s % 3600) / 60)).padStart(2, "0");
+            const ss = String(s % 60).padStart(2, "0");
+            return `${hh}:${mm}:${ss}`;
+        }
+
+        function formatOvertime(seconds) {
+            const s = Math.abs(Math.trunc(seconds));
+            const mm = String(Math.floor(s / 60)).padStart(2, "0");
+            const ss = String(s % 60).padStart(2, "0");
+            return `+${mm}:${ss}`;
+        }
+
+        const BREAK_COFFEE_EMOJI = "☕";
+        const BREAK_SNACK_EMOJI = "🍪";
+
+        function normalizeBreakEmoji(value) {
+            const text = String(value || "");
+            const hasCoffee = text.includes(BREAK_COFFEE_EMOJI);
+            const hasSnack = text.includes(BREAK_SNACK_EMOJI);
+            const emojis = [];
+
+            if (hasCoffee || (!hasCoffee && !hasSnack)) emojis.push(BREAK_COFFEE_EMOJI);
+            if (hasSnack || (!hasCoffee && !hasSnack)) emojis.push(BREAK_SNACK_EMOJI);
+
+            return emojis.join(" ");
+        }
+
+        function toast(msg) {
+            els.toast.textContent = msg;
+            els.toast.classList.add("show");
+            clearTimeout(toast._t);
+            toast._t = setTimeout(() => els.toast.classList.remove("show"), 2400);
+        }
+
+        const state = {
+            mode: "break",
+            total: 0,
+            remaining: 0,
+            overtimeSeconds: 0,
+            timerId: null,
+            overtimeTimerId: null,
+            running: false,
+            paused: false,
+            overtime: false,
+            overtimeAlarmPlaying: false,
+
+            // Settings
+            repeat: false,
+            vibrate: false,
+            notify: false,
+            overtimeAlarmEnabled: true,
+            overtimeDuration: 10,
+            overtimeCounterEnabled: true,
+
+            muted: false,
+            sound: "beep",
+            volume: 70,
+
+            cyclesDone: 0,
+
+            // Subtitle settings
+            subtitleSize: 13,
+            subtitleShowTime: false,
+            subtitleBaseText: "",
+
+            // Text
+            breakTitle: "Break Time",
+            breakSubtitle: "Time for coffee and snack",
+            quizTitle: "Quiz Time",
+            quizSubtitle: "Focus and answer the questions",
+            breakEmoji: "☕ 🍪",
+            quizEmoji: "📝",
+        };
+
+        const els = {
+            breakBtn: $("breakModeBtn"),
+            quizBtn: $("quizModeBtn"),
+
+            title: $("titleText"),
+            subtitle: $("subtitleText"),
+
+            center: $("center"),
+            ringWrap: $("ringWrap"),
+            overtimeBadge: $("overtimeBadge"),
+
+            centerEmoji: $("centerEmoji"),
+            centerText: $("centerText"),
+            centerDesc: $("centerDesc"),
+
+            time: $("timeDisplay"),
+            totalText: $("totalText"),
+            remainText: $("remainText"),
+            overtimeCounter: $("overtimeCounter"),
+            overtimeText: $("overtimeText"),
+
+            statusChip: $("statusChip"),
+            statusLabel: $("statusLabel"),
+            cycleText: $("cycleText"),
+            overtimeChip: $("overtimeChip"),
+            overtimeLabel: $("overtimeLabel"),
+
+            fullscreenBtn: $("fullscreenBtn"),
+            openTitleBtn: $("openTitleBtn"),
+            openSheetBtn: $("openSheetBtn"),
+            closeSheetBtn: $("closeSheetBtn"),
+            sheet: $("sheet"),
+            sheetBack: $("sheetBack"),
+            pop: $("pop"),
+            popBack: $("popBack"),
+            closePopBtn: $("closePopBtn"),
+            popTypeBreak: $("popTypeBreak"),
+            popTypeQuiz: $("popTypeQuiz"),
+
+            hours: $("hours"),
+            minutes: $("minutes"),
+            seconds: $("seconds"),
+
+            startBtn: $("startBtn"),
+            pauseBtn: $("pauseBtn"),
+            resumeBtn: $("resumeBtn"),
+            resetBtn: $("resetBtn"),
+            stopOvertimeBtn: $("stopOvertimeBtn"),
+
+            repeatToggle: $("repeatToggle"),
+            vibrateToggle: $("vibrateToggle"),
+            notifyToggle: $("notifyToggle"),
+            overtimeAlarmToggle: $("overtimeAlarmToggle"),
+            overtimeCounterToggle: $("overtimeCounterToggle"),
+
+            muteBtn: $("muteBtn"),
+            soundSelect: $("soundSelect"),
+            volume: $("volume"),
+            testSoundBtn: $("testSoundBtn"),
+            overtimeDuration: $("overtimeDuration"),
+
+            titleInput: $("titleInput"),
+            subtitleInput: $("subtitleInput"),
+            breakDescInput: $("breakDescInput"),
+            quizDescInput: $("quizDescInput"),
+            applyTitleBtn: $("applyTitleBtn"),
+            resetTitleBtn: $("resetTitleBtn"),
+            titleInput2: $("titleInput2"),
+            breakDescInput2: $("breakDescInput2"),
+            breakCoffeeEmoji: $("breakCoffeeEmoji"),
+            breakSnackEmoji: $("breakSnackEmoji"),
+            quizTitleInput2: $("quizTitleInput2"),
+            quizDescInput2: $("quizDescInput2"),
+            applyTitleBtn2: $("applyTitleBtn2"),
+            resetTitleBtn2: $("resetTitleBtn2"),
+
+            subtitleSize: $("subtitleSize"),
+            subTimeToggle: $("subTimeToggle"),
+
+            presetWrap: $("presetWrap"),
+            presetWrapTop: $("presetWrapTop"),
+            customMinutesTop: $("customMinutesTop"),
+            customMinutesBtnTop: $("customMinutesBtnTop"),
+            toast: $("toast"),
+        };
+
+        // Ring circumference setup
+        const R = 82;
+        const CIRC = 2 * Math.PI * R;
+        document.documentElement.style.setProperty("--circ", String(CIRC));
+        document.documentElement.style.setProperty("--dash", String(CIRC));
+
+        const STORAGE_KEY = "simple_timer_v1";
+
+        function setToggle(el, on) {
+            el.classList.toggle("on", !!on);
+            el.setAttribute("aria-checked", String(!!on));
+        }
+
+        function setEmojiChoice(button, active) {
+            button.classList.toggle("active", !!active);
+            button.setAttribute("aria-pressed", String(!!active));
+        }
+
+        function setBreakEmojiChoices(value) {
+            const normalized = normalizeBreakEmoji(value);
+
+            setEmojiChoice(els.breakCoffeeEmoji, normalized.includes(BREAK_COFFEE_EMOJI));
+            setEmojiChoice(els.breakSnackEmoji, normalized.includes(BREAK_SNACK_EMOJI));
+        }
+
+        function getBreakEmojiChoices() {
+            const emojis = [];
+
+            if (els.breakCoffeeEmoji.classList.contains("active")) emojis.push(BREAK_COFFEE_EMOJI);
+            if (els.breakSnackEmoji.classList.contains("active")) emojis.push(BREAK_SNACK_EMOJI);
+
+            return normalizeBreakEmoji(emojis.join(" "));
+        }
+
+        function toggleBreakEmojiChoice(button) {
+            const otherButton = button === els.breakCoffeeEmoji ? els.breakSnackEmoji : els.breakCoffeeEmoji;
+            const nextActive = !button.classList.contains("active");
+
+            if (!nextActive && !otherButton.classList.contains("active")) {
+                return;
+            }
+
+            setEmojiChoice(button, nextActive);
+        }
+
+        function saveNow() {
+            try {
+                localStorage.setItem(STORAGE_KEY, JSON.stringify({
+                    mode: state.mode,
+                    repeat: state.repeat,
+                    vibrate: state.vibrate,
+                    notify: state.notify,
+                    overtimeAlarmEnabled: state.overtimeAlarmEnabled,
+                    overtimeDuration: state.overtimeDuration,
+                    overtimeCounterEnabled: state.overtimeCounterEnabled,
+                    muted: state.muted,
+                    sound: state.sound,
+                    volume: state.volume,
+                    cyclesDone: state.cyclesDone,
+
+                    h: clampInt(els.hours.value, 0, 23, 0),
+                    m: clampInt(els.minutes.value, 0, 59, 5),
+                    s: clampInt(els.seconds.value, 0, 59, 0),
+
+                    title: String(els.titleInput.value || ""),
+                    subtitle: String(els.subtitleInput.value || ""),
+                    breakDesc: String(els.breakDescInput.value || ""),
+                    quizDesc: String(els.quizDescInput.value || ""),
+                    breakTitle: String(state.breakTitle || ""),
+                    breakSubtitle: String(state.breakSubtitle || ""),
+                    quizTitle: String(state.quizTitle || ""),
+                    quizSubtitle: String(state.quizSubtitle || ""),
+                    breakEmoji: String(state.breakEmoji || ""),
+                    quizEmoji: String(state.quizEmoji || ""),
+
+                    subtitleSize: state.subtitleSize,
+                    subtitleShowTime: state.subtitleShowTime,
+                }));
+            } catch (e) {
+                console.warn("Failed to save settings:", e);
+            }
+        }
+
+        function loadSaved() {
+            try {
+                const raw = localStorage.getItem(STORAGE_KEY);
+                if (!raw) return;
+                const x = JSON.parse(raw);
+
+                state.mode = x.mode === "quiz" ? "quiz" : "break";
+                state.repeat = !!x.repeat;
+                state.vibrate = !!x.vibrate;
+                state.notify = !!x.notify;
+                state.overtimeAlarmEnabled = x.overtimeAlarmEnabled !== false;
+                state.overtimeDuration = clampInt(x.overtimeDuration, 5, 60, 10);
+                state.overtimeCounterEnabled = x.overtimeCounterEnabled !== false;
+                state.muted = !!x.muted;
+                state.sound = x.sound || "beep";
+                state.volume = clampInt(x.volume, 0, 100, 70);
+                state.cyclesDone = clampInt(x.cyclesDone, 0, 999999, 0);
+
+                els.hours.value = clampInt(x.h, 0, 23, 0);
+                els.minutes.value = clampInt(x.m, 0, 59, 5);
+                els.seconds.value = clampInt(x.s, 0, 59, 0);
+
+                if (typeof x.title === "string" && x.title.trim()) els.titleInput.value = x.title;
+                if (typeof x.subtitle === "string" && x.subtitle.trim()) els.subtitleInput.value = x.subtitle;
+                if (typeof x.breakDesc === "string" && x.breakDesc.trim()) els.breakDescInput.value = x.breakDesc;
+                if (typeof x.quizDesc === "string" && x.quizDesc.trim()) els.quizDescInput.value = x.quizDesc;
+                if (typeof x.breakTitle === "string" && x.breakTitle.trim()) state.breakTitle = x.breakTitle;
+                if (typeof x.breakSubtitle === "string" && x.breakSubtitle.trim()) state.breakSubtitle = x.breakSubtitle;
+                if (typeof x.quizTitle === "string" && x.quizTitle.trim()) state.quizTitle = x.quizTitle;
+                if (typeof x.quizSubtitle === "string" && x.quizSubtitle.trim()) state.quizSubtitle = x.quizSubtitle;
+                if (typeof x.breakEmoji === "string" && x.breakEmoji.trim()) state.breakEmoji = normalizeBreakEmoji(x.breakEmoji);
+                if (typeof x.quizEmoji === "string" && x.quizEmoji.trim()) state.quizEmoji = x.quizEmoji;
+
+                state.subtitleSize = clampInt(x.subtitleSize, 10, 22, 13);
+                state.subtitleShowTime = !!x.subtitleShowTime;
+
+                els.soundSelect.value = state.sound;
+                els.volume.value = state.volume;
+                els.subtitleSize.value = state.subtitleSize;
+                els.overtimeDuration.value = state.overtimeDuration;
+            } catch (e) {
+                console.warn("Failed to load settings:", e);
+            }
+        }
+
+        function applySubtitleSize() {
+            document.documentElement.style.setProperty("--subSize", `${state.subtitleSize}px`);
+        }
+
+        /* Fullscreen */
+        function isFullscreen() {
+            return !!(document.fullscreenElement ||
+                document.webkitFullscreenElement ||
+                document.mozFullScreenElement ||
+                document.msFullscreenElement);
+        }
+
+        function updateFullscreenUI() {
+            if (isFullscreen()) {
+                document.body.classList.add("fullscreen-mode");
+                closeSheet();
+            } else {
+                document.body.classList.remove("fullscreen-mode");
+            }
+        }
+
+        async function toggleFullscreen() {
+            try {
+                if (!isFullscreen()) {
+                    const el = document.documentElement;
+                    const p = el.requestFullscreen?.() ||
+                        el.webkitRequestFullscreen?.() ||
+                        el.mozRequestFullScreen?.() ||
+                        el.msRequestFullscreen?.();
+                    if (p && p.then) await p;
+                } else {
+                    const p = document.exitFullscreen?.() ||
+                        document.webkitExitFullscreen?.() ||
+                        document.mozCancelFullScreen?.() ||
+                        document.msExitFullscreen?.();
+                    if (p && p.then) await p;
+                }
+            } catch {}
+            updateFullscreenUI();
+        }
+
+        /* Sheet */
+        function openSheet() {
+            if (document.body.classList.contains("fullscreen-mode")) return;
+            els.sheetBack.classList.add("show");
+            els.sheet.classList.add("show");
+            document.body.style.overflow = "hidden";
+        }
+
+        function closeSheet() {
+            els.sheetBack.classList.remove("show");
+            els.sheet.classList.remove("show");
+            document.body.style.overflow = "";
+            saveNow();
+        }
+
+        /* Quick title popup */
+        function setPopupType(type) {
+            const t = type === "quiz" ? "quiz" : "break";
+            els.pop.setAttribute("data-type", t);
+            els.popTypeBreak.classList.toggle("active", t === "break");
+            els.popTypeQuiz.classList.toggle("active", t === "quiz");
+            els.popTypeBreak.setAttribute("aria-selected", String(t === "break"));
+            els.popTypeQuiz.setAttribute("aria-selected", String(t === "quiz"));
+        }
+
+        function syncPopupFieldsFromState() {
+            els.titleInput2.value = state.breakTitle || "";
+            els.breakDescInput2.value = els.breakDescInput.value || "";
+            setBreakEmojiChoices(state.breakEmoji);
+
+            els.quizTitleInput2.value = state.quizTitle || "";
+            els.quizDescInput2.value = els.quizDescInput.value || "";
+        }
+
+        function syncStateFromPopupFields() {
+            state.breakTitle = String(els.titleInput2.value || "");
+            els.breakDescInput.value = String(els.breakDescInput2.value || "");
+            state.breakEmoji = getBreakEmojiChoices();
+
+            state.quizTitle = String(els.quizTitleInput2.value || "");
+            els.quizDescInput.value = String(els.quizDescInput2.value || "");
+            state.quizEmoji = "📝";
+        }
+
+        function openPop() {
+            if (document.body.classList.contains("fullscreen-mode")) return;
+            syncPopupFieldsFromState();
+            setPopupType(state.mode);
+            els.popBack.classList.add("show");
+            els.pop.classList.add("show");
+            document.body.style.overflow = "hidden";
+        }
+
+        function closePop() {
+            els.popBack.classList.remove("show");
+            els.pop.classList.remove("show");
+            document.body.style.overflow = "";
+            saveNow();
+        }
+
+        /* Sound - Radial Alert */
+        function playSound(kind) {
+            if (state.muted || kind === "none") return;
+            const vol = Math.max(0, Math.min(1, state.volume / 100));
+            if (vol === 0) return;
+
+            const AudioCtx = window.AudioContext || window.webkitAudioContext;
+            if (!AudioCtx) return;
+
+            try {
+                const ctx = new AudioCtx();
+
+                if (kind === "radial") {
+                    // Radial alert: 3 quick beeps with rising pitch
+                    for (let i = 0; i < 3; i++) {
+                        setTimeout(() => {
+                            const o = ctx.createOscillator();
+                            const g = ctx.createGain();
+
+                            o.connect(g);
+                            g.connect(ctx.destination);
+
+                            o.type = "sine";
+                            o.frequency.setValueAtTime(600 + (i * 100), ctx.currentTime);
+
+                            g.gain.setValueAtTime(0, ctx.currentTime);
+                            g.gain.linearRampToValueAtTime(vol * 0.7, ctx.currentTime + 0.05);
+                            g.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.15);
+
+                            o.start();
+                            o.stop(ctx.currentTime + 0.2);
+                        }, i * 200);
+                    }
+
+                    setTimeout(() => {
+                        try {
+                            ctx.close();
+                        } catch {}
+                    }, 800);
+                } else {
+                    // Regular sounds
+                    const o = ctx.createOscillator();
+                    const g = ctx.createGain();
+
+                    o.connect(g);
+                    g.connect(ctx.destination);
+                    g.gain.value = vol * 0.6;
+
+                    let freq = 880,
+                        dur = 0.18;
+                    if (kind === "chime") {
+                        freq = 660;
+                        dur = 0.26;
+                    }
+                    if (kind === "pop") {
+                        freq = 420;
+                        dur = 0.12;
+                    }
+
+                    o.type = "sine";
+                    o.frequency.setValueAtTime(freq, ctx.currentTime);
+                    o.frequency.exponentialRampToValueAtTime(freq * 1.22, ctx.currentTime + dur * 0.65);
+
+                    g.gain.setValueAtTime(vol * 0.0001, ctx.currentTime);
+                    g.gain.exponentialRampToValueAtTime(vol * 0.65, ctx.currentTime + 0.02);
+                    g.gain.exponentialRampToValueAtTime(vol * 0.0001, ctx.currentTime + dur);
+
+                    o.start();
+                    o.stop(ctx.currentTime + dur + 0.02);
+                    setTimeout(() => {
+                        try {
+                            ctx.close();
+                        } catch {}
+                    }, (dur + 0.2) * 1000);
+                }
+            } catch (e) {
+                console.warn("Failed to play sound:", e);
+            }
+        }
+
+        // Overtime alarm - uses radial pattern
+        function playOvertimeAlarm() {
+            if (state.muted || !state.overtimeAlarmEnabled) return;
+            if (state.overtimeAlarmPlaying) return;
+
+            state.overtimeAlarmPlaying = true;
+
+            const vol = Math.max(0, Math.min(1, state.volume / 100));
+            if (vol === 0) return;
+
+            const AudioCtx = window.AudioContext || window.webkitAudioContext;
+            if (!AudioCtx) return;
+
+            try {
+                const ctx = new AudioCtx();
+
+                // Create radial alarm pattern: alternating high-low tones
+                let time = ctx.currentTime;
+
+                for (let i = 0; i < Math.floor(state.overtimeDuration / 0.8); i++) {
+                    setTimeout(() => {
+                        const o = ctx.createOscillator();
+                        const g = ctx.createGain();
+
+                        o.connect(g);
+                        g.connect(ctx.destination);
+
+                        // Alternating pattern
+                        const freq = i % 2 === 0 ? 700 : 500;
+                        o.type = "sine";
+                        o.frequency.setValueAtTime(freq, ctx.currentTime);
+
+                        // Quick fade in/out
+                        g.gain.setValueAtTime(0, ctx.currentTime);
+                        g.gain.linearRampToValueAtTime(vol * 0.8, ctx.currentTime + 0.05);
+                        g.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.35);
+
+                        o.start();
+                        o.stop(ctx.currentTime + 0.4);
+                    }, i * 800);
+                }
+
+                // Cleanup
+                setTimeout(() => {
+                    state.overtimeAlarmPlaying = false;
+                    try {
+                        ctx.close();
+                    } catch {}
+                }, state.overtimeDuration * 1000);
+
+            } catch (e) {
+                console.warn("Failed to play overtime alarm:", e);
+                state.overtimeAlarmPlaying = false;
+            }
+        }
+
+        function stopOvertimeAlarm() {
+            state.overtimeAlarmPlaying = false;
+        }
+
+        /* Notifications */
+        async function ensureNotificationPermission() {
+            if (!("Notification" in window)) {
+                toast("Notifications not supported.");
+                return false;
+            }
+            if (Notification.permission === "granted") return true;
+            if (Notification.permission === "denied") {
+                toast("Notifications blocked in browser settings.");
+                return false;
+            }
+            try {
+                const res = await Notification.requestPermission();
+                return res === "granted";
+            } catch {
+                return false;
+            }
+        }
+
+        function fireNotification(title, body) {
+            if (!state.notify) return;
+            if (!("Notification" in window)) return;
+            if (Notification.permission !== "granted") return;
+            try {
+                new Notification(title, {
+                    body,
+                    icon: state.mode === "break" ? "☕" : "📝"
+                });
+            } catch {}
+        }
+
+        /* UI */
+        function setButtons(mode) {
+            if (mode === "ready") {
+                els.startBtn.disabled = false;
+                els.pauseBtn.disabled = true;
+                els.resumeBtn.disabled = true;
+                els.resetBtn.disabled = true;
+                els.stopOvertimeBtn.style.display = "none";
+                els.statusChip.className = "chip";
+                els.statusLabel.textContent = "Ready";
+            }
+            if (mode === "running") {
+                els.startBtn.disabled = true;
+                els.pauseBtn.disabled = false;
+                els.resumeBtn.disabled = true;
+                els.resetBtn.disabled = false;
+                els.stopOvertimeBtn.style.display = "none";
+                els.statusChip.className = "chip running";
+                els.statusLabel.textContent = "Running";
+            }
+            if (mode === "paused") {
+                els.startBtn.disabled = true;
+                els.pauseBtn.disabled = true;
+                els.resumeBtn.disabled = false;
+                els.resetBtn.disabled = false;
+                els.stopOvertimeBtn.style.display = "none";
+                els.statusChip.className = "chip paused";
+                els.statusLabel.textContent = "Paused";
+            }
+            if (mode === "done") {
+                els.startBtn.disabled = false;
+                els.pauseBtn.disabled = true;
+                els.resumeBtn.disabled = true;
+                els.resetBtn.disabled = false;
+                els.stopOvertimeBtn.style.display = state.overtime ? "block" : "none";
+                els.statusChip.className = "chip done";
+                els.statusLabel.textContent = "Finished";
+            }
+            if (mode === "overtime") {
+                els.startBtn.disabled = true;
+                els.pauseBtn.disabled = true;
+                els.resumeBtn.disabled = true;
+                els.resetBtn.disabled = false;
+                els.stopOvertimeBtn.style.display = "block";
+                els.statusChip.className = "chip overtime";
+                els.statusLabel.textContent = "Overtime";
+            }
+
+            // Quick presets: show only before starting (and after finish), never while running/paused/overtime.
+            if (els.presetWrapTop) {
+                const show = (mode === "ready" || mode === "done");
+                els.presetWrapTop.style.display = show ? "flex" : "none";
+            }
+        }
+
+        function readInputs() {
+            const h = clampInt(els.hours.value, 0, 23, 0);
+            const m = clampInt(els.minutes.value, 0, 59, 5);
+            const s = clampInt(els.seconds.value, 0, 59, 0);
+            els.hours.value = h;
+            els.minutes.value = m;
+            els.seconds.value = s;
+            return {
+                h,
+                m,
+                s,
+                total: (h * 3600 + m * 60 + s)
+            };
+        }
+
+        function updateRing() {
+            let pct = 0;
+            if (state.total > 0) {
+                pct = (state.total - state.remaining) / state.total;
+                pct = Math.max(0, Math.min(1, pct));
+            }
+            const dash = CIRC * (1 - pct);
+            document.documentElement.style.setProperty("--dash", String(dash));
+        }
+
+        function updateCenterLabel() {
+            if (state.mode === "break") {
+                els.centerEmoji.textContent = (state.breakEmoji || "☕").trim() || "☕";
+                els.centerText.textContent = els.title.textContent || "Break Time";
+                els.centerDesc.textContent = (els.breakDescInput.value || "").trim() || "Coffee and snack";
+                els.center.setAttribute("data-mode", "break");
+            } else {
+                els.centerEmoji.textContent = (state.quizEmoji || "📝").trim() || "📝";
+                els.centerText.textContent = els.title.textContent || "Quiz Time";
+                els.centerDesc.textContent = (els.quizDescInput.value || "").trim() || "Focus & answer";
+                els.center.setAttribute("data-mode", "quiz");
+            }
+
+            // Update for overtime
+            if (state.overtime) {
+                els.centerDesc.textContent = "TIME'S UP! ⚠";
+            }
+        }
+
+        // Update overtime display
+        function updateOvertimeDisplay() {
+            if (state.overtime && state.overtimeCounterEnabled) {
+                els.overtimeCounter.style.display = "flex";
+                els.overtimeText.textContent = formatOvertime(state.overtimeSeconds);
+            } else {
+                els.overtimeCounter.style.display = "none";
+            }
+
+            // Show/hide overtime badge and chip
+            if (state.overtime) {
+                els.overtimeBadge.style.display = "block";
+                els.overtimeChip.style.display = "flex";
+                document.body.classList.add("overtime-mode");
+            } else {
+                els.overtimeBadge.style.display = "none";
+                els.overtimeChip.style.display = "none";
+                document.body.classList.remove("overtime-mode");
+            }
+        }
+
+        // Live subtitle update
+        function maybeUpdateSubtitleLive() {
+            if (!state.subtitleShowTime) return;
+
+            if (state.running) {
+                els.subtitle.textContent = `⏳ Remaining ${formatTime(state.remaining)}`;
+            } else if (state.paused) {
+                els.subtitle.textContent = `⏸ Paused at ${formatTime(state.remaining)}`;
+            } else if (state.overtime) {
+                els.subtitle.textContent = `⚠ Overtime ${formatOvertime(state.overtimeSeconds)}`;
+            } else {
+                if (state.subtitleBaseText) els.subtitle.textContent = state.subtitleBaseText;
+            }
+        }
+
+        function updateDisplay() {
+            if (state.overtime) {
+                els.time.textContent = formatTime(0);
+                els.remainText.textContent = formatTime(0);
+            } else {
+                els.time.textContent = formatTime(state.remaining);
+                els.remainText.textContent = formatTime(state.remaining);
+            }
+
+            els.totalText.textContent = formatTime(state.total);
+            els.cycleText.textContent = state.cyclesDone > 0 ? String(state.cyclesDone) : "—";
+
+            updateRing();
+            updateCenterLabel();
+            updateOvertimeDisplay();
+            maybeUpdateSubtitleLive();
+        }
+
+        function applyTitlesForMode() {
+            if (state.mode === "break") {
+                els.title.textContent = (state.breakTitle || "").trim() || "Break Time";
+                els.subtitle.textContent = (state.breakSubtitle || "").trim() || "Time for coffee and snack";
+            } else {
+                els.title.textContent = (state.quizTitle || "").trim() || "Quiz Time";
+                els.subtitle.textContent = (state.quizSubtitle || "").trim() || "Focus and answer the questions";
+            }
+
+            state.subtitleBaseText = els.subtitle.textContent;
+            updateCenterLabel();
+            saveNow();
+        }
+
+        function setMode(mode) {
+            state.mode = (mode === "quiz") ? "quiz" : "break";
+            document.body.classList.toggle("quiz-mode", state.mode === "quiz");
+            if (state.overtime) document.body.classList.add("overtime-mode");
+
+            els.breakBtn.classList.toggle("active", state.mode === "break");
+            els.quizBtn.classList.toggle("active", state.mode === "quiz");
+            els.breakBtn.setAttribute("aria-selected", String(state.mode === "break"));
+            els.quizBtn.setAttribute("aria-selected", String(state.mode === "quiz"));
+
+            applyTitlesForMode();
+        }
+
+        /* Timer */
+        function stopTimer() {
+            if (state.timerId) clearInterval(state.timerId);
+            if (state.overtimeTimerId) clearInterval(state.overtimeTimerId);
+            state.timerId = null;
+            state.overtimeTimerId = null;
+            state.running = false;
+            state.paused = false;
+        }
+
+        function refreshPreview() {
+            if (state.running || state.timerId) return;
+            const {
+                total
+            } = readInputs();
+            state.total = total;
+            state.remaining = total;
+            state.overtime = false;
+            state.overtimeSeconds = 0;
+            updateDisplay();
+        }
+
+        function startTimer() {
+            const {
+                total
+            } = readInputs();
+            if (total <= 0) {
+                toast("Set a duration first.");
+                return;
+            }
+            if (state.running) return;
+
+            // Clear any finish anim class and overtime mode
+            els.center.classList.remove("finishAnim");
+            els.ringWrap.classList.remove("finishFlash");
+            state.overtime = false;
+            state.overtimeSeconds = 0;
+            document.body.classList.remove("overtime-mode");
+
+            stopTimer();
+            state.total = total;
+            state.remaining = total;
+            state.running = true;
+            state.paused = false;
+
+            setButtons("running");
+            updateDisplay();
+
+            toast(state.mode === "break" ? "Break started ☕" : "Quiz started 📝");
+
+            state.timerId = setInterval(() => {
+                state.remaining -= 1;
+                if (state.remaining <= 0) {
+                    state.remaining = 0;
+                    updateDisplay();
+                    finishTimer();
+                    return;
+                }
+                updateDisplay();
+            }, 1000);
+        }
+
+        function pauseTimer() {
+            if (!state.running) return;
+            if (state.timerId) clearInterval(state.timerId);
+            state.timerId = null;
+            state.running = false;
+            state.paused = true;
+            setButtons("paused");
+            updateDisplay();
+
+            toast("Paused");
+            saveNow();
+        }
+
+        function resumeTimer() {
+            if (state.running || !state.paused) return;
+            if (state.remaining <= 0) return;
+
+            state.running = true;
+            state.paused = false;
+            setButtons("running");
+
+            toast("Resumed");
+
+            state.timerId = setInterval(() => {
+                state.remaining -= 1;
+                if (state.remaining <= 0) {
+                    state.remaining = 0;
+                    updateDisplay();
+                    finishTimer();
+                    return;
+                }
+                updateDisplay();
+            }, 1000);
+        }
+
+        function resetTimer() {
+            stopTimer();
+            stopOvertimeAlarm();
+
+            // Remove finish animation and overtime mode
+            els.center.classList.remove("finishAnim");
+            els.ringWrap.classList.remove("finishFlash");
+            state.overtime = false;
+            state.overtimeSeconds = 0;
+            document.body.classList.remove("overtime-mode");
+
+            const {
+                total
+            } = readInputs();
+            state.total = total;
+            state.remaining = total;
+
+            setButtons("ready");
+            updateDisplay();
+
+            toast("Reset");
+            saveNow();
+        }
+
+        // Stop overtime alarm
+        function stopOvertime() {
+            stopOvertimeAlarm();
+            state.overtime = false;
+            state.overtimeSeconds = 0;
+            document.body.classList.remove("overtime-mode");
+            setButtons("done");
+            updateDisplay();
+            toast("Alarm stopped");
+        }
+
+        // Start overtime timer
+        function startOvertime() {
+            state.overtime = true;
+            state.overtimeSeconds = 0;
+            setButtons("overtime");
+            updateDisplay();
+
+            // Play overtime alarm
+            if (state.overtimeAlarmEnabled) {
+                playOvertimeAlarm();
+            }
+
+            // Start counting overtime
+            state.overtimeTimerId = setInterval(() => {
+                state.overtimeSeconds += 1;
+                updateDisplay();
+
+                // Stop alarm after duration
+                if (state.overtimeSeconds >= state.overtimeDuration) {
+                    stopOvertimeAlarm();
+                }
+            }, 1000);
+
+            toast("Overtime! ⚠");
+        }
+
+        async function finishTimer() {
+            stopTimer();
+            setButtons("done");
+
+            // Add animations
+            els.center.classList.add("finishAnim");
+            els.ringWrap.classList.add("finishFlash");
+            setTimeout(() => {
+                els.center.classList.remove("finishAnim");
+                els.ringWrap.classList.remove("finishFlash");
+            }, 2200);
+
+            state.subtitleBaseText = els.subtitle.textContent;
+            els.subtitle.textContent = state.mode === "break" ? "✅ Break finished — back to work!" : "✅ Quiz finished — submit now!";
+
+            playSound(state.sound);
+
+            if (state.vibrate && "vibrate" in navigator && typeof navigator.vibrate === "function") {
+                try {
+                    navigator.vibrate([180, 80, 180, 80, 260]);
+                } catch {}
+            }
+
+            if (state.notify) {
+                const ok = await ensureNotificationPermission();
+                if (ok) {
+                    fireNotification(
+                        state.mode === "break" ? "Break finished" : "Quiz finished",
+                        "Time is up ⏰"
+                    );
+                }
+            }
+
+            toast("Time is up ⏰");
+            state.cyclesDone += 1;
+            updateDisplay();
+            saveNow();
+
+            // Start overtime if enabled
+            if (state.overtimeAlarmEnabled) {
+                setTimeout(() => startOvertime(), 1000);
+            } else if (state.repeat) {
+                setTimeout(() => startTimer(), 900);
+            }
+        }
+
+        /* Events */
+        els.breakBtn.addEventListener("click", () => setMode("break"));
+        els.quizBtn.addEventListener("click", () => setMode("quiz"));
+
+        els.fullscreenBtn.addEventListener("click", toggleFullscreen);
+        document.addEventListener("fullscreenchange", updateFullscreenUI);
+        document.addEventListener("webkitfullscreenchange", updateFullscreenUI);
+        document.addEventListener("mozfullscreenchange", updateFullscreenUI);
+        document.addEventListener("MSFullscreenChange", updateFullscreenUI);
+
+        // Settings sheet UI is hidden for fast use.
+
+        // Double tap/click ring to toggle fullscreen
+        els.ringWrap.addEventListener("dblclick", toggleFullscreen);
+        let lastTap = 0;
+        els.ringWrap.addEventListener("touchend", () => {
+            const now = Date.now();
+            if (now - lastTap < 280) toggleFullscreen();
+            lastTap = now;
+        });
+
+        function applyPresetFromEvent(e) {
+            const btn = e.target.closest("button");
+            if (!btn) return;
+            if (!("m" in btn.dataset)) return;
+            if (state.running || state.timerId) return;
+            const h = clampInt(btn.dataset.h, 0, 23, 0);
+            const m = clampInt(btn.dataset.m, 0, 59, 0);
+            const s = clampInt(btn.dataset.s, 0, 59, 0);
+            els.hours.value = h;
+            els.minutes.value = m;
+            els.seconds.value = s;
+            refreshPreview();
+            toast("Preset applied");
+            saveNow();
+        }
+
+        function applyCustomMinutes() {
+            if (state.running || state.timerId) {
+                toast("Stop timer before changing time");
+                return;
+            }
+
+            const totalMinutes = clampInt(els.customMinutesTop.value, 1, 999, 5);
+            const h = Math.floor(totalMinutes / 60);
+            const m = totalMinutes % 60;
+
+            els.customMinutesTop.value = totalMinutes;
+            els.hours.value = h;
+            els.minutes.value = m;
+            els.seconds.value = 0;
+
+            refreshPreview();
+            toast(`Custom ${totalMinutes}m applied`);
+            saveNow();
+        }
+
+        els.presetWrap.addEventListener("click", applyPresetFromEvent);
+        els.presetWrapTop.addEventListener("click", applyPresetFromEvent);
+        els.customMinutesBtnTop.addEventListener("click", applyCustomMinutes);
+        els.customMinutesTop.addEventListener("keydown", (event) => {
+            if (event.key === "Enter") {
+                event.preventDefault();
+                applyCustomMinutes();
+            }
+        });
+
+        // Quick title popup
+        els.openTitleBtn.addEventListener("click", openPop);
+        els.closePopBtn.addEventListener("click", closePop);
+        els.popBack.addEventListener("click", closePop);
+
+        els.popTypeBreak.addEventListener("click", () => setPopupType("break"));
+        els.popTypeQuiz.addEventListener("click", () => setPopupType("quiz"));
+        els.breakCoffeeEmoji.addEventListener("click", () => toggleBreakEmojiChoice(els.breakCoffeeEmoji));
+        els.breakSnackEmoji.addEventListener("click", () => toggleBreakEmojiChoice(els.breakSnackEmoji));
+
+        els.applyTitleBtn2.addEventListener("click", () => {
+            syncStateFromPopupFields();
+            applyTitlesForMode();
+            toast("Applied");
+            closePop();
+        });
+
+        els.resetTitleBtn2.addEventListener("click", () => {
+            state.breakTitle = "Break Time";
+            state.breakSubtitle = "Time for coffee and snack";
+            state.quizTitle = "Quiz Time";
+            state.quizSubtitle = "Focus and answer the questions";
+            els.breakDescInput.value = "Coffee and snack";
+            els.quizDescInput.value = "Focus & answer";
+            state.breakEmoji = "☕ 🍪";
+            state.quizEmoji = "📝";
+            syncPopupFieldsFromState();
+            applyTitlesForMode();
+            toast("Default");
+            saveNow();
+        });
+
+        ["input", "change"].forEach(ev => {
+            els.hours.addEventListener(ev, refreshPreview);
+            els.minutes.addEventListener(ev, refreshPreview);
+            els.seconds.addEventListener(ev, refreshPreview);
+        });
+
+        els.startBtn.addEventListener("click", startTimer);
+        els.pauseBtn.addEventListener("click", pauseTimer);
+        els.resumeBtn.addEventListener("click", resumeTimer);
+        els.resetBtn.addEventListener("click", resetTimer);
+        els.stopOvertimeBtn.addEventListener("click", stopOvertime);
+
+        els.repeatToggle.addEventListener("click", () => {
+            state.repeat = !state.repeat;
+            setToggle(els.repeatToggle, state.repeat);
+            toast(state.repeat ? "Auto-repeat ON" : "Auto-repeat OFF");
+            saveNow();
+        });
+
+        els.vibrateToggle.addEventListener("click", () => {
+            state.vibrate = !state.vibrate;
+            setToggle(els.vibrateToggle, state.vibrate);
+            if (state.vibrate && "vibrate" in navigator && typeof navigator.vibrate === "function") {
+                try {
+                    navigator.vibrate(80);
+                } catch {}
+            }
+            toast(state.vibrate ? "Vibrate ON" : "Vibrate OFF");
+            saveNow();
+        });
+
+        els.notifyToggle.addEventListener("click", async() => {
+            const next = !state.notify;
+            if (next) {
+                const ok = await ensureNotificationPermission();
+                if (!ok) {
+                    state.notify = false;
+                    setToggle(els.notifyToggle, false);
+                    saveNow();
+                    return;
+                }
+            }
+            state.notify = next;
+            setToggle(els.notifyToggle, state.notify);
+            toast(state.notify ? "Notifications ON" : "Notifications OFF");
+            saveNow();
+        });
+
+        // Overtime settings
+        els.overtimeAlarmToggle.addEventListener("click", () => {
+            state.overtimeAlarmEnabled = !state.overtimeAlarmEnabled;
+            setToggle(els.overtimeAlarmToggle, state.overtimeAlarmEnabled);
+            toast(state.overtimeAlarmEnabled ? "Overtime alarm ON" : "Overtime alarm OFF");
+            saveNow();
+        });
+
+        els.overtimeCounterToggle.addEventListener("click", () => {
+            state.overtimeCounterEnabled = !state.overtimeCounterEnabled;
+            setToggle(els.overtimeCounterToggle, state.overtimeCounterEnabled);
+            updateOvertimeDisplay();
+            toast(state.overtimeCounterEnabled ? "Overtime counter ON" : "Overtime counter OFF");
+            saveNow();
+        });
+
+        els.overtimeDuration.addEventListener("change", () => {
+            state.overtimeDuration = clampInt(els.overtimeDuration.value, 5, 60, 10);
+            els.overtimeDuration.value = state.overtimeDuration;
+            toast("Overtime duration updated");
+            saveNow();
+        });
+
+        els.muteBtn.addEventListener("click", () => {
+            state.muted = !state.muted;
+            els.muteBtn.textContent = state.muted ? "🔇" : "🔊";
+            toast(state.muted ? "Muted" : "Sound on");
+            saveNow();
+        });
+
+        els.soundSelect.addEventListener("change", () => {
+            state.sound = els.soundSelect.value;
+            toast("Sound updated");
+            saveNow();
+        });
+
+        els.volume.addEventListener("change", () => {
+            state.volume = clampInt(els.volume.value, 0, 100, 70);
+            els.volume.value = state.volume;
+            toast("Volume updated");
+            saveNow();
+        });
+
+        els.testSoundBtn.addEventListener("click", () => {
+            state.sound = els.soundSelect.value;
+            state.volume = clampInt(els.volume.value, 0, 100, 70);
+            playSound(state.sound);
+            toast("Test sound");
+            saveNow();
+        });
+
+        // Subtitle size live update
+        els.subtitleSize.addEventListener("input", () => {
+            state.subtitleSize = clampInt(els.subtitleSize.value, 10, 22, 13);
+            els.subtitleSize.value = state.subtitleSize;
+            applySubtitleSize();
+            saveNow();
+        });
+
+        els.subtitleSize.addEventListener("change", () => {
+            state.subtitleSize = clampInt(els.subtitleSize.value, 10, 22, 13);
+            els.subtitleSize.value = state.subtitleSize;
+            applySubtitleSize();
+            saveNow();
+        });
+
+        // Toggle live subtitle time updates
+        els.subTimeToggle.addEventListener("click", () => {
+            state.subtitleShowTime = !state.subtitleShowTime;
+            setToggle(els.subTimeToggle, state.subtitleShowTime);
+            if (!state.subtitleShowTime) {
+                if (state.subtitleBaseText) els.subtitle.textContent = state.subtitleBaseText;
+            } else {
+                state.subtitleBaseText = els.subtitle.textContent;
+                maybeUpdateSubtitleLive();
+            }
+            toast(state.subtitleShowTime ? "Subtitle time ON" : "Subtitle time OFF");
+            saveNow();
+        });
+
+        els.applyTitleBtn.addEventListener("click", () => {
+            applyTitlesForMode();
+            toast("Titles applied");
+            saveNow();
+        });
+
+        els.resetTitleBtn.addEventListener("click", () => {
+            if (state.mode === "break") {
+                state.breakTitle = "Break Time";
+                state.breakSubtitle = "Time for coffee and snack";
+                els.breakDescInput.value = "Coffee and snack";
+            } else {
+                state.quizTitle = "Quiz Time";
+                state.quizSubtitle = "Focus and answer the questions";
+                els.quizDescInput.value = "Focus & answer";
+            }
+            applyTitlesForMode();
+            toast("Default titles");
+            saveNow();
+        });
+
+        // Keyboard shortcuts
+        document.addEventListener("keydown", (e) => {
+            const tag = (e.target && e.target.tagName) ? e.target.tagName.toLowerCase() : "";
+            const typing = tag === "input" || tag === "textarea" || tag === "select";
+            if (typing) return;
+
+            if (e.key === "Escape") {
+                if (els.sheet.classList.contains("show")) closeSheet();
+                if (isFullscreen()) toggleFullscreen();
+                if (state.overtime) stopOvertime();
+                return;
+            }
+            if (e.key === " " || e.key === "Enter") {
+                e.preventDefault();
+                if (!state.running && !state.paused) startTimer();
+                else if (state.running) pauseTimer();
+                else if (state.paused) resumeTimer();
+            }
+            if (e.key === "r" || e.key === "R") {
+                e.preventDefault();
+                resetTimer();
+            }
+            if (e.key === "f" || e.key === "F") {
+                e.preventDefault();
+                toggleFullscreen();
+            }
+            if (e.key === "s" || e.key === "S") {
+                e.preventDefault();
+                openSheet();
+            }
+            // Overtime stop shortcut
+            if (e.key === "o" || e.key === "O") {
+                e.preventDefault();
+                if (state.overtime) stopOvertime();
+            }
+        });
+
+        window.addEventListener("beforeunload", saveNow);
+
+        /* Init */
+        loadSaved();
+
+        setToggle(els.repeatToggle, state.repeat);
+        setToggle(els.vibrateToggle, state.vibrate);
+        setToggle(els.notifyToggle, state.notify);
+        setToggle(els.overtimeAlarmToggle, state.overtimeAlarmEnabled);
+        setToggle(els.overtimeCounterToggle, state.overtimeCounterEnabled);
+        setToggle(els.subTimeToggle, state.subtitleShowTime);
+
+        els.muteBtn.textContent = state.muted ? "🔇" : "🔊";
+
+        applySubtitleSize();
+        setMode(state.mode);
+
+        // Apply titles and store base subtitle
+        applyTitlesForMode();
+        state.subtitleBaseText = els.subtitle.textContent;
+
+        refreshPreview();
+        setButtons("ready");
+        updateDisplay();
+        updateOvertimeDisplay();
+    </script>
+</body>
+
+</html>
