@@ -22,7 +22,20 @@ import {
   isSupportedScanFile,
 } from "../lib/ocr-utils";
 
-const autoOcrLanguages = "chi_sim+chi_tra+khm+eng";
+const ocrProfiles = [
+  {
+    id: "khmer",
+    imageKey: "ocrDataUrl",
+    label: "Khmer",
+    languages: "khm+eng",
+  },
+  {
+    id: "chinese",
+    imageKey: "binaryOcrDataUrl",
+    label: "Chinese",
+    languages: "chi_sim+chi_tra+eng",
+  },
+];
 
 function isPdfFile(file) {
   return file?.type === "application/pdf" || /\.pdf$/i.test(file?.name || "");
@@ -45,7 +58,11 @@ function getLoadedImageSize(image) {
   };
 }
 
-async function prepareOcrDataUrl(dataUrl) {
+function clampChannel(value) {
+  return Math.max(0, Math.min(255, Math.round(value)));
+}
+
+async function prepareOcrDataUrls(dataUrl) {
   const image = await dataUrlToLoadedImage(dataUrl);
   const { height, width } = getLoadedImageSize(image);
   const longestSide = Math.max(width, height);
@@ -67,23 +84,35 @@ async function prepareOcrDataUrl(dataUrl) {
 
   const imageData = context.getImageData(0, 0, canvas.width, canvas.height);
   const pixels = imageData.data;
+  const binaryPixels = new Uint8ClampedArray(pixels);
 
   for (let index = 0; index < pixels.length; index += 4) {
     const luminance =
       pixels[index] * 0.299 +
       pixels[index + 1] * 0.587 +
       pixels[index + 2] * 0.114;
-    const contrasted = (luminance - 128) * 1.38 + 128;
-    const value = contrasted < 188 ? 0 : 255;
+    const softValue = clampChannel((luminance - 128) * 1.16 + 128);
+    const binaryValue = softValue < 188 ? 0 : 255;
 
-    pixels[index] = value;
-    pixels[index + 1] = value;
-    pixels[index + 2] = value;
+    pixels[index] = softValue;
+    pixels[index + 1] = softValue;
+    pixels[index + 2] = softValue;
     pixels[index + 3] = 255;
+
+    binaryPixels[index] = binaryValue;
+    binaryPixels[index + 1] = binaryValue;
+    binaryPixels[index + 2] = binaryValue;
+    binaryPixels[index + 3] = 255;
   }
 
   context.putImageData(imageData, 0, 0);
-  return canvas.toDataURL("image/png");
+  const ocrDataUrl = canvas.toDataURL("image/png");
+
+  context.putImageData(new ImageData(binaryPixels, canvas.width, canvas.height), 0, 0);
+  return {
+    binaryOcrDataUrl: canvas.toDataURL("image/png"),
+    ocrDataUrl,
+  };
 }
 
 function formatCombinedText(results) {
@@ -97,6 +126,50 @@ function formatCombinedText(results) {
       return `Page ${result.pageNumber}\n${result.text}`;
     })
     .join("\n\n");
+}
+
+function countMatches(text, pattern) {
+  return text.match(pattern)?.length || 0;
+}
+
+function scoreOcrCandidate(profile, text, confidence) {
+  const normalizedConfidence = Number.isFinite(confidence) ? confidence : 0;
+  const khmerChars = countMatches(text, /[\u1780-\u17ff]/g);
+  const cjkChars = countMatches(text, /[\u3400-\u4dbf\u4e00-\u9fff\uf900-\ufaff]/g);
+  const latinChars = countMatches(text, /[A-Za-z]/g);
+  const digits = countMatches(text, /\d/g);
+  const noisySymbols = countMatches(text, /[#@{}[\]<>|~`^_=+\\]/g);
+  let score = normalizedConfidence + text.length * 0.04 + latinChars * 0.12 + digits * 0.08;
+
+  score -= noisySymbols * 5;
+
+  if (profile.id === "khmer") {
+    score += khmerChars * 10 - cjkChars * 10;
+    score += khmerChars ? 42 : 0;
+  }
+
+  if (profile.id === "chinese") {
+    score += cjkChars * 10 - khmerChars * 10;
+    score += cjkChars ? 42 : 0;
+  }
+
+  return score;
+}
+
+function buildBestResults(pages, candidatesByPage) {
+  return pages.map((page, index) => {
+    const candidates = candidatesByPage[index] || [];
+    const bestCandidate =
+      candidates.length > 0
+        ? [...candidates].sort((first, second) => second.score - first.score)[0]
+        : null;
+
+    return {
+      confidence: bestCandidate?.confidence ?? null,
+      pageNumber: page.pageNumber,
+      text: bestCandidate?.text || "",
+    };
+  });
 }
 
 async function renderPdfPages(file, { maxPages = Infinity, onProgress } = {}) {
@@ -129,13 +202,14 @@ async function renderPdfPages(file, { maxPages = Infinity, onProgress } = {}) {
       }).promise;
 
       const dataUrl = canvas.toDataURL("image/png");
+      const ocrDataUrls = await prepareOcrDataUrls(dataUrl);
 
       pages.push({
         dataUrl,
         height: canvas.height,
         id: `page-${pageNumber}`,
         label: `Page ${pageNumber}`,
-        ocrDataUrl: await prepareOcrDataUrl(dataUrl),
+        ...ocrDataUrls,
         pageNumber,
         width: canvas.width,
       });
@@ -186,6 +260,7 @@ export default function ScanTextTool() {
     const dataUrl = await readFileAsDataUrl(file);
     const image = await dataUrlToLoadedImage(dataUrl);
     const imageSize = getLoadedImageSize(image);
+    const ocrDataUrls = await prepareOcrDataUrls(dataUrl);
 
     return [
       {
@@ -193,7 +268,7 @@ export default function ScanTextTool() {
         height: imageSize.height,
         id: "image-1",
         label: file.name || "Image",
-        ocrDataUrl: await prepareOcrDataUrl(dataUrl),
+        ...ocrDataUrls,
         pageNumber: 1,
         width: imageSize.width,
       },
@@ -284,39 +359,63 @@ export default function ScanTextTool() {
       }
 
       const { createWorker } = await import("tesseract.js");
-      const nextResults = [];
+      const candidatesByPage = pages.map(() => []);
+      const failedProfiles = [];
 
-      worker = await createWorker(autoOcrLanguages, 1, {
-        logger: (message) => {
-          const progress = typeof message?.progress === "number" ? message.progress : 0;
-          setOcrProgress(progress);
-          setStatus(`OCR ${getOcrProgressMessage(message)}`);
-        },
-      });
-      await worker.setParameters({
-        preserve_interword_spaces: "1",
-      });
+      for (let profileIndex = 0; profileIndex < ocrProfiles.length; profileIndex += 1) {
+        const profile = ocrProfiles[profileIndex];
 
-      for (let index = 0; index < pages.length; index += 1) {
-        const page = pages[index];
+        try {
+          setStatus("Loading OCR data...");
+          worker = await createWorker(profile.languages, 1, {
+            logger: (message) => {
+              const progress = typeof message?.progress === "number" ? message.progress : 0;
+              const totalProgress = (profileIndex + progress) / ocrProfiles.length;
 
-        setActivePageIndex(index);
-        setStatus(`Scanning ${page.label}...`);
+              setOcrProgress(totalProgress);
+              setStatus(`OCR ${getOcrProgressMessage(message)}`);
+            },
+          });
+          await worker.setParameters({
+            preserve_interword_spaces: "1",
+          });
 
-        const {
-          data: { confidence, text },
-        } = await worker.recognize(page.ocrDataUrl || page.dataUrl);
-        const cleanText = text.trim();
+          for (let pageIndex = 0; pageIndex < pages.length; pageIndex += 1) {
+            const page = pages[pageIndex];
+            const imageForOcr = page[profile.imageKey] || page.ocrDataUrl || page.dataUrl;
 
-        nextResults.push({
-          confidence: Number.isFinite(confidence) ? Math.round(confidence) : null,
-          pageNumber: page.pageNumber,
-          text: cleanText,
-        });
-        setScanResults([...nextResults]);
+            setActivePageIndex(pageIndex);
+            setStatus(`Scanning ${page.label}...`);
+
+            const {
+              data: { confidence, text },
+            } = await worker.recognize(imageForOcr);
+            const cleanText = text.trim();
+
+            candidatesByPage[pageIndex].push({
+              confidence: Number.isFinite(confidence) ? Math.round(confidence) : null,
+              score: scoreOcrCandidate(profile, cleanText, confidence),
+              text: cleanText,
+            });
+            setScanResults(buildBestResults(pages, candidatesByPage));
+          }
+        } catch (error) {
+          failedProfiles.push(error);
+        } finally {
+          if (worker) {
+            await worker.terminate();
+            worker = null;
+          }
+        }
       }
 
+      const nextResults = buildBestResults(pages, candidatesByPage);
       const detectedText = formatCombinedText(nextResults);
+
+      if (!detectedText && failedProfiles.length === ocrProfiles.length) {
+        throw failedProfiles[0];
+      }
+
       const confidenceValues = nextResults
         .map((result) => result.confidence)
         .filter((confidence) => Number.isFinite(confidence));
