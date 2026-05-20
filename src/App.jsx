@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import {
   ArrowLeft,
+  BotMessageSquare,
   CheckSquare,
   ChevronRight,
   Clock3,
@@ -15,7 +16,9 @@ import ImageTools from "./components/ImageTools";
 import PdfTools from "./components/PdfTools";
 import QrStudio from "./components/QrStudio";
 import ScanTextTool from "./components/ScanTextTool";
+import SnaGptTool from "./components/SnaGptTool";
 import mamLogo from "./image/mam-logo.png";
+import snaGptLogo from "./image/sna-gpt.png";
 
 const categories = [
   {
@@ -61,6 +64,16 @@ const categories = [
     description: "Scan text from images, pasted screenshots, and PDFs.",
     icon: ScanTextIcon,
     tone: "green",
+    enabled: true,
+  },
+  {
+    id: "sna-gpt",
+    title: "SNA GPT",
+    tabTitle: "SNA GPT",
+    description: "Chat with your custom GPT assistant created by Song Veasna.",
+    icon: BotMessageSquare,
+    logo: snaGptLogo,
+    tone: "orange",
     enabled: true,
   },
   {
@@ -146,7 +159,11 @@ function CategoryCard({ category, onOpen }) {
     >
       <span className="corner-accent" aria-hidden="true" />
       <span className="category-icon" aria-hidden="true">
-        <Icon size={38} strokeWidth={1.9} />
+        {category.logo ? (
+          <img src={category.logo} alt="" />
+        ) : (
+          <Icon size={38} strokeWidth={1.9} />
+        )}
       </span>
       <span className="category-copy">
         <strong>{category.title}</strong>
@@ -247,8 +264,9 @@ function ToolView({ activeId, onBack }) {
       {activeId === "pdf" ? <PdfTools /> : null}
       {activeId === "image" ? <ImageTools /> : null}
       {activeId === "scan-text" ? <ScanTextTool /> : null}
+      {activeId === "sna-gpt" ? <SnaGptTool /> : null}
       {activeId === "comment" ? <CommentTool /> : null}
-      {activeId !== "timer" && activeId !== "qr" && activeId !== "pdf" && activeId !== "image" && activeId !== "scan-text" && activeId !== "comment" ? (
+      {activeId !== "timer" && activeId !== "qr" && activeId !== "pdf" && activeId !== "image" && activeId !== "scan-text" && activeId !== "sna-gpt" && activeId !== "comment" ? (
         <PlaceholderTool category={category} />
       ) : null}
     </section>
