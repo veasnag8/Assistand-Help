@@ -253,7 +253,9 @@ function ToolView({ activeId, onBack }) {
     () => getCategoryById(activeId) || categories[0],
     [activeId],
   );
-  const hideHeader = activeId === "comment" && getHashParams().get("view") === "screen";
+  const hideHeader =
+    activeId === "sna-gpt" ||
+    (activeId === "comment" && getHashParams().get("view") === "screen");
 
   return (
     <section className={`tool-view tool-view--${activeId}`}>
@@ -264,7 +266,7 @@ function ToolView({ activeId, onBack }) {
       {activeId === "pdf" ? <PdfTools /> : null}
       {activeId === "image" ? <ImageTools /> : null}
       {activeId === "scan-text" ? <ScanTextTool /> : null}
-      {activeId === "sna-gpt" ? <SnaGptTool /> : null}
+      {activeId === "sna-gpt" ? <SnaGptTool onBack={onBack} /> : null}
       {activeId === "comment" ? <CommentTool /> : null}
       {activeId !== "timer" && activeId !== "qr" && activeId !== "pdf" && activeId !== "image" && activeId !== "scan-text" && activeId !== "sna-gpt" && activeId !== "comment" ? (
         <PlaceholderTool category={category} />
@@ -306,7 +308,7 @@ export default function App() {
 
   return (
     <div className={`app-shell tool-${activeTool || "home"}`}>
-      <main className={`app-layout${activeTool ? " is-tool-view" : ""}`}>
+      <main className={`app-layout${activeTool ? ` is-tool-view is-${activeTool}-view` : ""}`}>
         {activeTool ? (
           <ToolView activeId={activeTool} onBack={() => setActiveTool(null)} />
         ) : (

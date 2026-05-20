@@ -2,7 +2,7 @@
 
 :root {
   color-scheme: light;
-  font-family: "Manrope", "Segoe UI", sans-serif;
+  font-family: "Manrope", "Segoe UI", "Segoe UI Emoji", "Apple Color Emoji", "Noto Color Emoji", sans-serif;
   --bg: #f7f9ff;
   --panel: rgba(255, 255, 255, 0.9);
   --panel-strong: rgba(255, 255, 255, 0.98);
@@ -120,6 +120,12 @@ img {
 .app-layout.is-tool-view {
   max-width: 1220px;
   padding: 10px 18px 12px;
+}
+
+.app-layout.is-sna-gpt-view {
+  max-width: none;
+  min-height: 100vh;
+  padding: 6px 10px 10px;
 }
 
 .app-shell.tool-timer .app-layout.is-tool-view {
@@ -1103,25 +1109,34 @@ img {
 }
 
 .tool-view--sna-gpt {
-  grid-template-rows: auto minmax(0, 1fr);
-  gap: 10px;
-  height: calc(100vh - 22px);
+  grid-template-rows: minmax(0, 1fr);
+  gap: 0;
+  height: calc(100vh - 16px);
   overflow: hidden;
+}
+
+.tool-view--sna-gpt .tool-header {
+  display: none;
+  width: 100%;
+  min-height: 48px;
+  margin: 0 auto;
 }
 
 .sna-gpt-tool {
   --sna-accent: #f97316;
   --sna-deep: #194a5f;
   --sna-soft: rgba(249, 115, 22, 0.1);
+  width: 100%;
   display: grid;
-  grid-template-columns: minmax(250px, 310px) minmax(0, 1fr);
-  gap: 12px;
+  grid-template-columns: minmax(82px, 230px) minmax(0, 1fr);
+  gap: 8px;
+  margin: 0 auto;
   min-height: 0;
   overflow: hidden;
 }
 
 .sna-gpt-tool.is-sidebar-collapsed {
-  grid-template-columns: 72px minmax(0, 1fr);
+  grid-template-columns: 58px minmax(0, 1fr);
 }
 
 .sna-sidebar,
@@ -1129,26 +1144,26 @@ img {
   min-width: 0;
   min-height: 0;
   border: 1px solid rgba(9, 16, 71, 0.08);
-  border-radius: 18px;
-  background: rgba(255, 255, 255, 0.82);
-  box-shadow: 0 18px 38px rgba(39, 45, 88, 0.1);
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.88);
+  box-shadow: 0 14px 30px rgba(39, 45, 88, 0.08);
 }
 
 .sna-sidebar {
   position: relative;
   display: grid;
   align-content: start;
-  gap: 12px;
-  padding: 12px;
+  gap: 8px;
+  padding: 8px;
 }
 
 .sna-sidebar-toggle {
   position: absolute;
-  top: 10px;
-  right: 10px;
+  top: 8px;
+  right: 8px;
   z-index: 2;
-  width: 30px;
-  height: 30px;
+  width: 28px;
+  height: 28px;
   display: inline-grid;
   place-items: center;
   border: 1px solid rgba(9, 16, 71, 0.1);
@@ -1176,7 +1191,7 @@ img {
 
 .sna-gpt-tool.is-sidebar-collapsed .sna-sidebar {
   justify-items: center;
-  padding: 12px 8px;
+  padding: 8px 6px;
 }
 
 .sna-gpt-tool.is-sidebar-collapsed .sna-sidebar-toggle {
@@ -1185,7 +1200,7 @@ img {
 }
 
 .sna-gpt-tool.is-sidebar-collapsed .sna-brand-panel {
-  width: 48px;
+  width: 44px;
   justify-content: center;
   padding: 6px;
 }
@@ -1196,14 +1211,14 @@ img {
 }
 
 .sna-gpt-tool.is-sidebar-collapsed .sna-brand-icon {
-  width: 36px;
-  height: 36px;
+  width: 32px;
+  height: 32px;
   border-radius: 12px;
 }
 
 .sna-brand-icon {
-  width: 54px;
-  height: 54px;
+  width: 50px;
+  height: 50px;
   flex: 0 0 auto;
   display: inline-grid;
   place-items: center;
@@ -1246,29 +1261,59 @@ img {
 }
 
 .sna-chat-panel {
+  position: relative;
   min-height: 0;
   display: grid;
   grid-template-rows: auto minmax(0, 1fr) auto auto;
   overflow: hidden;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.96), rgba(248, 250, 252, 0.92)),
+    #fff;
 }
 
 .sna-chat-header {
-  min-height: 58px;
+  min-height: 56px;
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 12px;
   border-bottom: 1px solid rgba(9, 16, 71, 0.08);
-  padding: 10px 14px;
+  padding: 8px 18px;
 }
 
-.sna-chat-header div:first-child {
+.sna-chat-title-row {
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.sna-chat-back {
+  flex: 0 0 auto;
+  width: 36px;
+  height: 36px;
+  display: inline-grid;
+  place-items: center;
+  border: 1px solid rgba(9, 16, 71, 0.1);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.88);
+  color: var(--ink);
+  padding: 0;
+}
+
+.sna-chat-back:hover {
+  background: rgba(249, 115, 22, 0.08);
+  border-color: rgba(249, 115, 22, 0.24);
+}
+
+.sna-chat-title {
+  min-width: 0;
   display: grid;
   gap: 3px;
 }
 
 .sna-chat-header strong {
-  font-size: 1rem;
+  font-size: 1.08rem;
 }
 
 .sna-chat-header span,
@@ -1292,23 +1337,25 @@ img {
   min-height: 0;
   display: grid;
   align-content: start;
-  gap: 12px;
+  gap: 18px;
   overflow-x: hidden;
   overflow-y: auto;
-  padding: 14px;
+  padding: 20px 24px 26px;
   scroll-behavior: smooth;
   scrollbar-gutter: stable;
 }
 
 .sna-message {
+  width: min(100%, 1120px);
   display: grid;
-  grid-template-columns: 36px minmax(0, 1fr);
-  gap: 9px;
+  grid-template-columns: 42px minmax(0, 1fr);
+  gap: 12px;
   align-items: start;
+  margin: 0 auto;
 }
 
 .sna-message.is-user {
-  grid-template-columns: minmax(0, 1fr) 36px;
+  grid-template-columns: minmax(0, 1fr) 42px;
 }
 
 .sna-message.is-user .sna-message-avatar {
@@ -1325,8 +1372,8 @@ img {
 }
 
 .sna-message-avatar {
-  width: 36px;
-  height: 36px;
+  width: 42px;
+  height: 42px;
   display: inline-grid;
   place-items: center;
   border-radius: 12px;
@@ -1338,16 +1385,20 @@ img {
 .sna-message-bubble {
   position: relative;
   width: fit-content;
-  max-width: min(760px, 100%);
+  max-width: min(1060px, 100%);
   display: grid;
-  gap: 7px;
+  gap: 10px;
   border: 1px solid rgba(9, 16, 71, 0.08);
-  border-radius: 14px;
+  border-radius: 16px;
   background:
     linear-gradient(135deg, rgba(249, 115, 22, 0.07), rgba(255, 255, 255, 0.86)),
     #fff;
-  padding: 10px 38px 11px 12px;
-  box-shadow: 0 12px 24px rgba(39, 45, 88, 0.08);
+  padding: 14px 46px 15px 16px;
+  box-shadow: 0 12px 24px rgba(39, 45, 88, 0.07);
+}
+
+.sna-message-bubble:has(.sna-code-block) {
+  width: min(1060px, 100%);
 }
 
 .sna-message.is-user .sna-message-top span,
@@ -1363,7 +1414,7 @@ img {
 
 .sna-message-top strong {
   color: var(--ink);
-  font-size: 0.8rem;
+  font-size: 0.84rem;
 }
 
 .sna-message-top span {
@@ -1373,18 +1424,191 @@ img {
 }
 
 .sna-message-text {
-  font-size: 0.92rem;
+  font-size: 0.94rem;
   overflow-wrap: anywhere;
   white-space: pre-wrap;
-  line-height: 1.48;
+  line-height: 1.56;
+}
+
+.sna-message-content {
+  min-width: 0;
+  display: grid;
+  gap: 9px;
+}
+
+.sna-attachment-list {
+  min-width: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+}
+
+.sna-attachment-chip {
+  max-width: min(100%, 320px);
+  min-height: 34px;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  overflow: hidden;
+  border: 1px solid rgba(9, 16, 71, 0.1);
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.76);
+  color: var(--ink);
+  padding: 0 9px;
+}
+
+.sna-attachment-chip span {
+  min-width: 0;
+  overflow: hidden;
+  font-size: 0.76rem;
+  font-weight: 800;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.sna-attachment-chip small {
+  flex: 0 0 auto;
+  color: var(--muted);
+  font-size: 0.68rem;
+  font-weight: 800;
+}
+
+.sna-attachment-chip button {
+  flex: 0 0 auto;
+  width: 22px;
+  height: 22px;
+  display: inline-grid;
+  place-items: center;
+  border: 0;
+  border-radius: 7px;
+  background: rgba(9, 16, 71, 0.07);
+  color: var(--muted);
+  padding: 0;
+}
+
+.sna-attachment-chip button:hover {
+  background: rgba(9, 16, 71, 0.12);
+  color: var(--ink);
+}
+
+.sna-message.is-user .sna-attachment-chip {
+  border-color: rgba(255, 255, 255, 0.18);
+  background: rgba(255, 255, 255, 0.11);
+  color: #fff;
+}
+
+.sna-message.is-user .sna-attachment-chip small,
+.sna-message.is-user .sna-attachment-chip button {
+  color: rgba(255, 255, 255, 0.78);
+}
+
+.sna-code-block {
+  min-width: 0;
+  overflow: hidden;
+  border: 1px solid rgba(148, 163, 184, 0.16);
+  border-radius: 16px;
+  background: #0d1117;
+  color: #f8fafc;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06);
+}
+
+.sna-code-header {
+  min-height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  background: #161b22;
+  padding: 0 12px 0 15px;
+}
+
+.sna-code-header span {
+  min-width: 0;
+  overflow: hidden;
+  color: #cbd5e1;
+  font-size: 0.78rem;
+  font-weight: 800;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.sna-code-copy {
+  flex: 0 0 auto;
+  min-height: 32px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.07);
+  color: #f8fafc;
+  padding: 0 10px;
+  font-size: 0.74rem;
+  font-weight: 800;
+}
+
+.sna-code-copy:hover {
+  background: rgba(255, 255, 255, 0.12);
+}
+
+.sna-code-block pre {
+  margin: 0;
+  overflow-x: auto;
+  padding: 18px 20px 20px;
+}
+
+.sna-code-block code {
+  display: block;
+  width: max-content;
+  min-width: 100%;
+  font-family: "Cascadia Code", "Consolas", "SFMono-Regular", "Segoe UI Emoji", "Apple Color Emoji", monospace;
+  font-size: 0.94rem;
+  line-height: 1.72;
+  tab-size: 2;
+  white-space: pre;
+}
+
+.token-keyword {
+  color: #ff7b72;
+}
+
+.token-string {
+  color: #a5d6ff;
+}
+
+.token-comment {
+  color: #8b949e;
+  font-style: italic;
+}
+
+.token-number,
+.token-literal {
+  color: #79c0ff;
+}
+
+.token-function {
+  color: #d2a8ff;
+}
+
+.token-builtin {
+  color: #ffa657;
+}
+
+.token-operator {
+  color: #ffdf5d;
+}
+
+.token-tag {
+  color: #7ee787;
 }
 
 .sna-copy-button {
   position: absolute;
-  top: 8px;
-  right: 8px;
-  width: 26px;
-  height: 26px;
+  top: 11px;
+  right: 11px;
+  width: 30px;
+  height: 30px;
   display: inline-grid;
   place-items: center;
   border: 1px solid rgba(9, 16, 71, 0.08);
@@ -1427,18 +1651,18 @@ img {
   gap: 7px;
   overflow-x: auto;
   border-top: 1px solid rgba(9, 16, 71, 0.06);
-  padding: 9px 14px 8px;
+  padding: 10px max(22px, calc((100% - 1120px) / 2)) 9px;
 }
 
 .sna-prompt-chip {
   flex: 0 0 auto;
-  min-height: 32px;
+  min-height: 30px;
   border: 1px solid rgba(249, 115, 22, 0.16);
   border-radius: 999px;
   background: rgba(255, 255, 255, 0.78);
   color: var(--ink);
-  padding: 0 12px;
-  font-size: 0.76rem;
+  padding: 0 11px;
+  font-size: 0.72rem;
   font-weight: 800;
 }
 
@@ -1453,24 +1677,90 @@ img {
 
 .sna-composer {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 42px;
-  gap: 9px;
+  grid-template-columns: minmax(0, 1fr) 48px;
+  gap: 10px;
   border-top: 1px solid rgba(9, 16, 71, 0.08);
-  padding: 11px 14px 14px;
+  padding: 12px max(22px, calc((100% - 1120px) / 2)) 15px;
+}
+
+.sna-composer-main {
+  min-width: 0;
+  display: grid;
+  gap: 8px;
+}
+
+.sna-composer-row {
+  min-width: 0;
+  display: grid;
+  grid-template-columns: 48px minmax(0, 1fr);
+  gap: 10px;
+}
+
+.sna-attach-button {
+  width: 48px;
+  height: 48px;
+  display: inline-grid;
+  place-items: center;
+  border: 1px solid rgba(22, 49, 69, 0.12);
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.86);
+  color: var(--muted);
+  padding: 0;
+}
+
+.sna-attach-button:hover {
+  border-color: rgba(249, 115, 22, 0.28);
+  background: rgba(249, 115, 22, 0.08);
+  color: var(--ink);
+}
+
+.sna-attach-button:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
 }
 
 .sna-composer textarea {
   width: 100%;
   max-height: 150px;
-  min-height: 42px;
+  min-height: 48px;
   resize: vertical;
   border: 1px solid rgba(22, 49, 69, 0.12);
-  border-radius: 14px;
+  border-radius: 16px;
   background: rgba(255, 255, 255, 0.9);
-  padding: 10px 12px;
+  padding: 13px 15px;
   font: inherit;
-  font-size: 0.92rem;
-  line-height: 1.4;
+  font-size: 0.94rem;
+  line-height: 1.45;
+}
+
+.sna-drop-overlay {
+  position: absolute;
+  inset: 62px 0 0;
+  z-index: 6;
+  display: none;
+  place-items: center;
+  background: rgba(248, 250, 252, 0.78);
+  backdrop-filter: blur(4px);
+  pointer-events: none;
+}
+
+.sna-drop-overlay div {
+  min-width: min(420px, calc(100% - 40px));
+  min-height: 130px;
+  display: grid;
+  place-items: center;
+  align-content: center;
+  gap: 10px;
+  border: 2px dashed rgba(249, 115, 22, 0.42);
+  border-radius: 20px;
+  background: rgba(255, 255, 255, 0.88);
+  color: #194a5f;
+  font-weight: 900;
+  box-shadow: 0 18px 36px rgba(39, 45, 88, 0.14);
+}
+
+.sna-gpt-tool.is-dragging-file .sna-drop-overlay {
+  display: grid;
 }
 
 .sna-composer textarea:focus {
@@ -1480,12 +1770,12 @@ img {
 }
 
 .sna-send-button {
-  width: 42px;
-  height: 42px;
+  width: 48px;
+  height: 48px;
   display: inline-grid;
   place-items: center;
   border: 0;
-  border-radius: 14px;
+  border-radius: 16px;
   background: linear-gradient(135deg, #f97316, #194a5f);
   color: #fff;
   padding: 0;
@@ -2297,13 +2587,13 @@ img {
   }
 
   .sna-gpt-tool {
-    grid-template-columns: 1fr;
-    grid-template-rows: auto minmax(0, 1fr);
+    grid-template-columns: minmax(72px, 210px) minmax(0, 1fr);
+    grid-template-rows: minmax(0, 1fr);
   }
 
   .sna-gpt-tool.is-sidebar-collapsed {
-    grid-template-columns: 1fr;
-    grid-template-rows: auto minmax(0, 1fr);
+    grid-template-columns: 58px minmax(0, 1fr);
+    grid-template-rows: minmax(0, 1fr);
   }
 
   .sna-sidebar {
@@ -2319,6 +2609,10 @@ img {
   .sna-side-actions {
     grid-column: 1 / -1;
     grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .sna-gpt-tool.is-sidebar-collapsed .sna-side-actions {
+    display: none;
   }
 
   .comment-stage {
@@ -2341,6 +2635,10 @@ img {
 
   .app-layout.is-tool-view {
     padding: 10px;
+  }
+
+  .app-layout.is-sna-gpt-view {
+    padding: 6px;
   }
 
   .dashboard {
@@ -2409,11 +2707,16 @@ img {
   }
 
   .sna-gpt-tool {
+    grid-template-columns: 1fr;
     min-height: 0;
   }
 
-  .sna-sidebar {
+  .sna-gpt-tool.is-sidebar-collapsed {
     grid-template-columns: 1fr;
+  }
+
+  .sna-sidebar {
+    display: none;
   }
 
   .sna-brand-panel {
@@ -2429,8 +2732,17 @@ img {
   }
 
   .sna-chat-header {
-    align-items: flex-start;
-    flex-direction: column;
+    align-items: center;
+    flex-direction: row;
+    padding: 8px 10px;
+  }
+
+  .sna-chat-title-row {
+    min-width: 0;
+  }
+
+  .sna-status {
+    flex-shrink: 0;
   }
 
   .sna-message-list {

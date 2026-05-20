@@ -1,18 +1,37 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
+  ArrowLeft,
+  Check,
   ChevronLeft,
   ChevronRight,
   Copy,
+  FileSpreadsheet,
+  FileText,
+  Image as ImageIcon,
+  Paperclip,
   RefreshCw,
   Send,
   Trash2,
   UserRound,
+  X,
 } from "lucide-react";
+import { readFileAsDataUrl } from "../lib/file-utils";
+import {
+  formatFileSize,
+  getClipboardImageFile,
+} from "../lib/ocr-utils";
 import snaGptLogo from "../image/sna-gpt.png";
 
 const snaGptEndpointPath = "/.netlify/functions/sna-gpt";
 const chatStorageKey = "sna-gpt-chat-v1";
-const sidebarStorageKey = "sna-gpt-sidebar-collapsed";
+const sidebarStorageKey = "sna-gpt-sidebar-collapsed-v2";
+const publicModelName = "SNA 10.0 Pluse";
+const maxAttachments = 6;
+const maxBinaryFileBytes = 4 * 1024 * 1024;
+const maxTextFileBytes = 1.2 * 1024 * 1024;
+const maxTextAttachmentLength = 260000;
+const supportedAttachmentTypes =
+  "image/*,application/pdf,.pdf,.docx,.txt,.csv,.md,.json,.html,.xml,.log";
 
 const starterPrompts = [
   "Who created you?",
@@ -20,12 +39,157 @@ const starterPrompts = [
   "Translate this text to Khmer.",
 ];
 
-function createMessage(role, content) {
+const languageAliases = {
+  bash: "bash",
+  css: "css",
+  html: "html",
+  js: "javascript",
+  json: "json",
+  jsx: "javascript",
+  py: "python",
+  python: "python",
+  sh: "bash",
+  shell: "bash",
+  ts: "typescript",
+  tsx: "typescript",
+  xml: "html",
+};
+
+const commonKeywords = [
+  "break",
+  "case",
+  "catch",
+  "class",
+  "const",
+  "continue",
+  "default",
+  "delete",
+  "do",
+  "else",
+  "export",
+  "extends",
+  "finally",
+  "for",
+  "from",
+  "function",
+  "if",
+  "import",
+  "in",
+  "instanceof",
+  "let",
+  "new",
+  "return",
+  "static",
+  "switch",
+  "this",
+  "throw",
+  "try",
+  "typeof",
+  "var",
+  "void",
+  "while",
+];
+
+const languageKeywords = {
+  bash: [
+    "case",
+    "do",
+    "done",
+    "elif",
+    "else",
+    "esac",
+    "fi",
+    "for",
+    "function",
+    "if",
+    "in",
+    "then",
+    "until",
+    "while",
+  ],
+  python: [
+    "and",
+    "as",
+    "assert",
+    "async",
+    "await",
+    "break",
+    "class",
+    "continue",
+    "def",
+    "del",
+    "elif",
+    "else",
+    "except",
+    "finally",
+    "for",
+    "from",
+    "global",
+    "if",
+    "import",
+    "in",
+    "is",
+    "lambda",
+    "nonlocal",
+    "not",
+    "or",
+    "pass",
+    "raise",
+    "return",
+    "try",
+    "while",
+    "with",
+    "yield",
+  ],
+  typescript: [
+    "abstract",
+    "as",
+    "enum",
+    "implements",
+    "interface",
+    "namespace",
+    "private",
+    "protected",
+    "public",
+    "readonly",
+    "type",
+  ],
+};
+
+const builtinWords = [
+  "Array",
+  "Boolean",
+  "Date",
+  "Error",
+  "JSON",
+  "Math",
+  "Object",
+  "Promise",
+  "String",
+  "console",
+  "dict",
+  "fetch",
+  "int",
+  "len",
+  "list",
+  "print",
+  "range",
+  "set",
+  "str",
+];
+
+const literals = ["False", "None", "True", "false", "null", "true"];
+
+const codeTokenPattern =
+  /\/\*[\s\S]*?\*\/|\/\/[^\n]*|#[^\n]*|'''[\s\S]*?'''|"""[\s\S]*?"""|`(?:\\.|[^`\\])*`|'(?:\\.|[^'\\])*'|"(?:\\.|[^"\\])*"|<\/?[A-Za-z][^>\n]*?>|\b[A-Za-z_$][\w$-]*(?=\s*\()|\b[A-Za-z_$][\w$-]*\b|\b\d+(?:\.\d+)?\b|[{}()[\].,;:+\-*/%=<>!&|^~?]+/g;
+
+function createMessage(role, content, attachments = []) {
   const id = window.crypto?.randomUUID
     ? window.crypto.randomUUID()
     : `${Date.now()}-${Math.random().toString(36).slice(2)}`;
 
   return {
+    attachments,
     content,
     createdAt: new Date().toISOString(),
     id,
@@ -45,7 +209,13 @@ function loadStoredMessages() {
     const parsed = JSON.parse(window.localStorage.getItem(chatStorageKey) || "[]");
 
     if (Array.isArray(parsed) && parsed.length) {
-      return parsed.filter((message) => message?.role && message?.content).slice(-40);
+      return parsed
+        .filter((message) => message?.role && message?.content)
+        .map((message) => ({
+          ...message,
+          attachments: Array.isArray(message.attachments) ? message.attachments : [],
+        }))
+        .slice(-40);
     }
   } catch {
     // Fall back to the welcome message.
@@ -54,8 +224,25 @@ function loadStoredMessages() {
   return [createWelcomeMessage()];
 }
 
+function sanitizeAttachmentForStorage(attachment) {
+  return {
+    id: attachment.id,
+    kind: attachment.kind,
+    mimeType: attachment.mimeType,
+    name: attachment.name,
+    size: attachment.size,
+  };
+}
+
+function sanitizeMessageForStorage(message) {
+  return {
+    ...message,
+    attachments: (message.attachments || []).map(sanitizeAttachmentForStorage),
+  };
+}
+
 function loadSidebarCollapsed() {
-  return window.localStorage.getItem(sidebarStorageKey) === "true";
+  return window.localStorage.getItem(sidebarStorageKey) !== "false";
 }
 
 function getSnaGptEndpoint() {
@@ -93,6 +280,14 @@ async function sendSnaGptMessage(messages, signal) {
   const response = await fetch(getSnaGptEndpoint(), {
     body: JSON.stringify({
       messages: messages.map((message) => ({
+        attachments: (message.attachments || []).map((attachment) => ({
+          data: attachment.data,
+          kind: attachment.kind,
+          mimeType: attachment.mimeType,
+          name: attachment.name,
+          size: attachment.size,
+          text: attachment.text,
+        })),
         content: message.content,
         role: message.role,
       })),
@@ -112,6 +307,189 @@ async function sendSnaGptMessage(messages, signal) {
   return result;
 }
 
+function readFileAsText(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+
+    reader.onload = () => resolve(String(reader.result || ""));
+    reader.onerror = () => reject(new Error("Could not read the selected file."));
+    reader.readAsText(file);
+  });
+}
+
+function dataUrlToBase64(dataUrl) {
+  return String(dataUrl).split(",")[1] || "";
+}
+
+function getFileExtension(name) {
+  return (name || "").split(".").pop()?.toLowerCase() || "";
+}
+
+function getAttachmentKind(file) {
+  const extension = getFileExtension(file.name);
+  const mimeType = file.type || "";
+
+  if (mimeType.startsWith("image/") || /^(png|jpe?g|webp|bmp|gif|tiff?)$/.test(extension)) {
+    return "image";
+  }
+
+  if (mimeType === "application/pdf" || extension === "pdf") {
+    return "pdf";
+  }
+
+  if (
+    mimeType === "application/vnd.openxmlformats-officedocument.wordprocessingml.document" ||
+    extension === "docx"
+  ) {
+    return "docx";
+  }
+
+  if (
+    mimeType.startsWith("text/") ||
+    ["csv", "html", "json", "log", "md", "txt", "xml"].includes(extension)
+  ) {
+    return extension === "csv" ? "csv" : "text";
+  }
+
+  return "unknown";
+}
+
+function getAttachmentMimeType(file, kind) {
+  if (file.type) {
+    return file.type;
+  }
+
+  if (kind === "pdf") return "application/pdf";
+  if (kind === "docx") return "application/vnd.openxmlformats-officedocument.wordprocessingml.document";
+  if (kind === "csv") return "text/csv";
+  if (kind === "image") return "image/png";
+  return "text/plain";
+}
+
+function makeAttachmentId(file) {
+  const randomPart = window.crypto?.randomUUID
+    ? window.crypto.randomUUID()
+    : Math.random().toString(36).slice(2);
+
+  return `${file.name || "file"}-${file.size}-${randomPart}`;
+}
+
+function canvasToBlob(canvas, type, quality) {
+  return new Promise((resolve, reject) => {
+    canvas.toBlob((blob) => {
+      if (blob) {
+        resolve(blob);
+      } else {
+        reject(new Error("Could not prepare the image attachment."));
+      }
+    }, type, quality);
+  });
+}
+
+function loadDataUrlImage(dataUrl) {
+  return new Promise((resolve, reject) => {
+    const image = new Image();
+
+    image.onload = () => resolve(image);
+    image.onerror = () => reject(new Error("Could not open the image attachment."));
+    image.src = dataUrl;
+  });
+}
+
+async function prepareImageData(file) {
+  const sourceDataUrl = await readFileAsDataUrl(file);
+
+  if (file.size <= maxBinaryFileBytes) {
+    return {
+      data: dataUrlToBase64(sourceDataUrl),
+      mimeType: file.type || "image/png",
+    };
+  }
+
+  const image = await loadDataUrlImage(sourceDataUrl);
+  const width = image.naturalWidth || image.width || 1;
+  const height = image.naturalHeight || image.height || 1;
+  const scale = Math.min(1, 1800 / Math.max(width, height));
+  const canvas = document.createElement("canvas");
+  const context = canvas.getContext("2d");
+
+  if (!context) {
+    throw new Error("Could not prepare the image attachment.");
+  }
+
+  canvas.width = Math.max(1, Math.round(width * scale));
+  canvas.height = Math.max(1, Math.round(height * scale));
+  context.fillStyle = "#ffffff";
+  context.fillRect(0, 0, canvas.width, canvas.height);
+  context.drawImage(image, 0, 0, canvas.width, canvas.height);
+
+  const compressedBlob = await canvasToBlob(canvas, "image/jpeg", 0.86);
+
+  if (compressedBlob.size > maxBinaryFileBytes) {
+    throw new Error(`${file.name} is too large. Use an image under ${formatFileSize(maxBinaryFileBytes)}.`);
+  }
+
+  const compressedDataUrl = await readFileAsDataUrl(
+    new File([compressedBlob], file.name.replace(/\.[^.]+$/, ".jpg"), {
+      type: "image/jpeg",
+    }),
+  );
+
+  return {
+    data: dataUrlToBase64(compressedDataUrl),
+    mimeType: "image/jpeg",
+  };
+}
+
+async function prepareAttachment(file) {
+  const kind = getAttachmentKind(file);
+  const mimeType = getAttachmentMimeType(file, kind);
+  const base = {
+    id: makeAttachmentId(file),
+    kind,
+    mimeType,
+    name: file.name || "attachment",
+    size: file.size || 0,
+  };
+
+  if (kind === "unknown") {
+    throw new Error(`${file.name} is not supported.`);
+  }
+
+  if (kind === "text" || kind === "csv") {
+    if (file.size > maxTextFileBytes) {
+      throw new Error(`${file.name} is too large. Use a text/CSV file under ${formatFileSize(maxTextFileBytes)}.`);
+    }
+
+    return {
+      ...base,
+      text: (await readFileAsText(file)).slice(0, maxTextAttachmentLength),
+    };
+  }
+
+  if (kind === "image") {
+    return {
+      ...base,
+      ...(await prepareImageData(file)),
+    };
+  }
+
+  if (file.size > maxBinaryFileBytes) {
+    throw new Error(`${file.name} is too large. Use a file under ${formatFileSize(maxBinaryFileBytes)}.`);
+  }
+
+  return {
+    ...base,
+    data: dataUrlToBase64(await readFileAsDataUrl(file)),
+  };
+}
+
+function getAttachmentIcon(kind) {
+  if (kind === "image") return ImageIcon;
+  if (kind === "csv") return FileSpreadsheet;
+  return FileText;
+}
+
 function formatTime(value) {
   return new Intl.DateTimeFormat(undefined, {
     hour: "2-digit",
@@ -119,8 +497,208 @@ function formatTime(value) {
   }).format(new Date(value));
 }
 
+function parseMessageParts(content) {
+  const parts = [];
+  const fencePattern = /```([^\n`]*)\n?([\s\S]*?)(?:```|$)/g;
+  let lastIndex = 0;
+  let match;
+
+  while ((match = fencePattern.exec(content)) !== null) {
+    const [block, rawLanguage = "", rawCode = ""] = match;
+    const text = content.slice(lastIndex, match.index);
+
+    if (text) {
+      parts.push({
+        content: text,
+        type: "text",
+      });
+    }
+
+    parts.push({
+      code: rawCode.replace(/\n$/, ""),
+      language: rawLanguage.trim(),
+      type: "code",
+    });
+
+    lastIndex = match.index + block.length;
+  }
+
+  const trailingText = content.slice(lastIndex);
+
+  if (trailingText || !parts.length) {
+    parts.push({
+      content: trailingText || content,
+      type: "text",
+    });
+  }
+
+  return parts;
+}
+
+function getSyntaxLanguage(language) {
+  const normalized = String(language || "")
+    .trim()
+    .toLowerCase()
+    .replace(/^\./, "");
+
+  return languageAliases[normalized] || normalized || "text";
+}
+
+function getTokenClass(token, code, tokenEnd, syntaxSets) {
+  if (/^(\/\*|\/\/|#)/.test(token)) {
+    return "token-comment";
+  }
+
+  if (/^(['"`])/.test(token)) {
+    return "token-string";
+  }
+
+  if (/^<\/?[A-Za-z]/.test(token)) {
+    return "token-tag";
+  }
+
+  if (/^\d/.test(token)) {
+    return "token-number";
+  }
+
+  if (syntaxSets.literals.has(token)) {
+    return "token-literal";
+  }
+
+  if (syntaxSets.keywords.has(token)) {
+    return "token-keyword";
+  }
+
+  if (syntaxSets.builtins.has(token)) {
+    return "token-builtin";
+  }
+
+  if (
+    /^[A-Za-z_$][\w$-]*$/.test(token) &&
+    code.slice(tokenEnd).trimStart().startsWith("(")
+  ) {
+    return "token-function";
+  }
+
+  if (/^[{}()[\].,;:+\-*/%=<>!&|^~?]+$/.test(token)) {
+    return "token-operator";
+  }
+
+  return "";
+}
+
+function highlightCode(code, language) {
+  const syntaxLanguage = getSyntaxLanguage(language);
+  const syntaxSets = {
+    builtins: new Set(builtinWords),
+    keywords: new Set([
+      ...commonKeywords,
+      ...(languageKeywords[syntaxLanguage] || []),
+    ]),
+    literals: new Set(literals),
+  };
+  const fragments = [];
+  let lastIndex = 0;
+  let match;
+
+  codeTokenPattern.lastIndex = 0;
+
+  while ((match = codeTokenPattern.exec(code)) !== null) {
+    const token = match[0];
+    const tokenClass = getTokenClass(
+      token,
+      code,
+      match.index + token.length,
+      syntaxSets,
+    );
+
+    if (match.index > lastIndex) {
+      fragments.push(code.slice(lastIndex, match.index));
+    }
+
+    fragments.push(
+      tokenClass ? (
+        <span className={tokenClass} key={`${match.index}-${token}`}>
+          {token}
+        </span>
+      ) : (
+        token
+      ),
+    );
+
+    lastIndex = match.index + token.length;
+  }
+
+  if (lastIndex < code.length) {
+    fragments.push(code.slice(lastIndex));
+  }
+
+  return fragments;
+}
+
+function CodeBlock({ code, language, onCopy }) {
+  const [copied, setCopied] = useState(false);
+  const label = language || "Code";
+
+  async function handleCopy() {
+    const didCopy = await onCopy(code, "Code copied.");
+
+    if (didCopy) {
+      setCopied(true);
+      window.setTimeout(() => setCopied(false), 1400);
+    }
+  }
+
+  return (
+    <div className="sna-code-block">
+      <div className="sna-code-header">
+        <span>{label}</span>
+        <button
+          className="sna-code-copy"
+          type="button"
+          onClick={handleCopy}
+          aria-label={`Copy ${label} code`}
+          title="Copy code"
+        >
+          {copied ? (
+            <Check size={14} strokeWidth={2.4} />
+          ) : (
+            <Copy size={14} strokeWidth={2.2} />
+          )}
+          <span>{copied ? "Copied" : "Copy code"}</span>
+        </button>
+      </div>
+      <pre>
+        <code>{highlightCode(code, language)}</code>
+      </pre>
+    </div>
+  );
+}
+
+function MessageContent({ content, onCopy }) {
+  return (
+    <div className="sna-message-content">
+      {parseMessageParts(content).map((part, index) => (
+        part.type === "code" ? (
+          <CodeBlock
+            code={part.code}
+            key={`${part.type}-${index}`}
+            language={part.language}
+            onCopy={onCopy}
+          />
+        ) : (
+          <div className="sna-message-text" key={`${part.type}-${index}`}>
+            {part.content}
+          </div>
+        )
+      ))}
+    </div>
+  );
+}
+
 function ChatMessage({ message, onCopy }) {
   const isUser = message.role === "user";
+  const attachments = message.attachments || [];
 
   return (
     <article className={`sna-message ${isUser ? "is-user" : "is-assistant"}`}>
@@ -136,7 +714,10 @@ function ChatMessage({ message, onCopy }) {
           <strong>{isUser ? "You" : "SNA GPT"}</strong>
           <span>{formatTime(message.createdAt)}</span>
         </div>
-        <div className="sna-message-text">{message.content}</div>
+        {attachments.length ? (
+          <AttachmentList attachments={attachments} />
+        ) : null}
+        <MessageContent content={message.content} onCopy={onCopy} />
         {!isUser ? (
           <button
             className="sna-copy-button"
@@ -153,24 +734,63 @@ function ChatMessage({ message, onCopy }) {
   );
 }
 
-export default function SnaGptTool() {
+function AttachmentList({ attachments, onRemove }) {
+  return (
+    <div className="sna-attachment-list">
+      {attachments.map((attachment) => {
+        const Icon = getAttachmentIcon(attachment.kind);
+
+        return (
+          <div className="sna-attachment-chip" key={attachment.id || attachment.name}>
+            <Icon size={16} strokeWidth={2.2} />
+            <span>{attachment.name}</span>
+            <small>{formatFileSize(attachment.size)}</small>
+            {onRemove ? (
+              <button
+                type="button"
+                onClick={() => onRemove(attachment.id)}
+                aria-label={`Remove ${attachment.name}`}
+                title="Remove"
+              >
+                <X size={14} strokeWidth={2.3} />
+              </button>
+            ) : null}
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+export default function SnaGptTool({ onBack }) {
   const [messages, setMessages] = useState(loadStoredMessages);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(loadSidebarCollapsed);
   const [draft, setDraft] = useState("");
+  const [attachments, setAttachments] = useState([]);
+  const [dragActive, setDragActive] = useState(false);
   const [status, setStatus] = useState("Ready.");
   const [busy, setBusy] = useState(false);
-  const [model, setModel] = useState("SNA GPT");
+  const [model, setModel] = useState(publicModelName);
+  const fileInputRef = useRef(null);
   const scrollRef = useRef(null);
   const requestRef = useRef(null);
 
-  const canSend = draft.trim().length > 0 && !busy;
+  const canSend = (draft.trim().length > 0 || attachments.length > 0) && !busy;
   const latestAssistantMessage = useMemo(
     () => [...messages].reverse().find((message) => message.role === "assistant"),
     [messages],
   );
+  const showStarterPrompts =
+    !busy &&
+    messages.length === 1 &&
+    messages[0]?.role === "assistant" &&
+    !messages[0]?.attachments?.length;
 
   useEffect(() => {
-    window.localStorage.setItem(chatStorageKey, JSON.stringify(messages.slice(-40)));
+    window.localStorage.setItem(
+      chatStorageKey,
+      JSON.stringify(messages.slice(-40).map(sanitizeMessageForStorage)),
+    );
   }, [messages]);
 
   useEffect(() => {
@@ -186,30 +806,89 @@ export default function SnaGptTool() {
 
   useEffect(() => () => requestRef.current?.abort(), []);
 
+  useEffect(() => {
+    function handlePaste(event) {
+      if (busy) {
+        return;
+      }
+
+      const pastedFile = getClipboardImageFile(event.clipboardData);
+
+      if (!pastedFile) {
+        return;
+      }
+
+      event.preventDefault();
+      addFiles([pastedFile]);
+    }
+
+    window.addEventListener("paste", handlePaste);
+    return () => window.removeEventListener("paste", handlePaste);
+  }, [busy, attachments]);
+
   function clearChat() {
     requestRef.current?.abort();
     setBusy(false);
+    setAttachments([]);
     setMessages([createWelcomeMessage()]);
     setStatus("Ready.");
   }
 
-  async function copyText(text) {
+  async function copyText(text, successMessage = "Copied.") {
     try {
       await navigator.clipboard.writeText(text);
-      setStatus("Copied.");
+      setStatus(successMessage);
+      return true;
     } catch {
       setStatus("Could not copy.");
+      return false;
     }
   }
 
-  async function submitMessage(text = draft) {
-    const content = text.trim();
+  async function addFiles(files) {
+    const incomingFiles = Array.from(files || []).filter(Boolean);
 
-    if (!content || busy) {
+    if (!incomingFiles.length) {
       return;
     }
 
-    const userMessage = createMessage("user", content);
+    const remainingSlots = maxAttachments - attachments.length;
+
+    if (remainingSlots <= 0) {
+      setStatus(`Maximum ${maxAttachments} files per message.`);
+      return;
+    }
+
+    setStatus("Preparing attachment...");
+
+    try {
+      const prepared = [];
+
+      for (const file of incomingFiles.slice(0, remainingSlots)) {
+        prepared.push(await prepareAttachment(file));
+      }
+
+      setAttachments((current) => [...current, ...prepared].slice(0, maxAttachments));
+      setStatus(`${prepared.length} file${prepared.length === 1 ? "" : "s"} attached.`);
+    } catch (error) {
+      setStatus(error?.message || "Could not attach that file.");
+    }
+  }
+
+  function removeAttachment(id) {
+    setAttachments((current) => current.filter((attachment) => attachment.id !== id));
+  }
+
+  async function submitMessage(text = draft) {
+    const rawContent = text.trim();
+
+    if ((!rawContent && !attachments.length) || busy) {
+      return;
+    }
+
+    const content = rawContent || "Analyze the attached file(s).";
+    const messageAttachments = attachments;
+    const userMessage = createMessage("user", content, messageAttachments);
     const nextMessages = [...messages, userMessage];
     const controller = new AbortController();
 
@@ -218,6 +897,7 @@ export default function SnaGptTool() {
 
     setMessages(nextMessages);
     setDraft("");
+    setAttachments([]);
     setBusy(true);
     setStatus("Thinking...");
 
@@ -226,7 +906,7 @@ export default function SnaGptTool() {
       const assistantMessage = createMessage("assistant", result.reply || "SNA GPT did not return a response.");
 
       setMessages([...nextMessages, assistantMessage]);
-      setModel(result.model || "SNA GPT");
+      setModel(result.model || publicModelName);
       setStatus("Ready.");
     } catch (error) {
       if (error?.name === "AbortError") {
@@ -257,10 +937,34 @@ export default function SnaGptTool() {
     }
   }
 
+  function handleDragOver(event) {
+    if (!Array.from(event.dataTransfer?.types || []).includes("Files")) {
+      return;
+    }
+
+    event.preventDefault();
+    setDragActive(true);
+  }
+
+  function handleDragLeave(event) {
+    if (!event.relatedTarget || !event.currentTarget.contains(event.relatedTarget)) {
+      setDragActive(false);
+    }
+  }
+
+  function handleDrop(event) {
+    event.preventDefault();
+    setDragActive(false);
+    addFiles(event.dataTransfer.files);
+  }
+
   return (
     <section
-      className={`sna-gpt-tool${sidebarCollapsed ? " is-sidebar-collapsed" : ""}`}
+      className={`sna-gpt-tool${sidebarCollapsed ? " is-sidebar-collapsed" : ""}${dragActive ? " is-dragging-file" : ""}`}
       aria-labelledby="sna-gpt-title"
+      onDragLeave={handleDragLeave}
+      onDragOver={handleDragOver}
+      onDrop={handleDrop}
     >
       <aside className="sna-sidebar">
         <button
@@ -308,9 +1012,20 @@ export default function SnaGptTool() {
 
       <div className="sna-chat-panel">
         <header className="sna-chat-header">
-          <div>
-            <strong>SNA GPT Chat</strong>
-            <span>{model}</span>
+          <div className="sna-chat-title-row">
+            <button
+              className="sna-chat-back"
+              type="button"
+              onClick={onBack}
+              aria-label="Back to categories"
+              title="Main Categories"
+            >
+              <ArrowLeft size={18} strokeWidth={2.4} />
+            </button>
+            <div className="sna-chat-title">
+              <strong>SNA GPT Chat</strong>
+              <span>{model}</span>
+            </div>
           </div>
           <div className="sna-status" role="status">
             {busy ? <RefreshCw size={15} strokeWidth={2.2} /> : null}
@@ -336,34 +1051,70 @@ export default function SnaGptTool() {
           ) : null}
         </div>
 
-        <div className="sna-prompt-strip">
-          {starterPrompts.map((prompt) => (
-            <button
-              className="sna-prompt-chip"
-              disabled={busy}
-              key={prompt}
-              type="button"
-              onClick={() => submitMessage(prompt)}
-            >
-              {prompt}
-            </button>
-          ))}
-        </div>
+        {showStarterPrompts ? (
+          <div className="sna-prompt-strip">
+            {starterPrompts.map((prompt) => (
+              <button
+                className="sna-prompt-chip"
+                disabled={busy}
+                key={prompt}
+                type="button"
+                onClick={() => submitMessage(prompt)}
+              >
+                {prompt}
+              </button>
+            ))}
+          </div>
+        ) : null}
 
         <form className="sna-composer" onSubmit={handleSubmit}>
-          <textarea
-            aria-label="Message SNA GPT"
-            maxLength={6000}
-            onChange={(event) => setDraft(event.target.value)}
-            onKeyDown={handleKeyDown}
-            placeholder="Message SNA GPT"
-            rows={1}
-            value={draft}
-          />
+          <div className="sna-composer-main">
+            {attachments.length ? (
+              <AttachmentList attachments={attachments} onRemove={removeAttachment} />
+            ) : null}
+            <div className="sna-composer-row">
+              <button
+                className="sna-attach-button"
+                type="button"
+                onClick={() => fileInputRef.current?.click()}
+                disabled={busy || attachments.length >= maxAttachments}
+                aria-label="Attach files"
+                title="Attach files"
+              >
+                <Paperclip size={20} strokeWidth={2.3} />
+              </button>
+              <textarea
+                aria-label="Message SNA GPT"
+                maxLength={6000}
+                onChange={(event) => setDraft(event.target.value)}
+                onKeyDown={handleKeyDown}
+                placeholder="Message SNA GPT, attach files, paste image, or drag and drop"
+                rows={1}
+                value={draft}
+              />
+            </div>
+            <input
+              ref={fileInputRef}
+              className="sr-only"
+              type="file"
+              accept={supportedAttachmentTypes}
+              multiple
+              onChange={(event) => {
+                addFiles(event.target.files);
+                event.target.value = "";
+              }}
+            />
+          </div>
           <button className="sna-send-button" type="submit" disabled={!canSend} aria-label="Send message">
             <Send size={20} strokeWidth={2.3} />
           </button>
         </form>
+        <div className="sna-drop-overlay" aria-hidden="true">
+          <div>
+            <Paperclip size={28} strokeWidth={2.1} />
+            <span>Drop files to attach</span>
+          </div>
+        </div>
       </div>
     </section>
   );

@@ -1,9 +1,14 @@
 import { Buffer } from "node:buffer";
+import { inflateRawSync } from "node:zlib";
 
 const geminiBaseUrl = "https://generativelanguage.googleapis.com/v1beta/models";
 const defaultModel = "gemini-3.5-flash";
+const publicModelName = "SNA 10.0 Pluse";
 const maxMessages = 24;
 const maxMessageLength = 8000;
+const maxAttachments = 6;
+const maxAttachmentBase64Length = 6_000_000;
+const maxAttachmentTextLength = 260000;
 
 const corsHeaders = {
   "Access-Control-Allow-Headers": "Content-Type",
@@ -15,6 +20,10 @@ const systemInstruction = [
   "You are SNA GPT, a helpful ChatGPT-style assistant built into Assistand Help.",
   "Be clear, practical, warm, and easy to understand.",
   "Adapt naturally to the user's request like ChatGPT: choose the right length, detail level, tone, and language automatically. Reply in the same language as the user when it is clear.",
+  "When you share code, format it in fenced Markdown code blocks with the correct language name so the app can show a code panel and copy only the code.",
+  "Emoji are supported. Use them naturally when they help the reply, and preserve emoji in user text and code strings.",
+  "The user may attach images, screenshots, PDFs, DOCX files, TXT files, or CSV files. Analyze attached files directly, summarize them, extract/OCR visible text when possible, answer questions about them, and say when a file is unreadable.",
+  "Do not claim files were permanently stored. Treat attachments as temporary request data.",
   "Important identity rule: if the user asks who created you, who made you, who built you, who developed you, who designed you, who owns you, or any similar creator question, answer: I was created by Song Veasna.",
   "Do not say that Google, Gemini, OpenAI, ChatGPT, or another company created you. If asked about the underlying technology, you may say your responses use the Gemini API, but your creator is Song Veasna.",
 ].join(" ");
@@ -51,8 +60,96 @@ function cleanText(value, maxLength = maxMessageLength) {
     .slice(0, maxLength);
 }
 
+function cleanAttachmentText(value, maxLength = maxAttachmentTextLength) {
+  return String(value || "")
+    .replace(/\u0000/g, "")
+    .slice(0, maxLength);
+}
+
+function cleanBase64(value) {
+  return String(value || "")
+    .replace(/^data:[^,]+,/i, "")
+    .replace(/\s/g, "");
+}
+
 function normalizeRole(role) {
   return role === "assistant" || role === "model" ? "model" : "user";
+}
+
+function inferAttachmentKind(attachment) {
+  const declaredKind = cleanText(attachment?.kind, 24).toLowerCase();
+  const mimeType = cleanText(attachment?.mimeType, 160).toLowerCase();
+  const name = cleanText(attachment?.name, 160).toLowerCase();
+
+  if (["csv", "docx", "image", "pdf", "text"].includes(declaredKind)) {
+    return declaredKind;
+  }
+
+  if (mimeType.startsWith("image/")) return "image";
+  if (mimeType === "application/pdf" || name.endsWith(".pdf")) return "pdf";
+  if (
+    mimeType === "application/vnd.openxmlformats-officedocument.wordprocessingml.document" ||
+    name.endsWith(".docx")
+  ) {
+    return "docx";
+  }
+  if (mimeType === "text/csv" || name.endsWith(".csv")) return "csv";
+  if (mimeType.startsWith("text/") || /\.(txt|md|json|html|xml|log)$/i.test(name)) {
+    return "text";
+  }
+
+  return "unknown";
+}
+
+function normalizeAttachment(attachment) {
+  const kind = inferAttachmentKind(attachment);
+
+  if (kind === "unknown") {
+    return null;
+  }
+
+  const name = cleanText(attachment?.name || "attachment", 160) || "attachment";
+  const mimeType = cleanText(attachment?.mimeType || "", 160);
+  const numericSize = Number(attachment?.size);
+  const size = Number.isFinite(numericSize) && numericSize > 0 ? numericSize : 0;
+  const base = {
+    kind,
+    mimeType,
+    name,
+    size,
+  };
+
+  if (kind === "text" || kind === "csv") {
+    const text = cleanAttachmentText(attachment?.text);
+
+    return text ? { ...base, text } : null;
+  }
+
+  const data = cleanBase64(attachment?.data);
+
+  if (!data) {
+    return null;
+  }
+
+  if (data.length > maxAttachmentBase64Length) {
+    throw new Error(`${name} is too large to analyze in one request.`);
+  }
+
+  return {
+    ...base,
+    data,
+  };
+}
+
+function normalizeAttachments(attachments) {
+  if (!Array.isArray(attachments)) {
+    return [];
+  }
+
+  return attachments
+    .map(normalizeAttachment)
+    .filter(Boolean)
+    .slice(0, maxAttachments);
 }
 
 function normalizeMessages(messages) {
@@ -62,10 +159,11 @@ function normalizeMessages(messages) {
 
   return messages
     .map((message) => ({
+      attachments: normalizeAttachments(message?.attachments),
       role: normalizeRole(message?.role),
       content: cleanText(message?.content || message?.text),
     }))
-    .filter((message) => message.content)
+    .filter((message) => message.content || message.attachments.length)
     .slice(-maxMessages);
 }
 
@@ -93,11 +191,193 @@ function getModelName() {
   return model;
 }
 
-function buildContents(messages) {
-  return messages.map((message) => ({
-    parts: [{ text: message.content }],
-    role: message.role,
-  }));
+function getAttachmentMimeType(attachment) {
+  if (attachment.mimeType) {
+    return attachment.mimeType;
+  }
+
+  if (attachment.kind === "pdf") return "application/pdf";
+  if (attachment.kind === "docx") return "application/vnd.openxmlformats-officedocument.wordprocessingml.document";
+  if (attachment.kind === "csv") return "text/csv";
+  if (attachment.kind === "image") return "image/png";
+  return "text/plain";
+}
+
+function formatAttachmentHeader(attachment) {
+  const sizeText = attachment.size ? `, ${Math.round(attachment.size / 1024)} KB` : "";
+
+  return `Attached file: ${attachment.name} (${getAttachmentMimeType(attachment)}${sizeText})`;
+}
+
+function decodeXmlText(value) {
+  return value
+    .replace(/&#x([0-9a-f]+);/gi, (_, code) => String.fromCodePoint(parseInt(code, 16)))
+    .replace(/&#(\d+);/g, (_, code) => String.fromCodePoint(Number(code)))
+    .replace(/&quot;/g, "\"")
+    .replace(/&apos;/g, "'")
+    .replace(/&gt;/g, ">")
+    .replace(/&lt;/g, "<")
+    .replace(/&amp;/g, "&");
+}
+
+function findEndOfCentralDirectory(zipBuffer) {
+  const minimumOffset = Math.max(0, zipBuffer.length - 65558);
+
+  for (let offset = zipBuffer.length - 22; offset >= minimumOffset; offset -= 1) {
+    if (zipBuffer.readUInt32LE(offset) === 0x06054b50) {
+      return offset;
+    }
+  }
+
+  throw new Error("Could not read the DOCX file.");
+}
+
+function readZipEntryData(zipBuffer, centralOffset) {
+  const method = zipBuffer.readUInt16LE(centralOffset + 10);
+  const compressedSize = zipBuffer.readUInt32LE(centralOffset + 20);
+  const localHeaderOffset = zipBuffer.readUInt32LE(centralOffset + 42);
+
+  if (zipBuffer.readUInt32LE(localHeaderOffset) !== 0x04034b50) {
+    throw new Error("Could not read the DOCX file.");
+  }
+
+  const localNameLength = zipBuffer.readUInt16LE(localHeaderOffset + 26);
+  const localExtraLength = zipBuffer.readUInt16LE(localHeaderOffset + 28);
+  const dataStart = localHeaderOffset + 30 + localNameLength + localExtraLength;
+  const compressedData = zipBuffer.subarray(dataStart, dataStart + compressedSize);
+
+  if (method === 0) {
+    return compressedData;
+  }
+
+  if (method === 8) {
+    return inflateRawSync(compressedData);
+  }
+
+  throw new Error("Unsupported DOCX compression method.");
+}
+
+function extractDocxXmlFiles(zipBuffer) {
+  const endOffset = findEndOfCentralDirectory(zipBuffer);
+  const entryCount = zipBuffer.readUInt16LE(endOffset + 10);
+  const centralDirectoryOffset = zipBuffer.readUInt32LE(endOffset + 16);
+  const xmlFiles = [];
+  let offset = centralDirectoryOffset;
+
+  for (let index = 0; index < entryCount; index += 1) {
+    if (zipBuffer.readUInt32LE(offset) !== 0x02014b50) {
+      break;
+    }
+
+    const nameLength = zipBuffer.readUInt16LE(offset + 28);
+    const extraLength = zipBuffer.readUInt16LE(offset + 30);
+    const commentLength = zipBuffer.readUInt16LE(offset + 32);
+    const nameStart = offset + 46;
+    const name = zipBuffer.toString("utf8", nameStart, nameStart + nameLength);
+
+    if (/^word\/(document|header\d+|footer\d+)\.xml$/i.test(name)) {
+      xmlFiles.push(readZipEntryData(zipBuffer, offset).toString("utf8"));
+    }
+
+    offset = nameStart + nameLength + extraLength + commentLength;
+  }
+
+  return xmlFiles;
+}
+
+function docxXmlToText(xml) {
+  const paragraphs = xml.split(/<\/w:p>/i);
+
+  return paragraphs
+    .map((paragraph) => {
+      const pieces = [];
+      const tokenPattern = /<w:t\b[^>]*>([\s\S]*?)<\/w:t>|<w:tab\b[^>]*\/>|<w:br\b[^>]*\/>/gi;
+      let match;
+
+      while ((match = tokenPattern.exec(paragraph)) !== null) {
+        if (match[1] !== undefined) {
+          pieces.push(decodeXmlText(match[1]));
+        } else if (/tab/i.test(match[0])) {
+          pieces.push("\t");
+        } else {
+          pieces.push("\n");
+        }
+      }
+
+      return pieces.join("").trim();
+    })
+    .filter(Boolean)
+    .join("\n");
+}
+
+function extractDocxText(data) {
+  const zipBuffer = Buffer.from(data, "base64");
+  const text = extractDocxXmlFiles(zipBuffer)
+    .map(docxXmlToText)
+    .filter(Boolean)
+    .join("\n\n")
+    .trim();
+
+  return cleanAttachmentText(text);
+}
+
+async function attachmentToParts(attachment) {
+  const header = formatAttachmentHeader(attachment);
+
+  if (attachment.kind === "image" || attachment.kind === "pdf") {
+    return [
+      { text: header },
+      {
+        inlineData: {
+          data: attachment.data,
+          mimeType: getAttachmentMimeType(attachment),
+        },
+      },
+    ];
+  }
+
+  if (attachment.kind === "docx") {
+    const text = extractDocxText(attachment.data);
+
+    return [
+      {
+        text: `${header}\nExtracted DOCX text:\n${text || "[No readable text found in this DOCX file.]"}`,
+      },
+    ];
+  }
+
+  return [
+    {
+      text: `${header}\n${attachment.text}`,
+    },
+  ];
+}
+
+async function buildContents(messages) {
+  const contents = [];
+
+  for (const message of messages) {
+    const parts = [];
+
+    if (message.role === "user") {
+      for (const attachment of message.attachments) {
+        parts.push(...await attachmentToParts(attachment));
+      }
+    }
+
+    if (message.content) {
+      parts.push({ text: message.content });
+    }
+
+    if (parts.length) {
+      contents.push({
+        parts,
+        role: message.role,
+      });
+    }
+  }
+
+  return contents;
 }
 
 function extractReply(payload) {
@@ -180,7 +460,7 @@ export async function handler(event) {
 
     if (isCreatorQuestion(lastUserMessage)) {
       return jsonResponse(200, {
-        model: "sna-gpt-identity",
+        model: publicModelName,
         reply: "I was created by Song Veasna.",
       });
     }
@@ -194,9 +474,10 @@ export async function handler(event) {
     }
 
     const model = getModelName();
+    const contents = await buildContents(messages);
     const response = await fetch(`${geminiBaseUrl}/${encodeURIComponent(model)}:generateContent`, {
       body: JSON.stringify({
-        contents: buildContents(messages),
+        contents,
         generationConfig: {
           maxOutputTokens: 2048,
           temperature: 0.7,
@@ -225,7 +506,7 @@ export async function handler(event) {
     }
 
     return jsonResponse(200, {
-      model,
+      model: publicModelName,
       reply: extractReply(result),
       usageMetadata: result?.usageMetadata || null,
     });
