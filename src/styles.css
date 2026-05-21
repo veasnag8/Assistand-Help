@@ -226,6 +226,7 @@ img {
   color: var(--ink);
   padding: 22px 20px 18px;
   text-align: center;
+  text-decoration: none;
   transition:
     transform 180ms ease,
     box-shadow 180ms ease,
@@ -365,6 +366,11 @@ img {
 .tone-cyan {
   --tone: #06b6d4;
   --tone-soft: #e5f9fc;
+}
+
+.tone-excel {
+  --tone: #217346;
+  --tone-soft: #e8f5ee;
 }
 
 .tone-indigo {

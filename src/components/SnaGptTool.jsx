@@ -25,7 +25,7 @@ import snaGptLogo from "../image/sna-gpt.png";
 const snaGptEndpointPath = "/.netlify/functions/sna-gpt";
 const chatStorageKey = "sna-gpt-chat-v1";
 const sidebarStorageKey = "sna-gpt-sidebar-collapsed-v2";
-const publicModelName = "SNA 10.0 Pluse";
+const publicModelName = "SNA 10.5 Pro";
 const maxAttachments = 6;
 const maxBinaryFileBytes = 4 * 1024 * 1024;
 const maxTextFileBytes = 1.2 * 1024 * 1024;
@@ -200,7 +200,7 @@ function createMessage(role, content, attachments = []) {
 function createWelcomeMessage() {
   return createMessage(
     "assistant",
-    "Hello, I am SNA GPT. I was created by Song Veasna. How can I help today?",
+    "Hello, I am SNA GPT. I was created by សង វាសនា. How can I help today?",
   );
 }
 
@@ -246,14 +246,6 @@ function loadSidebarCollapsed() {
 }
 
 function getSnaGptEndpoint() {
-  const { hostname, port, protocol } = window.location;
-  const isLocalVite =
-    ["localhost", "127.0.0.1"].includes(hostname) && port && port !== "8888";
-
-  if (isLocalVite) {
-    return `${protocol}//${hostname}:8888${snaGptEndpointPath}`;
-  }
-
   return snaGptEndpointPath;
 }
 
@@ -269,7 +261,7 @@ async function readJsonResponse(response, fallbackMessage) {
 
   if (looksLikeHtml) {
     throw new Error(
-      "SNA GPT server not available. Open the app with Netlify dev on port 8888.",
+      "SNA GPT server returned the app page instead of JSON. Restart the app and try again.",
     );
   }
 
@@ -277,27 +269,38 @@ async function readJsonResponse(response, fallbackMessage) {
 }
 
 async function sendSnaGptMessage(messages, signal) {
-  const response = await fetch(getSnaGptEndpoint(), {
-    body: JSON.stringify({
-      messages: messages.map((message) => ({
-        attachments: (message.attachments || []).map((attachment) => ({
-          data: attachment.data,
-          kind: attachment.kind,
-          mimeType: attachment.mimeType,
-          name: attachment.name,
-          size: attachment.size,
-          text: attachment.text,
+  let response;
+
+  try {
+    response = await fetch(getSnaGptEndpoint(), {
+      body: JSON.stringify({
+        messages: messages.map((message) => ({
+          attachments: (message.attachments || []).map((attachment) => ({
+            data: attachment.data,
+            kind: attachment.kind,
+            mimeType: attachment.mimeType,
+            name: attachment.name,
+            size: attachment.size,
+            text: attachment.text,
+          })),
+          content: message.content,
+          role: message.role,
         })),
-        content: message.content,
-        role: message.role,
-      })),
-    }),
-    headers: {
-      "Content-Type": "application/json",
-    },
-    method: "POST",
-    signal,
-  });
+      }),
+      headers: {
+        "Content-Type": "application/json",
+      },
+      method: "POST",
+      signal,
+    });
+  } catch (error) {
+    if (error?.name === "AbortError") {
+      throw error;
+    }
+
+    throw new Error("SNA GPT server is not available. Restart the app and try again.");
+  }
+
   const result = await readJsonResponse(response, "Could not reach SNA GPT.");
 
   if (!response.ok) {
@@ -989,7 +992,7 @@ export default function SnaGptTool({ onBack }) {
           <div>
             <p className="eyebrow">SNA GPT</p>
             <h1 id="sna-gpt-title">SNA GPT</h1>
-            <span>Created by Song Veasna</span>
+            <span>Created by សង វាសនា</span>
           </div>
         </div>
 

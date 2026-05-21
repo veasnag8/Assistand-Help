@@ -5,8 +5,10 @@ import {
   CheckSquare,
   ChevronRight,
   Clock3,
+  ExternalLink,
   FileText,
   FileImage,
+  FileSpreadsheet,
   MessageSquare,
   QrCode,
   ScanText as ScanTextIcon,
@@ -70,7 +72,7 @@ const categories = [
     id: "sna-gpt",
     title: "SNA GPT",
     tabTitle: "SNA GPT",
-    description: "Chat with your custom GPT assistant created by Song Veasna.",
+    description: "Chat with your custom GPT assistant created by សង វាសនា.",
     icon: BotMessageSquare,
     logo: snaGptLogo,
     tone: "orange",
@@ -85,6 +87,17 @@ const categories = [
     tone: "pink",
     enabled: true,
   },
+  {
+    id: "master-list-boq",
+    title: "Master List BOQ",
+    tabTitle: "Master List BOQ",
+    description: "Open the shared BOQ master list workbook.",
+    icon: FileSpreadsheet,
+    tone: "excel",
+    enabled: true,
+    externalUrl:
+      "https://megaassetmanagement-my.sharepoint.com/:x:/g/personal/phal_bunnavath_mam_com_kh/IQAW0G_7jYZLS7khZPkBFvzRAQVNj0cc1j7RS94carTvRBg?rtime=LkB8YN-23kg",
+  },
 ];
 
 const toneColors = {
@@ -95,6 +108,7 @@ const toneColors = {
   orange: "#f97316",
   pink: "#ec407a",
   cyan: "#06b6d4",
+  excel: "#217346",
   indigo: "#2563eb",
   yellow: "#f4b400",
 };
@@ -148,15 +162,11 @@ function BrandLogo() {
 
 function CategoryCard({ category, onOpen }) {
   const Icon = category.icon;
-  const statusText = category.enabled ? "Open" : "Coming soon";
-
-  return (
-    <button
-      className={`category-card tone-${category.tone}`}
-      type="button"
-      onClick={() => onOpen(category.id)}
-      aria-label={`${statusText} ${category.title}`}
-    >
+  const isExternal = Boolean(category.externalUrl);
+  const statusText = category.enabled ? (isExternal ? "Open link" : "Open") : "Coming soon";
+  const ArrowIcon = isExternal ? ExternalLink : ChevronRight;
+  const content = (
+    <>
       <span className="corner-accent" aria-hidden="true" />
       <span className="category-icon" aria-hidden="true">
         {category.logo ? (
@@ -171,8 +181,33 @@ function CategoryCard({ category, onOpen }) {
       </span>
       {!category.enabled ? <span className="feature-status">Coming Soon</span> : null}
       <span className="category-arrow" aria-hidden="true">
-        <ChevronRight size={22} strokeWidth={2.6} />
+        <ArrowIcon size={22} strokeWidth={2.6} />
       </span>
+    </>
+  );
+
+  if (isExternal) {
+    return (
+      <a
+        className={`category-card tone-${category.tone}`}
+        href={category.externalUrl}
+        target="_blank"
+        rel="noopener noreferrer"
+        aria-label={`${statusText} ${category.title}`}
+      >
+        {content}
+      </a>
+    );
+  }
+
+  return (
+    <button
+      className={`category-card tone-${category.tone}`}
+      type="button"
+      onClick={() => onOpen(category.id)}
+      aria-label={`${statusText} ${category.title}`}
+    >
+      {content}
     </button>
   );
 }
@@ -202,7 +237,7 @@ function Dashboard({ onOpen }) {
       </div>
 
       <footer className="dashboard-footer">
-        Copyright 2026 Create By Song Veasna
+        Copyright 2026 Create By សង វាសនា
       </footer>
     </section>
   );

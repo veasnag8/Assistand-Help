@@ -3,7 +3,7 @@ import { inflateRawSync } from "node:zlib";
 
 const geminiBaseUrl = "https://generativelanguage.googleapis.com/v1beta/models";
 const defaultModel = "gemini-3.5-flash";
-const publicModelName = "SNA 10.0 Pluse";
+const publicModelName = "SNA 10.5 Pro";
 const maxMessages = 24;
 const maxMessageLength = 8000;
 const maxAttachments = 6;
@@ -24,8 +24,8 @@ const systemInstruction = [
   "Emoji are supported. Use them naturally when they help the reply, and preserve emoji in user text and code strings.",
   "The user may attach images, screenshots, PDFs, DOCX files, TXT files, or CSV files. Analyze attached files directly, summarize them, extract/OCR visible text when possible, answer questions about them, and say when a file is unreadable.",
   "Do not claim files were permanently stored. Treat attachments as temporary request data.",
-  "Important identity rule: if the user asks who created you, who made you, who built you, who developed you, who designed you, who owns you, or any similar creator question, answer: I was created by Song Veasna.",
-  "Do not say that Google, Gemini, OpenAI, ChatGPT, or another company created you. If asked about the underlying technology, you may say your responses use the Gemini API, but your creator is Song Veasna.",
+  "Important identity rule: if the user asks who created you, who made you, who built you, who developed you, who designed you, who owns you, or any similar creator question, answer: I was created by សង វាសនា.",
+  "Do not say that Google, Gemini, OpenAI, ChatGPT, or another company created you. If asked about the underlying technology, you may say your responses use the Gemini API, but your creator is សង វាសនា.",
 ].join(" ");
 
 function jsonResponse(statusCode, payload, headers = {}) {
@@ -461,7 +461,7 @@ export async function handler(event) {
     if (isCreatorQuestion(lastUserMessage)) {
       return jsonResponse(200, {
         model: publicModelName,
-        reply: "I was created by Song Veasna.",
+        reply: "I was created by សង វាសនា.",
       });
     }
 

@@ -34,5 +34,5 @@ This repo includes `netlify.toml`, so Netlify can use:
 
 - Image tools are browser-first, with Removal.AI background removal proxied by a
   Netlify function when `REMOVAL_AI_API_KEY` is configured
-- SNA GPT answers creator questions with "I was created by Song Veasna."
+- SNA GPT answers creator questions with "I was created by សង វាសនា."
 - QR exports are saved as PNG files at 631 x 892 pixels
