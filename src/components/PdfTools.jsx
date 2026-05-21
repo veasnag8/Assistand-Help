@@ -356,7 +356,17 @@ export default function PdfTools() {
       return "Original kept";
     }
 
-    return "Smaller";
+    const originalBytes = compressResult.originalBytes || compressFile.size;
+    const compressedBytes = compressResult.compressedBytes;
+    const difference = originalBytes - compressedBytes;
+
+    if (difference <= 0) {
+      return "Original kept";
+    }
+
+    const percent = (difference / originalBytes) * 100;
+
+    return percent < 1 ? "Less than 1% smaller" : `${percent.toFixed(0)}% smaller`;
   }
 
   async function buildCompressedPdf(file, profileKey, onProgress = () => {}) {
