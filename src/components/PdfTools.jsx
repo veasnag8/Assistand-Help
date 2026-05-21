@@ -207,7 +207,7 @@ export default function PdfTools() {
   const [compressFile, setCompressFile] = useState(null);
   const [compressProfile, setCompressProfile] = useState("50");
   const [compressResult, setCompressResult] = useState(null);
-  const [compressStarted, setCompressStarted] = useState(false);
+  const [compressPreviewBusy, setCompressPreviewBusy] = useState(false);
   const [status, setStatus] = useState("Choose a mode and upload PDF files.");
   const [busy, setBusy] = useState(false);
 
@@ -303,6 +303,53 @@ export default function PdfTools() {
     };
   }, [splitFile]);
 
+  useEffect(() => {
+    let active = true;
+
+    async function prepareCompressedPreview() {
+      setCompressResult(null);
+
+      if (mode !== "compress" || !compressFile) {
+        return;
+      }
+
+      if (!isPdfFile(compressFile)) {
+        setStatus("Please choose a PDF file.");
+        return;
+      }
+
+      try {
+        setCompressPreviewBusy(true);
+        setStatus("Calculating compressed preview...");
+
+        const result = await buildCompressedPdf(compressFile, compressProfile, (message) => {
+          if (active) {
+            setStatus(message);
+          }
+        });
+
+        if (active) {
+          setCompressResult(result);
+          setStatus(getCompressionStatusMessage(result));
+        }
+      } catch (error) {
+        if (active) {
+          setStatus(error?.message || "Could not calculate compressed preview.");
+        }
+      } finally {
+        if (active) {
+          setCompressPreviewBusy(false);
+        }
+      }
+    }
+
+    prepareCompressedPreview();
+
+    return () => {
+      active = false;
+    };
+  }, [compressFile, compressProfile, mode]);
+
   function toggleSplitPage(pageIndex) {
     setSelectedSplitPages((current) => (
       current.includes(pageIndex)
@@ -330,7 +377,6 @@ export default function PdfTools() {
   function handleCompressFileChange(file) {
     setCompressFile(file);
     setCompressResult(null);
-    setCompressStarted(false);
 
     if (file) {
       setStatus(`Original file ready: ${formatFileSize(file.size)}.`);
@@ -340,12 +386,11 @@ export default function PdfTools() {
   function handleCompressProfileChange(value) {
     setCompressProfile(value);
     setCompressResult(null);
-    setCompressStarted(false);
   }
 
   function getCompressionSummary() {
     if (!compressFile || !compressResult?.compressedBytes) {
-      return compressFile ? "Ready to compress" : "Waiting for file";
+      return compressPreviewBusy ? "Calculating..." : "Waiting for file";
     }
 
     if (compressResult.originalReason === "target-unavailable") {
@@ -554,7 +599,6 @@ export default function PdfTools() {
 
   async function handleCompress() {
     try {
-      setCompressStarted(true);
       setBusy(true);
       setStatus("Preparing compressed PDF...");
 
@@ -733,7 +777,7 @@ export default function PdfTools() {
               ) : null}
             </div>
 
-            {compressFile && compressStarted ? (
+            {compressFile ? (
               <div className="pdf-compress-result" aria-label="Compression size result">
                 <div className="pdf-size-card is-original">
                   <span>Original</span>
@@ -745,7 +789,7 @@ export default function PdfTools() {
                   <strong>
                     {compressResult?.compressedBytes
                       ? formatFileSize(compressResult.compressedBytes)
-                      : "Working..."}
+                      : "Calculating..."}
                   </strong>
                   <small>{getCompressionSummary()}</small>
                 </div>
@@ -772,7 +816,7 @@ export default function PdfTools() {
               className="button"
               type="button"
               onClick={handleCompress}
-              disabled={busy || Boolean(compressResult?.originalReason)}
+              disabled={busy || compressPreviewBusy || Boolean(compressResult?.originalReason)}
             >
               {compressResult?.originalReason ? "Original Kept" : "Compress PDF"}
             </button>
