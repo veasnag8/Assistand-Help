@@ -44,6 +44,9 @@ const compressProfiles = {
   },
   50: {
     attempts: [
+      { quality: 0.98, scale: 5 },
+      { quality: 0.98, scale: 4 },
+      { quality: 0.96, scale: 3 },
       { quality: 0.94, scale: 2 },
       { quality: 0.88, scale: 1.7 },
       { quality: 0.8, scale: 1.45 },
@@ -56,6 +59,11 @@ const compressProfiles = {
   },
   75: {
     attempts: [
+      { quality: 0.98, scale: 7 },
+      { quality: 0.98, scale: 6 },
+      { quality: 0.98, scale: 5 },
+      { quality: 0.96, scale: 4 },
+      { quality: 0.96, scale: 3 },
       { quality: 0.96, scale: 2.5 },
       { quality: 0.94, scale: 2.2 },
       { quality: 0.9, scale: 1.9 },
@@ -69,6 +77,11 @@ const compressProfiles = {
   },
   90: {
     attempts: [
+      { quality: 0.98, scale: 8 },
+      { quality: 0.98, scale: 7 },
+      { quality: 0.98, scale: 6 },
+      { quality: 0.98, scale: 5 },
+      { quality: 0.96, scale: 4 },
       { quality: 0.98, scale: 3 },
       { quality: 0.96, scale: 2.6 },
       { quality: 0.94, scale: 2.2 },
@@ -131,7 +144,7 @@ function chooseTargetPdfResult(candidates, file, targetRatio) {
   }
 
   const targetBytes = file.size * targetRatio;
-  const minimumAcceptableBytes = file.size * Math.max(0.2, targetRatio - 0.2);
+  const minimumAcceptableBytes = file.size * Math.max(0.1, targetRatio * 0.55);
   const underTarget = compressedCandidates
     .filter((candidate) => candidate.compressedBytes <= targetBytes)
     .sort((left, right) => right.compressedBytes - left.compressedBytes);
