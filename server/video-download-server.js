@@ -9,6 +9,11 @@ import ffmpegStaticPath from "ffmpeg-static";
 
 const port = Number(process.env.VIDEO_SERVER_PORT || 5454);
 const host = process.env.VIDEO_SERVER_HOST || "127.0.0.1";
+const publicServerUrl = String(
+  process.env.PUBLIC_VIDEO_SERVER_URL ||
+  process.env.RENDER_EXTERNAL_URL ||
+  `http://${host}:${port}`,
+).replace(/\/+$/, "");
 const downloadRoot = path.join(tmpdir(), "aisupport-video-downloads");
 const maxRequestBytes = 64 * 1024;
 const downloadTtlMs = 60 * 60 * 1000;
@@ -93,6 +98,12 @@ function getPlatform(url) {
   }
 
   return "";
+}
+
+function getPublicUrl(pathname) {
+  const pathValue = String(pathname || "");
+
+  return `${publicServerUrl}${pathValue.startsWith("/") ? pathValue : `/${pathValue}`}`;
 }
 
 function clampProgress(value) {
@@ -431,13 +442,13 @@ async function prepareDownload(downloadRequest, jobId, job) {
     format: downloadRequest.format,
     items: [
       {
-        downloadUrl: `http://${host}:${port}/downloads/${jobId}`,
+        downloadUrl: getPublicUrl(`/downloads/${jobId}`),
         filename,
         previewKind: previewImage ? "image" : downloadRequest.format === "mp4" ? "video" : "audio",
         previewUrl: previewImage
-          ? `http://${host}:${port}/downloads/${jobId}-preview`
+          ? getPublicUrl(`/downloads/${jobId}-preview`)
           : downloadRequest.format === "mp4"
-            ? `http://${host}:${port}/downloads/${jobId}`
+            ? getPublicUrl(`/downloads/${jobId}`)
             : "",
         type: downloadRequest.format,
       },
@@ -491,7 +502,7 @@ async function handlePrepareDownload(request, response) {
       progress: job.progress,
       stage: job.stage,
       status: job.status,
-      statusUrl: `http://${host}:${port}/api/video-download/jobs/${jobId}`,
+      statusUrl: getPublicUrl(`/api/video-download/jobs/${jobId}`),
     });
   } catch (error) {
     sendJson(response, 400, {
@@ -603,5 +614,6 @@ createServer((request, response) => {
   });
 }).listen(port, host, () => {
   console.log(`Video downloader server ready at http://${host}:${port}`);
+  console.log(`Public video server URL: ${publicServerUrl}`);
   console.log("Install yt-dlp if needed: python -m pip install -U yt-dlp");
 });

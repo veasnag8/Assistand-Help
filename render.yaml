@@ -1,0 +1,15 @@
+services:
+  - type: web
+    name: aisupport-video-server
+    env: node
+    plan: free
+    buildCommand: npm install && python -m pip install --user -U yt-dlp
+    startCommand: npm run dev:video
+    healthCheckPath: /health
+    envVars:
+      - key: NODE_VERSION
+        value: "20"
+      - key: VIDEO_SERVER_HOST
+        value: 0.0.0.0
+      - key: VIDEO_SERVER_PORT
+        value: "10000"
