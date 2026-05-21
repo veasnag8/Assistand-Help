@@ -39,7 +39,7 @@ const compressProfiles = {
       { quality: 0.42, scale: 0.7 },
       { quality: 0.32, scale: 0.55 },
     ],
-    label: "25%",
+    label: "បង្ហាប់ខ្លាំង",
     targetRatio: 0.25,
   },
   50: {
@@ -54,7 +54,7 @@ const compressProfiles = {
       { quality: 0.62, scale: 1 },
       { quality: 0.52, scale: 0.85 },
     ],
-    label: "50%",
+    label: "បង្ហាប់មធ្យម",
     targetRatio: 0.5,
   },
   75: {
@@ -72,7 +72,7 @@ const compressProfiles = {
       { quality: 0.72, scale: 1.15 },
       { quality: 0.62, scale: 1 },
     ],
-    label: "75%",
+    label: "រក្សាគុណភាព",
     targetRatio: 0.75,
   },
   90: {
@@ -90,7 +90,7 @@ const compressProfiles = {
       { quality: 0.78, scale: 1.35 },
       { quality: 0.72, scale: 1.15 },
     ],
-    label: "90%",
+    label: "គុណភាពខ្ពស់",
     targetRatio: 0.9,
   },
 };
@@ -423,21 +423,19 @@ export default function PdfTools() {
   }
 
   function getCompressionSummary() {
-    const profile = compressProfiles[compressProfile] || compressProfiles["50"];
-
     if (!compressFile || !compressResult?.compressedBytes) {
       return compressPreviewBusy ? "Calculating..." : "Waiting for file";
     }
 
     if (compressResult.originalReason === "target-unavailable") {
-      return "No clean target";
+      return "មិនមានលទ្ធផលស្អាត";
     }
 
     if (compressResult.originalReason) {
-      return "Original kept";
+      return "រក្សាឯកសារដើម";
     }
 
-    return `Target ${profile.label}`;
+    return "តូចជាងមុន";
   }
 
   async function buildCompressedPdf(file, profileKey, onProgress = () => {}) {
@@ -823,7 +821,7 @@ export default function PdfTools() {
             ) : null}
 
             <div className="field">
-              <label htmlFor="compress-profile">Target size</label>
+              <label htmlFor="compress-profile">ទំហំបង្ហាប់</label>
               <select
                 id="compress-profile"
                 value={compressProfile}
@@ -835,7 +833,7 @@ export default function PdfTools() {
                   </option>
                 ))}
               </select>
-              <div className="hint">Choose the approximate output size compared with the original. If a clean result cannot get near the target, the original is kept.</div>
+              <div className="hint">ជ្រើសកម្រិតបង្ហាប់។ ការបង្ហាប់ខ្លាំងធ្វើឱ្យឯកសារតូចជាង ប៉ុន្តែគុណភាពអាចថយចុះ។</div>
             </div>
 
             <button
@@ -844,7 +842,7 @@ export default function PdfTools() {
               onClick={handleCompress}
               disabled={busy || compressPreviewBusy || Boolean(compressResult?.originalReason)}
             >
-              {compressResult?.originalReason ? "Original Kept" : "Compress PDF"}
+              {compressResult?.originalReason ? "រក្សាឯកសារដើម" : "Compress PDF"}
             </button>
           </div>
         ) : null}
