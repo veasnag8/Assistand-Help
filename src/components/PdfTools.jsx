@@ -39,7 +39,7 @@ const compressProfiles = {
       { quality: 0.42, scale: 0.7 },
       { quality: 0.32, scale: 0.55 },
     ],
-    label: "បង្ហាប់ខ្លាំង",
+    label: "Smallest file",
     targetRatio: 0.25,
   },
   50: {
@@ -54,7 +54,7 @@ const compressProfiles = {
       { quality: 0.62, scale: 1 },
       { quality: 0.52, scale: 0.85 },
     ],
-    label: "បង្ហាប់មធ្យម",
+    label: "Balanced",
     targetRatio: 0.5,
   },
   75: {
@@ -72,7 +72,7 @@ const compressProfiles = {
       { quality: 0.72, scale: 1.15 },
       { quality: 0.62, scale: 1 },
     ],
-    label: "រក្សាគុណភាព",
+    label: "Better quality",
     targetRatio: 0.75,
   },
   90: {
@@ -90,7 +90,7 @@ const compressProfiles = {
       { quality: 0.78, scale: 1.35 },
       { quality: 0.72, scale: 1.15 },
     ],
-    label: "គុណភាពខ្ពស់",
+    label: "Best quality",
     targetRatio: 0.9,
   },
 };
@@ -428,14 +428,14 @@ export default function PdfTools() {
     }
 
     if (compressResult.originalReason === "target-unavailable") {
-      return "មិនមានលទ្ធផលស្អាត";
+      return "No clean result";
     }
 
     if (compressResult.originalReason) {
-      return "រក្សាឯកសារដើម";
+      return "Original kept";
     }
 
-    return "តូចជាងមុន";
+    return "Smaller";
   }
 
   async function buildCompressedPdf(file, profileKey, onProgress = () => {}) {
@@ -821,7 +821,7 @@ export default function PdfTools() {
             ) : null}
 
             <div className="field">
-              <label htmlFor="compress-profile">ទំហំបង្ហាប់</label>
+              <label htmlFor="compress-profile">Compress size</label>
               <select
                 id="compress-profile"
                 value={compressProfile}
@@ -833,7 +833,7 @@ export default function PdfTools() {
                   </option>
                 ))}
               </select>
-              <div className="hint">ជ្រើសកម្រិតបង្ហាប់។ ការបង្ហាប់ខ្លាំងធ្វើឱ្យឯកសារតូចជាង ប៉ុន្តែគុណភាពអាចថយចុះ។</div>
+              <div className="hint">Choose a compression level. Smaller files may reduce visual quality.</div>
             </div>
 
             <button
@@ -842,7 +842,7 @@ export default function PdfTools() {
               onClick={handleCompress}
               disabled={busy || compressPreviewBusy || Boolean(compressResult?.originalReason)}
             >
-              {compressResult?.originalReason ? "រក្សាឯកសារដើម" : "Compress PDF"}
+              {compressResult?.originalReason ? "Original Kept" : "Compress PDF"}
             </button>
           </div>
         ) : null}
