@@ -31,10 +31,46 @@ const modes = [
 ];
 
 const compressProfiles = {
-  25: { label: "25% strength", scale: 1.35, quality: 0.72 },
-  50: { label: "50% strength", scale: 1, quality: 0.6 },
-  75: { label: "75% strength", scale: 0.75, quality: 0.45 },
-  90: { label: "90% strength", scale: 0.55, quality: 0.32 },
+  25: {
+    attempts: [
+      { quality: 0.72, scale: 1.15 },
+      { quality: 0.62, scale: 1 },
+      { quality: 0.52, scale: 0.85 },
+      { quality: 0.42, scale: 0.7 },
+    ],
+    label: "25%",
+    targetRatio: 0.25,
+  },
+  50: {
+    attempts: [
+      { quality: 0.94, scale: 2 },
+      { quality: 0.88, scale: 1.7 },
+      { quality: 0.8, scale: 1.45 },
+      { quality: 0.72, scale: 1.2 },
+    ],
+    label: "50%",
+    targetRatio: 0.5,
+  },
+  75: {
+    attempts: [
+      { quality: 0.96, scale: 2.5 },
+      { quality: 0.94, scale: 2.2 },
+      { quality: 0.9, scale: 1.9 },
+      { quality: 0.84, scale: 1.6 },
+    ],
+    label: "75%",
+    targetRatio: 0.75,
+  },
+  90: {
+    attempts: [
+      { quality: 0.98, scale: 3 },
+      { quality: 0.96, scale: 2.6 },
+      { quality: 0.94, scale: 2.2 },
+      { quality: 0.9, scale: 1.9 },
+    ],
+    label: "90%",
+    targetRatio: 0.9,
+  },
 };
 
 function getBaseName(fileName, fallback = "document") {
@@ -76,12 +112,20 @@ function getOriginalPdfResult(file) {
   };
 }
 
-function chooseSmallerPdf(current, candidate) {
-  if (!candidate || candidate.compressedBytes >= current.compressedBytes) {
-    return current;
+function chooseTargetPdfResult(candidates, file, targetRatio) {
+  const compressedCandidates = candidates.filter((candidate) => (
+    candidate && candidate.compressedBytes > 0 && candidate.compressedBytes < file.size
+  ));
+
+  if (!compressedCandidates.length) {
+    return getOriginalPdfResult(file);
   }
 
-  return candidate;
+  const targetBytes = file.size * targetRatio;
+  return compressedCandidates
+    .sort((left, right) => (
+      Math.abs(left.compressedBytes - targetBytes) - Math.abs(right.compressedBytes - targetBytes)
+    ))[0];
 }
 
 function getCompressionStatusMessage(result) {
@@ -298,7 +342,7 @@ export default function PdfTools() {
       return "Already optimized";
     }
 
-    return profile.label;
+    return `Target ${profile.label}`;
   }
 
   async function buildCompressedPdf(file, profileKey, onProgress = () => {}) {
@@ -312,7 +356,8 @@ export default function PdfTools() {
       const profile = compressProfiles[profileKey] || compressProfiles["50"];
       const { getDocument } = await loadPdfJs();
       const data = await readFileAsArrayBuffer(file);
-      let bestResult = getOriginalPdfResult(file);
+      const candidates = [];
+      const targetBytes = file.size * profile.targetRatio;
 
       onProgress("Optimizing PDF structure...");
 
@@ -332,66 +377,71 @@ export default function PdfTools() {
           useObjectStreams: true,
         });
 
-        bestResult = chooseSmallerPdf(
-          bestResult,
-          createPdfResult(optimizedBytes, file, "optimized-copy"),
-        );
+        candidates.push(createPdfResult(optimizedBytes, file, "optimized-copy"));
       } catch {
         onProgress("PDF structure optimization skipped. Rebuilding pages...");
       }
 
       pdf = await getDocument({ data: data.slice(0) }).promise;
-      const outputPdf = await PDFDocument.create();
 
-      for (let pageNumber = 1; pageNumber <= pdf.numPages; pageNumber += 1) {
-        onProgress(`Compressing page ${pageNumber} of ${pdf.numPages}...`);
+      for (const attempt of profile.attempts) {
+        const outputPdf = await PDFDocument.create();
 
-        const page = await pdf.getPage(pageNumber);
-        const baseViewport = page.getViewport({ scale: 1 });
-        const viewport = page.getViewport({ scale: profile.scale });
-        const canvas = document.createElement("canvas");
-        const context = canvas.getContext("2d", { alpha: false });
+        for (let pageNumber = 1; pageNumber <= pdf.numPages; pageNumber += 1) {
+          onProgress(`Compressing page ${pageNumber} of ${pdf.numPages} for ${profile.label} target...`);
 
-        if (!context) {
-          throw new Error("Could not prepare compression canvas.");
+          const page = await pdf.getPage(pageNumber);
+          const baseViewport = page.getViewport({ scale: 1 });
+          const viewport = page.getViewport({ scale: attempt.scale });
+          const canvas = document.createElement("canvas");
+          const context = canvas.getContext("2d", { alpha: false });
+
+          if (!context) {
+            throw new Error("Could not prepare compression canvas.");
+          }
+
+          canvas.width = Math.ceil(viewport.width);
+          canvas.height = Math.ceil(viewport.height);
+          context.fillStyle = "#ffffff";
+          context.fillRect(0, 0, canvas.width, canvas.height);
+
+          await page.render({ canvasContext: context, viewport }).promise;
+
+          const blob = await new Promise((resolve) => {
+            canvas.toBlob(resolve, "image/jpeg", attempt.quality);
+          });
+
+          if (!blob) {
+            throw new Error("Could not compress one of the PDF pages.");
+          }
+
+          const jpgBytes = await blob.arrayBuffer();
+          const jpgImage = await outputPdf.embedJpg(jpgBytes);
+          const outputPage = outputPdf.addPage([baseViewport.width, baseViewport.height]);
+
+          outputPage.drawImage(jpgImage, {
+            x: 0,
+            y: 0,
+            width: baseViewport.width,
+            height: baseViewport.height,
+          });
         }
 
-        canvas.width = Math.ceil(viewport.width);
-        canvas.height = Math.ceil(viewport.height);
-        context.fillStyle = "#ffffff";
-        context.fillRect(0, 0, canvas.width, canvas.height);
+        const bytes = await outputPdf.save({ useObjectStreams: true });
+        const candidate = createPdfResult(bytes, file, `image-rebuild-${profile.label}`);
 
-        await page.render({ canvasContext: context, viewport }).promise;
+        candidates.push(candidate);
 
-        const blob = await new Promise((resolve) => {
-          canvas.toBlob(resolve, "image/jpeg", profile.quality);
-        });
-
-        if (!blob) {
-          throw new Error("Could not compress one of the PDF pages.");
+        if (candidate.compressedBytes <= targetBytes) {
+          break;
         }
-
-        const jpgBytes = await blob.arrayBuffer();
-        const jpgImage = await outputPdf.embedJpg(jpgBytes);
-        const outputPage = outputPdf.addPage([baseViewport.width, baseViewport.height]);
-
-        outputPage.drawImage(jpgImage, {
-          x: 0,
-          y: 0,
-          width: baseViewport.width,
-          height: baseViewport.height,
-        });
       }
 
-      const bytes = await outputPdf.save({ useObjectStreams: true });
-      bestResult = chooseSmallerPdf(
-        bestResult,
-        createPdfResult(bytes, file, "image-rebuild"),
-      );
+      const result = chooseTargetPdfResult(candidates, file, profile.targetRatio);
 
       return {
-        ...bestResult,
-        alreadyOptimized: bestResult.compressedBytes >= file.size,
+        ...result,
+        alreadyOptimized: result.compressedBytes >= file.size,
       };
     } finally {
       if (pdf) {
@@ -665,7 +715,7 @@ export default function PdfTools() {
             ) : null}
 
             <div className="field">
-              <label htmlFor="compress-profile">Compression strength</label>
+              <label htmlFor="compress-profile">Target size</label>
               <select
                 id="compress-profile"
                 value={compressProfile}
@@ -677,7 +727,7 @@ export default function PdfTools() {
                   </option>
                 ))}
               </select>
-              <div className="hint">This is compression strength. The actual saved size can be higher or lower depending on the PDF.</div>
+              <div className="hint">Choose the approximate output size compared with the original. 50% aims near half size.</div>
             </div>
 
             <button
