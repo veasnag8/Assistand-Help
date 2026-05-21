@@ -131,11 +131,16 @@ function chooseTargetPdfResult(candidates, file, targetRatio) {
   }
 
   const targetBytes = file.size * targetRatio;
+  const minimumAcceptableBytes = file.size * Math.max(0.2, targetRatio - 0.2);
   const underTarget = compressedCandidates
     .filter((candidate) => candidate.compressedBytes <= targetBytes)
     .sort((left, right) => right.compressedBytes - left.compressedBytes);
 
   if (underTarget[0]) {
+    if (underTarget[0].compressedBytes < minimumAcceptableBytes) {
+      return getOriginalPdfResult(file);
+    }
+
     return underTarget[0];
   }
 
@@ -744,7 +749,7 @@ export default function PdfTools() {
                   </option>
                 ))}
               </select>
-              <div className="hint">Choose the approximate output size compared with the original. 50% aims near half size.</div>
+              <div className="hint">Choose the approximate output size compared with the original. If a clean result cannot get near the target, the original is kept.</div>
             </div>
 
             <button
