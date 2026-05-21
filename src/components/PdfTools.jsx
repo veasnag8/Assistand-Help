@@ -31,9 +31,10 @@ const modes = [
 ];
 
 const compressProfiles = {
-  high: { label: "High", scale: 1.35, quality: 0.72 },
-  medium: { label: "Medium", scale: 1, quality: 0.6 },
-  smallest: { label: "Smallest", scale: 0.75, quality: 0.45 },
+  25: { label: "25%", scale: 1.35, quality: 0.72 },
+  50: { label: "50%", scale: 1, quality: 0.6 },
+  75: { label: "75%", scale: 0.75, quality: 0.45 },
+  100: { label: "100%", scale: 0.55, quality: 0.32 },
 };
 
 function getBaseName(fileName, fallback = "document") {
@@ -103,7 +104,7 @@ export default function PdfTools() {
   const [previewBusy, setPreviewBusy] = useState(false);
   const [mergeFiles, setMergeFiles] = useState([]);
   const [compressFile, setCompressFile] = useState(null);
-  const [compressProfile, setCompressProfile] = useState("medium");
+  const [compressProfile, setCompressProfile] = useState("50");
   const [compressResult, setCompressResult] = useState(null);
   const [compressPreviewBusy, setCompressPreviewBusy] = useState(false);
   const [status, setStatus] = useState("Choose a mode and upload PDF files.");
@@ -312,7 +313,7 @@ export default function PdfTools() {
         throw new Error("Please choose a PDF file.");
       }
 
-      const profile = compressProfiles[profileKey] || compressProfiles.medium;
+      const profile = compressProfiles[profileKey] || compressProfiles["50"];
       const { getDocument } = await loadPdfJs();
       const data = await readFileAsArrayBuffer(file);
       let bestResult = getOriginalPdfResult(file);
@@ -680,7 +681,7 @@ export default function PdfTools() {
                   </option>
                 ))}
               </select>
-              <div className="hint">Compression rebuilds pages as images, best for scanned or image-heavy PDFs.</div>
+              <div className="hint">Higher percentages create smaller files with lower image detail.</div>
             </div>
 
             <button
