@@ -31,10 +31,10 @@ const modes = [
 ];
 
 const compressProfiles = {
-  25: { label: "25%", scale: 1.35, quality: 0.72 },
-  50: { label: "50%", scale: 1, quality: 0.6 },
-  75: { label: "75%", scale: 0.75, quality: 0.45 },
-  100: { label: "100%", scale: 0.55, quality: 0.32 },
+  25: { label: "25% strength", scale: 1.35, quality: 0.72 },
+  50: { label: "50% strength", scale: 1, quality: 0.6 },
+  75: { label: "75% strength", scale: 0.75, quality: 0.45 },
+  100: { label: "100% strength", scale: 0.55, quality: 0.32 },
 };
 
 function getBaseName(fileName, fallback = "document") {
@@ -669,7 +669,7 @@ export default function PdfTools() {
             ) : null}
 
             <div className="field">
-              <label htmlFor="compress-profile">Compression</label>
+              <label htmlFor="compress-profile">Compression strength</label>
               <select
                 id="compress-profile"
                 value={compressProfile}
@@ -681,7 +681,7 @@ export default function PdfTools() {
                   </option>
                 ))}
               </select>
-              <div className="hint">Higher percentages create smaller files with lower image detail.</div>
+              <div className="hint">This is compression strength. The actual saved size can be higher or lower depending on the PDF.</div>
             </div>
 
             <button
