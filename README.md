@@ -34,9 +34,10 @@ npm run dev:all
 The app defaults to `VITE_VIDEO_SERVER_URL=http://127.0.0.1:5454`. If `yt-dlp`
 is installed somewhere custom, set `YTDLP_PATH` in `.env`.
 
-YouTube may require a JavaScript runtime and signed-in browser cookies. The
-local server passes Node to yt-dlp by default for YouTube. If YouTube shows
-`Sign in to confirm you're not a bot`, set one of these in `.env`:
+The local video server loads `.env` automatically. YouTube may require a
+JavaScript runtime and signed-in browser cookies. The local server passes Node
+to yt-dlp by default for YouTube. If YouTube shows `Sign in to confirm you're
+not a bot`, set one of these in `.env` and restart `npm run dev:all`:
 
 ```bash
 YTDLP_COOKIES_FROM_BROWSER=chrome

@@ -1,4 +1,4 @@
-import { createReadStream, existsSync } from "node:fs";
+import { createReadStream, existsSync, readFileSync } from "node:fs";
 import { mkdir, readdir, rm, stat } from "node:fs/promises";
 import { createServer } from "node:http";
 import { tmpdir } from "node:os";
@@ -6,6 +6,46 @@ import path from "node:path";
 import { spawn } from "node:child_process";
 import { randomUUID } from "node:crypto";
 import ffmpegStaticPath from "ffmpeg-static";
+
+function loadLocalEnvFile() {
+  const envPath = path.resolve(".env");
+
+  if (!existsSync(envPath)) {
+    return;
+  }
+
+  const lines = readFileSync(envPath, "utf8").split(/\r?\n/g);
+
+  for (const line of lines) {
+    const trimmedLine = line.trim();
+
+    if (!trimmedLine || trimmedLine.startsWith("#")) {
+      continue;
+    }
+
+    const separatorIndex = trimmedLine.indexOf("=");
+
+    if (separatorIndex <= 0) {
+      continue;
+    }
+
+    const key = trimmedLine.slice(0, separatorIndex).trim();
+
+    if (!/^[A-Za-z_][A-Za-z0-9_]*$/.test(key) || process.env[key] !== undefined) {
+      continue;
+    }
+
+    const rawValue = trimmedLine.slice(separatorIndex + 1).trim();
+    const quote = rawValue[0];
+    const value = (quote === "\"" || quote === "'") && rawValue.at(-1) === quote
+      ? rawValue.slice(1, -1)
+      : rawValue;
+
+    process.env[key] = value;
+  }
+}
+
+loadLocalEnvFile();
 
 const port = Number(process.env.VIDEO_SERVER_PORT || 5454);
 const host = process.env.VIDEO_SERVER_HOST || "127.0.0.1";
