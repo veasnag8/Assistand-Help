@@ -719,7 +719,7 @@ export default function PdfTools() {
               ) : null}
             </div>
 
-            {compressFile ? (
+            {compressFile && (busy || compressResult) ? (
               <div className="pdf-compress-result" aria-label="Compression size result">
                 <div className="pdf-size-card is-original">
                   <span>Original</span>
@@ -731,7 +731,7 @@ export default function PdfTools() {
                   <strong>
                     {compressResult?.compressedBytes
                       ? formatFileSize(compressResult.compressedBytes)
-                      : "Ready"}
+                      : "Working..."}
                   </strong>
                   <small>{getCompressionSummary()}</small>
                 </div>
