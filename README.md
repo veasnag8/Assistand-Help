@@ -34,6 +34,22 @@ npm run dev:all
 The app defaults to `VITE_VIDEO_SERVER_URL=http://127.0.0.1:5454`. If `yt-dlp`
 is installed somewhere custom, set `YTDLP_PATH` in `.env`.
 
+YouTube may require a JavaScript runtime and signed-in browser cookies. The
+local server passes Node to yt-dlp by default for YouTube. If YouTube shows
+`Sign in to confirm you're not a bot`, set one of these in `.env`:
+
+```bash
+YTDLP_COOKIES_FROM_BROWSER=chrome
+```
+
+or:
+
+```bash
+YTDLP_COOKIES_PATH=C:\path\to\cookies.txt
+```
+
+Use only cookies from an account and media you are authorized to access.
+
 For production, keep video downloads behind your own server or an authorized
 Cobalt-compatible API instance. Public hosted Cobalt APIs are not intended for
 other projects without permission.

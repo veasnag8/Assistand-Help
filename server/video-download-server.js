@@ -186,6 +186,28 @@ function getYtDlpCommandCandidates() {
   ];
 }
 
+function getYtDlpAuthArgs() {
+  const cookiesPath = cleanText(process.env.YTDLP_COOKIES_PATH, 1000);
+  const cookiesFromBrowser = cleanText(process.env.YTDLP_COOKIES_FROM_BROWSER, 200);
+
+  if (cookiesPath) {
+    return ["--cookies", cookiesPath];
+  }
+
+  if (cookiesFromBrowser) {
+    return ["--cookies-from-browser", cookiesFromBrowser];
+  }
+
+  return [];
+}
+
+function getYtDlpJavaScriptArgs(platform) {
+  const configuredRuntimes = cleanText(process.env.YTDLP_JS_RUNTIMES, 1000);
+  const runtimes = configuredRuntimes || (platform === "YouTube" ? "node" : "");
+
+  return runtimes ? ["--js-runtimes", runtimes] : [];
+}
+
 function runProcess(command, args, options = {}) {
   return new Promise((resolve, reject) => {
     const { onOutput, ...spawnOptions } = options;
@@ -399,6 +421,8 @@ async function prepareDownload(downloadRequest, jobId, job) {
     "--windows-filenames",
     "--no-mtime",
     "--force-overwrites",
+    ...getYtDlpJavaScriptArgs(downloadRequest.platform),
+    ...getYtDlpAuthArgs(),
     "--write-thumbnail",
     "--convert-thumbnails",
     "jpg",
