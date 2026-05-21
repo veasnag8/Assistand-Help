@@ -110,13 +110,13 @@ function createPdfResult(bytes, file, compressionKind) {
   };
 }
 
-function getOriginalPdfResult(file) {
+function getOriginalPdfResult(file, reason = "already-optimized") {
   return {
-    alreadyOptimized: true,
     blob: file,
     compressedBytes: file.size,
     compressionKind: "original",
     filename: file.name,
+    originalReason: reason,
     originalBytes: file.size,
   };
 }
@@ -127,7 +127,7 @@ function chooseTargetPdfResult(candidates, file, targetRatio) {
   ));
 
   if (!compressedCandidates.length) {
-    return getOriginalPdfResult(file);
+    return getOriginalPdfResult(file, "no-smaller-result");
   }
 
   const targetBytes = file.size * targetRatio;
@@ -138,7 +138,7 @@ function chooseTargetPdfResult(candidates, file, targetRatio) {
 
   if (underTarget[0]) {
     if (underTarget[0].compressedBytes < minimumAcceptableBytes) {
-      return getOriginalPdfResult(file);
+      return getOriginalPdfResult(file, "target-unavailable");
     }
 
     return underTarget[0];
@@ -155,7 +155,11 @@ function getCompressionStatusMessage(result) {
     return "Choose a PDF file to calculate compression.";
   }
 
-  if (result.alreadyOptimized) {
+  if (result.originalReason === "target-unavailable") {
+    return `No clean compressed PDF was close to the selected target. Keeping ${formatFileSize(result.originalBytes)} original.`;
+  }
+
+  if (result.originalReason) {
     return `Already optimized: ${formatFileSize(result.originalBytes)} is smaller than the rebuilt PDF.`;
   }
 
@@ -360,8 +364,12 @@ export default function PdfTools() {
       return compressPreviewBusy ? "Calculating..." : "Waiting for file";
     }
 
-    if (compressResult.alreadyOptimized) {
-      return "Already optimized";
+    if (compressResult.originalReason === "target-unavailable") {
+      return "No clean target";
+    }
+
+    if (compressResult.originalReason) {
+      return "Original kept";
     }
 
     return `Target ${profile.label}`;
@@ -463,7 +471,9 @@ export default function PdfTools() {
 
       return {
         ...result,
-        alreadyOptimized: result.compressedBytes >= file.size,
+        originalReason: result.compressedBytes >= file.size
+          ? result.originalReason || "already-optimized"
+          : result.originalReason,
       };
     } finally {
       if (pdf) {
@@ -550,9 +560,9 @@ export default function PdfTools() {
         ? compressResult
         : await buildCompressedPdf(compressFile, compressProfile, setStatus);
 
-      if (result.alreadyOptimized) {
+      if (result.originalReason) {
         setCompressResult(result);
-        setStatus("No smaller PDF was created. This file is already optimized.");
+        setStatus(getCompressionStatusMessage(result));
         return;
       }
 
@@ -724,7 +734,7 @@ export default function PdfTools() {
                   <strong>{formatFileSize(compressFile.size)}</strong>
                 </div>
                 <div className="pdf-size-arrow" aria-hidden="true">→</div>
-                <div className={`pdf-size-card ${compressResult?.alreadyOptimized ? "is-neutral" : "is-compressed"}`}>
+                <div className={`pdf-size-card ${compressResult?.originalReason ? "is-neutral" : "is-compressed"}`}>
                   <span>After</span>
                   <strong>
                     {compressResult?.compressedBytes
@@ -756,9 +766,9 @@ export default function PdfTools() {
               className="button"
               type="button"
               onClick={handleCompress}
-              disabled={busy || compressPreviewBusy || compressResult?.alreadyOptimized}
+              disabled={busy || compressPreviewBusy || Boolean(compressResult?.originalReason)}
             >
-              {compressResult?.alreadyOptimized ? "Already Optimized" : "Compress PDF"}
+              {compressResult?.originalReason ? "Original Kept" : "Compress PDF"}
             </button>
           </div>
         ) : null}
