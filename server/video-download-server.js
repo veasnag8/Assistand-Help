@@ -226,6 +226,36 @@ function getYtDlpCommandCandidates() {
   ];
 }
 
+function getYtDlpCookieStatus() {
+  return {
+    cookiesBase64: Boolean(cleanText(process.env.YTDLP_COOKIES_BASE64, 500000)),
+    cookiesFromBrowser: Boolean(cleanText(process.env.YTDLP_COOKIES_FROM_BROWSER, 200)),
+    cookiesPath: Boolean(cleanText(process.env.YTDLP_COOKIES_PATH, 1000)),
+  };
+}
+
+function decodeCookiesBase64(value) {
+  const normalizedValue = cleanText(value, 500000).replace(/\s+/g, "");
+
+  if (!/^[A-Za-z0-9+/]+={0,2}$/.test(normalizedValue)) {
+    throw new Error(
+      "YTDLP_COOKIES_BASE64 must be the encoded cookies.txt value, not the PowerShell commands.",
+    );
+  }
+
+  const text = Buffer.from(normalizedValue, "base64").toString("utf8");
+  const hasNetscapeHeader = text.includes("# Netscape HTTP Cookie File");
+  const hasCookieRows = /^\S+\t(?:TRUE|FALSE)\t\S+\t(?:TRUE|FALSE)\t\d+\t\S+\t/m.test(text);
+
+  if (!hasNetscapeHeader && !hasCookieRows) {
+    throw new Error(
+      "YTDLP_COOKIES_BASE64 does not look like a base64-encoded Netscape cookies.txt file.",
+    );
+  }
+
+  return text;
+}
+
 function getYtDlpAuthArgs() {
   const cookiesPath = cleanText(process.env.YTDLP_COOKIES_PATH, 1000);
   const cookiesFromBrowser = cleanText(process.env.YTDLP_COOKIES_FROM_BROWSER, 200);
@@ -238,7 +268,7 @@ function getYtDlpAuthArgs() {
   if (cookiesBase64) {
     const generatedCookiesPath = path.join(downloadRoot, "yt-dlp-cookies.txt");
 
-    writeFileSync(generatedCookiesPath, Buffer.from(cookiesBase64, "base64").toString("utf8"), {
+    writeFileSync(generatedCookiesPath, decodeCookiesBase64(cookiesBase64), {
       mode: 0o600,
     });
 
@@ -669,6 +699,8 @@ async function routeRequest(request, response) {
 
   if (request.method === "GET" && requestUrl.pathname === "/health") {
     sendJson(response, 200, {
+      cookies: getYtDlpCookieStatus(),
+      jsRuntimes: cleanText(process.env.YTDLP_JS_RUNTIMES, 1000) || "node",
       ok: true,
       service: "AISupport local video downloader",
     });
