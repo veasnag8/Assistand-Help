@@ -1,4 +1,4 @@
-import { createReadStream, existsSync, readFileSync } from "node:fs";
+import { createReadStream, existsSync, readFileSync, writeFileSync } from "node:fs";
 import { mkdir, readdir, rm, stat } from "node:fs/promises";
 import { createServer } from "node:http";
 import { tmpdir } from "node:os";
@@ -229,9 +229,20 @@ function getYtDlpCommandCandidates() {
 function getYtDlpAuthArgs() {
   const cookiesPath = cleanText(process.env.YTDLP_COOKIES_PATH, 1000);
   const cookiesFromBrowser = cleanText(process.env.YTDLP_COOKIES_FROM_BROWSER, 200);
+  const cookiesBase64 = cleanText(process.env.YTDLP_COOKIES_BASE64, 500000);
 
   if (cookiesPath) {
     return ["--cookies", cookiesPath];
+  }
+
+  if (cookiesBase64) {
+    const generatedCookiesPath = path.join(downloadRoot, "yt-dlp-cookies.txt");
+
+    writeFileSync(generatedCookiesPath, Buffer.from(cookiesBase64, "base64").toString("utf8"), {
+      mode: 0o600,
+    });
+
+    return ["--cookies", generatedCookiesPath];
   }
 
   if (cookiesFromBrowser) {

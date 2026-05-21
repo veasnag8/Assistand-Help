@@ -34,19 +34,27 @@ npm run dev:all
 The app defaults to `VITE_VIDEO_SERVER_URL=http://127.0.0.1:5454`. If `yt-dlp`
 is installed somewhere custom, set `YTDLP_PATH` in `.env`.
 
-The local video server loads `.env` automatically. YouTube may require a
-JavaScript runtime and signed-in browser cookies. The local server passes Node
-to yt-dlp by default for YouTube. If YouTube shows `Sign in to confirm you're
-not a bot`, set one of these in `.env` and restart `npm run dev:all`:
+When deploying the app with the Node video backend, set the frontend to call the
+backend URL instead of the Netlify function:
+
+```bash
+VITE_VIDEO_SERVER_URL=https://your-node-video-backend.example.com
+```
+
+On the Node video backend host, YouTube may require a JavaScript runtime and
+signed-in cookies. The video server passes Node to yt-dlp by default for
+YouTube. For local development, set this in `.env` and restart
+`npm run dev:all`:
 
 ```bash
 YTDLP_COOKIES_FROM_BROWSER=chrome
 ```
 
-or:
+For hosted Node backends without a browser profile, export YouTube cookies as a
+Netscape cookies file, base64 encode that file, and set:
 
 ```bash
-YTDLP_COOKIES_PATH=C:\path\to\cookies.txt
+YTDLP_COOKIES_BASE64=base64_encoded_cookies_txt
 ```
 
 Use only cookies from an account and media you are authorized to access.
