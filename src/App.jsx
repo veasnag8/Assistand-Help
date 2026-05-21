@@ -6,6 +6,7 @@ import {
   ChevronRight,
   Clock3,
   ExternalLink,
+  HardDriveDownload,
   FileText,
   FileImage,
   FileSpreadsheet,
@@ -19,6 +20,7 @@ import PdfTools from "./components/PdfTools";
 import QrStudio from "./components/QrStudio";
 import ScanTextTool from "./components/ScanTextTool";
 import SnaGptTool from "./components/SnaGptTool";
+import VideoDownloadTool from "./components/VideoDownloadTool";
 import mamLogo from "./image/mam-logo.png";
 import snaGptLogo from "./image/sna-gpt.png";
 
@@ -51,13 +53,15 @@ const categories = [
     enabled: true,
   },
   {
-    id: "image",
-    title: "Image Tools",
-    tabTitle: "Image Tools",
-    description: "Resize, compress, remove background, convert, crop, and enhance photos.",
-    icon: FileImage,
-    tone: "cyan",
+    id: "master-list-boq",
+    title: "Master List BOQ",
+    tabTitle: "Master List BOQ",
+    description: "Open the shared BOQ master list workbook.",
+    icon: FileSpreadsheet,
+    tone: "excel",
     enabled: true,
+    externalUrl:
+      "https://megaassetmanagement-my.sharepoint.com/:x:/g/personal/phal_bunnavath_mam_com_kh/IQAW0G_7jYZLS7khZPkBFvzRAQVNj0cc1j7RS94carTvRBg?rtime=LkB8YN-23kg",
   },
   {
     id: "scan-text",
@@ -72,11 +76,12 @@ const categories = [
     id: "sna-gpt",
     title: "SNA GPT",
     tabTitle: "SNA GPT",
-    description: "Chat with your custom GPT assistant created by សង វាសនា.",
+    description: "Under maintenance. SNA GPT cannot be used right now.",
     icon: BotMessageSquare,
     logo: snaGptLogo,
     tone: "orange",
-    enabled: true,
+    enabled: false,
+    statusLabel: "Maintenance",
   },
   {
     id: "comment",
@@ -88,15 +93,22 @@ const categories = [
     enabled: true,
   },
   {
-    id: "master-list-boq",
-    title: "Master List BOQ",
-    tabTitle: "Master List BOQ",
-    description: "Open the shared BOQ master list workbook.",
-    icon: FileSpreadsheet,
-    tone: "excel",
+    id: "video-download",
+    title: "Video Download",
+    tabTitle: "Video Download",
+    description: "Download authorized Facebook, YouTube, and TikTok media.",
+    icon: HardDriveDownload,
+    tone: "teal",
     enabled: true,
-    externalUrl:
-      "https://megaassetmanagement-my.sharepoint.com/:x:/g/personal/phal_bunnavath_mam_com_kh/IQAW0G_7jYZLS7khZPkBFvzRAQVNj0cc1j7RS94carTvRBg?rtime=LkB8YN-23kg",
+  },
+  {
+    id: "image",
+    title: "Image Tools",
+    tabTitle: "Image Tools",
+    description: "Resize, compress, remove background, convert, crop, and enhance photos.",
+    icon: FileImage,
+    tone: "cyan",
+    enabled: true,
   },
 ];
 
@@ -109,12 +121,23 @@ const toneColors = {
   pink: "#ec407a",
   cyan: "#06b6d4",
   excel: "#217346",
+  teal: "#0f766e",
   indigo: "#2563eb",
   yellow: "#f4b400",
 };
 
 function getCategoryById(id) {
   return categories.find((item) => item.id === id) || null;
+}
+
+function getOpenableCategoryById(id) {
+  const category = getCategoryById(id);
+
+  if (!category?.enabled || category.externalUrl) {
+    return null;
+  }
+
+  return category;
 }
 
 function getHashToolId() {
@@ -163,7 +186,9 @@ function BrandLogo() {
 function CategoryCard({ category, onOpen }) {
   const Icon = category.icon;
   const isExternal = Boolean(category.externalUrl);
-  const statusText = category.enabled ? (isExternal ? "Open link" : "Open") : "Coming soon";
+  const statusText =
+    category.statusLabel ||
+    (category.enabled ? (isExternal ? "Open link" : "Open") : "Coming soon");
   const ArrowIcon = isExternal ? ExternalLink : ChevronRight;
   const content = (
     <>
@@ -179,14 +204,14 @@ function CategoryCard({ category, onOpen }) {
         <strong>{category.title}</strong>
         <span>{category.description}</span>
       </span>
-      {!category.enabled ? <span className="feature-status">Coming Soon</span> : null}
+      {!category.enabled ? <span className="feature-status">{statusText}</span> : null}
       <span className="category-arrow" aria-hidden="true">
         <ArrowIcon size={22} strokeWidth={2.6} />
       </span>
     </>
   );
 
-  if (isExternal) {
+  if (isExternal && category.enabled) {
     return (
       <a
         className={`category-card tone-${category.tone}`}
@@ -204,7 +229,12 @@ function CategoryCard({ category, onOpen }) {
     <button
       className={`category-card tone-${category.tone}`}
       type="button"
-      onClick={() => onOpen(category.id)}
+      onClick={() => {
+        if (category.enabled) {
+          onOpen(category.id);
+        }
+      }}
+      disabled={!category.enabled}
       aria-label={`${statusText} ${category.title}`}
     >
       {content}
@@ -303,7 +333,8 @@ function ToolView({ activeId, onBack }) {
       {activeId === "scan-text" ? <ScanTextTool /> : null}
       {activeId === "sna-gpt" ? <SnaGptTool onBack={onBack} /> : null}
       {activeId === "comment" ? <CommentTool /> : null}
-      {activeId !== "timer" && activeId !== "qr" && activeId !== "pdf" && activeId !== "image" && activeId !== "scan-text" && activeId !== "sna-gpt" && activeId !== "comment" ? (
+      {activeId === "video-download" ? <VideoDownloadTool /> : null}
+      {activeId !== "timer" && activeId !== "qr" && activeId !== "pdf" && activeId !== "image" && activeId !== "scan-text" && activeId !== "sna-gpt" && activeId !== "comment" && activeId !== "video-download" ? (
         <PlaceholderTool category={category} />
       ) : null}
     </section>
@@ -313,13 +344,13 @@ function ToolView({ activeId, onBack }) {
 export default function App() {
   const [activeTool, setActiveTool] = useState(() => {
     const hashId = getHashToolId();
-    return getCategoryById(hashId) ? hashId : null;
+    return getOpenableCategoryById(hashId) ? hashId : null;
   });
 
   useEffect(() => {
     function handleHashChange() {
       const hashId = getHashToolId();
-      setActiveTool(getCategoryById(hashId) ? hashId : null);
+      setActiveTool(getOpenableCategoryById(hashId) ? hashId : null);
     }
 
     window.addEventListener("hashchange", handleHashChange);

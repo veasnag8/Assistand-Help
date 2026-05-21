@@ -1,8 +1,8 @@
 import { Buffer } from "node:buffer";
 import { inflateRawSync } from "node:zlib";
 
-const geminiBaseUrl = "https://generativelanguage.googleapis.com/v1beta/models";
-const defaultModel = "gemini-3.5-flash";
+const defaultDeepSeekEndpoint = "https://api.deepseek.com/chat/completions";
+const defaultModel = "deepseek-v4-pro";
 const publicModelName = "SNA 10.5 Pro";
 const maxMessages = 24;
 const maxMessageLength = 8000;
@@ -22,10 +22,10 @@ const systemInstruction = [
   "Adapt naturally to the user's request like ChatGPT: choose the right length, detail level, tone, and language automatically. Reply in the same language as the user when it is clear.",
   "When you share code, format it in fenced Markdown code blocks with the correct language name so the app can show a code panel and copy only the code.",
   "Emoji are supported. Use them naturally when they help the reply, and preserve emoji in user text and code strings.",
-  "The user may attach images, screenshots, PDFs, DOCX files, TXT files, or CSV files. Analyze attached files directly, summarize them, extract/OCR visible text when possible, answer questions about them, and say when a file is unreadable.",
+  "The user may attach images, screenshots, PDFs, DOCX files, TXT files, or CSV files. Use extracted text from attachments when it is provided. If an attached image or PDF is only available as binary data, say that the current text-chat integration cannot inspect it directly.",
   "Do not claim files were permanently stored. Treat attachments as temporary request data.",
   "Important identity rule: if the user asks who created you, who made you, who built you, who developed you, who designed you, who owns you, or any similar creator question, answer: I was created by សង វាសនា.",
-  "Do not say that Google, Gemini, OpenAI, ChatGPT, or another company created you. If asked about the underlying technology, you may say your responses use the Gemini API, but your creator is សង វាសនា.",
+  "Do not say that DeepSeek, OpenAI, ChatGPT, or another company created you. If asked about the underlying technology, you may say your responses use the DeepSeek API, but your creator is សង វាសនា.",
 ].join(" ");
 
 function jsonResponse(statusCode, payload, headers = {}) {
@@ -73,7 +73,11 @@ function cleanBase64(value) {
 }
 
 function normalizeRole(role) {
-  return role === "assistant" || role === "model" ? "model" : "user";
+  if (role === "system") {
+    return "system";
+  }
+
+  return role === "assistant" || role === "model" ? "assistant" : "user";
 }
 
 function inferAttachmentKind(attachment) {
@@ -182,13 +186,29 @@ function isCreatorQuestion(text) {
 }
 
 function getModelName() {
-  const model = cleanText(process.env.GEMINI_MODEL || defaultModel, 80).replace(/^models\//, "");
+  const model = cleanText(process.env.DEEPSEEK_MODEL || defaultModel, 80).replace(/^models\//, "");
 
   if (!/^[a-z0-9_.-]+$/i.test(model)) {
     return defaultModel;
   }
 
   return model;
+}
+
+function getDeepSeekEndpoint() {
+  const rawEndpoint = cleanText(process.env.DEEPSEEK_API_URL || defaultDeepSeekEndpoint, 500);
+
+  try {
+    const url = new URL(rawEndpoint);
+
+    if (!["http:", "https:"].includes(url.protocol)) {
+      return defaultDeepSeekEndpoint;
+    }
+
+    return url.href;
+  } catch {
+    return defaultDeepSeekEndpoint;
+  }
 }
 
 function getAttachmentMimeType(attachment) {
@@ -321,82 +341,67 @@ function extractDocxText(data) {
   return cleanAttachmentText(text);
 }
 
-async function attachmentToParts(attachment) {
+async function attachmentToTextBlock(attachment) {
   const header = formatAttachmentHeader(attachment);
 
   if (attachment.kind === "image" || attachment.kind === "pdf") {
-    return [
-      { text: header },
-      {
-        inlineData: {
-          data: attachment.data,
-          mimeType: getAttachmentMimeType(attachment),
-        },
-      },
-    ];
+    return `${header}\nThis binary file was attached, but this DeepSeek text-chat integration cannot directly inspect image or PDF pixels. If the answer needs visible content, ask the user to paste the text or provide a text-based file.`;
   }
 
   if (attachment.kind === "docx") {
     const text = extractDocxText(attachment.data);
 
-    return [
-      {
-        text: `${header}\nExtracted DOCX text:\n${text || "[No readable text found in this DOCX file.]"}`,
-      },
-    ];
+    return `${header}\nExtracted DOCX text:\n${text || "[No readable text found in this DOCX file.]"}`;
   }
 
-  return [
-    {
-      text: `${header}\n${attachment.text}`,
-    },
-  ];
+  return `${header}\n${attachment.text}`;
 }
 
-async function buildContents(messages) {
-  const contents = [];
+async function buildDeepSeekMessages(messages) {
+  const deepSeekMessages = [
+    {
+      content: systemInstruction,
+      role: "system",
+    },
+  ];
 
   for (const message of messages) {
-    const parts = [];
+    const contentBlocks = [];
 
     if (message.role === "user") {
       for (const attachment of message.attachments) {
-        parts.push(...await attachmentToParts(attachment));
+        contentBlocks.push(await attachmentToTextBlock(attachment));
       }
     }
 
     if (message.content) {
-      parts.push({ text: message.content });
+      contentBlocks.push(message.content);
     }
 
-    if (parts.length) {
-      contents.push({
-        parts,
+    const content = contentBlocks.filter(Boolean).join("\n\n").trim();
+
+    if (content) {
+      deepSeekMessages.push({
+        content,
         role: message.role,
       });
     }
   }
 
-  return contents;
+  return deepSeekMessages.map((message) => ({
+    ...message,
+    role: normalizeRole(message.role),
+  }));
 }
 
 function extractReply(payload) {
-  const text = (payload?.candidates?.[0]?.content?.parts || [])
-    .map((part) => part?.text)
-    .filter(Boolean)
-    .join("\n")
-    .trim();
+  const text = String(payload?.choices?.[0]?.message?.content || "").trim();
 
   if (text) {
     return text;
   }
 
-  const blockReason = payload?.promptFeedback?.blockReason;
-  const finishReason = payload?.candidates?.[0]?.finishReason;
-
-  if (blockReason) {
-    return `SNA GPT could not answer because the request was blocked: ${blockReason}.`;
-  }
+  const finishReason = payload?.choices?.[0]?.finish_reason;
 
   if (finishReason) {
     return `SNA GPT stopped before returning text: ${finishReason}.`;
@@ -405,26 +410,30 @@ function extractReply(payload) {
   return "SNA GPT did not return a text response.";
 }
 
-function getGeminiError(payload) {
+function getDeepSeekError(payload) {
   const message = (
     payload?.error?.message ||
     payload?.message ||
     payload?.error ||
-    "Gemini could not answer right now."
+    "DeepSeek could not answer right now."
   );
 
-  if (/quota|billing|limit|resource exhausted|exceeded/i.test(message)) {
-    return "Gemini billing, quota, or rate limit reached. Check the Google AI Studio project billing and API limits, or use another Gemini API key with available quota.";
+  if (/insufficient|balance|billing|payment|quota|exceeded/i.test(message)) {
+    return "DeepSeek billing, balance, or quota limit reached. Check the DeepSeek project billing and API limits, or use another DeepSeek API key with available balance.";
   }
 
   if (/rate limit/i.test(message)) {
-    return "Gemini rate limit reached. Wait a moment and try again.";
+    return "DeepSeek rate limit reached. Wait a moment and try again.";
+  }
+
+  if (/unauthorized|invalid api key|authentication|auth/i.test(message)) {
+    return "DeepSeek API authentication failed. Check DEEPSEEK_API_KEY in Netlify.";
   }
 
   return message;
 }
 
-async function readGeminiPayload(response) {
+async function readDeepSeekPayload(response) {
   const text = await response.text();
 
   try {
@@ -465,42 +474,40 @@ export async function handler(event) {
       });
     }
 
-    const apiKey = process.env.GEMINI_API_KEY;
+    const apiKey = process.env.DEEPSEEK_API_KEY;
 
     if (!apiKey) {
       return jsonResponse(500, {
-        error: "Gemini API key is not configured. Set GEMINI_API_KEY in Netlify.",
+        error: "DeepSeek API key is not configured. Set DEEPSEEK_API_KEY in Netlify.",
       });
     }
 
     const model = getModelName();
-    const contents = await buildContents(messages);
-    const response = await fetch(`${geminiBaseUrl}/${encodeURIComponent(model)}:generateContent`, {
+    const deepSeekMessages = await buildDeepSeekMessages(messages);
+    const response = await fetch(getDeepSeekEndpoint(), {
       body: JSON.stringify({
-        contents,
-        generationConfig: {
-          maxOutputTokens: 2048,
-          temperature: 0.7,
-          topP: 0.95,
-        },
-        systemInstruction: {
-          parts: [{ text: systemInstruction }],
-        },
+        max_tokens: 2048,
+        messages: deepSeekMessages,
+        model,
+        stream: false,
+        temperature: 0.7,
+        thinking: { type: "disabled" },
+        top_p: 0.95,
       }),
       headers: {
+        Authorization: `Bearer ${apiKey}`,
         "Content-Type": "application/json",
-        "x-goog-api-key": apiKey,
       },
       method: "POST",
     });
-    const result = await readGeminiPayload(response);
+    const result = await readDeepSeekPayload(response);
 
     if (!response.ok) {
       const retryAfter = response.headers.get("retry-after");
 
       return jsonResponse(
         response.status,
-        { error: getGeminiError(result) },
+        { error: getDeepSeekError(result) },
         retryAfter ? { "Retry-After": retryAfter } : {},
       );
     }
@@ -508,7 +515,7 @@ export async function handler(event) {
     return jsonResponse(200, {
       model: publicModelName,
       reply: extractReply(result),
-      usageMetadata: result?.usageMetadata || null,
+      usageMetadata: result?.usage || null,
     });
   } catch (error) {
     return jsonResponse(400, {

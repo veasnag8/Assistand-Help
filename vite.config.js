@@ -1,6 +1,8 @@
 import { defineConfig, loadEnv } from "vite";
 import react from "@vitejs/plugin-react";
 
+const localFunctionNames = new Set(["sna-gpt", "video-download"]);
+
 function readRequestBody(request) {
   return new Promise((resolve, reject) => {
     const chunks = [];
@@ -11,40 +13,52 @@ function readRequestBody(request) {
   });
 }
 
+async function runLocalFunction(functionName, request, response) {
+  const body = await readRequestBody(request);
+  const functionUrl = new URL(
+    `./netlify/functions/${functionName}.js?dev=${Date.now()}`,
+    import.meta.url,
+  );
+  const { handler } = await import(functionUrl.href);
+  const result = await handler({
+    body,
+    headers: request.headers,
+    httpMethod: request.method,
+    isBase64Encoded: false,
+    path: `/.netlify/functions/${functionName}`,
+    rawUrl: request.url,
+  });
+
+  response.statusCode = result.statusCode || 200;
+
+  Object.entries(result.headers || {}).forEach(([key, value]) => {
+    response.setHeader(key, value);
+  });
+
+  response.end(result.body || "");
+}
+
 function localNetlifyFunctions() {
   return {
     name: "local-netlify-functions",
     configureServer(server) {
-      server.middlewares.use("/.netlify/functions/sna-gpt", async (request, response) => {
+      server.middlewares.use("/.netlify/functions", async (request, response, next) => {
+        const requestUrl = new URL(request.url || "", "http://localhost");
+        const functionName = requestUrl.pathname.split("/").filter(Boolean).at(-1);
+
+        if (!localFunctionNames.has(functionName)) {
+          next();
+          return;
+        }
+
         try {
-          const body = await readRequestBody(request);
-          const functionUrl = new URL(
-            `./netlify/functions/sna-gpt.js?dev=${Date.now()}`,
-            import.meta.url,
-          );
-          const { handler } = await import(functionUrl.href);
-          const result = await handler({
-            body,
-            headers: request.headers,
-            httpMethod: request.method,
-            isBase64Encoded: false,
-            path: "/.netlify/functions/sna-gpt",
-            rawUrl: request.url,
-          });
-
-          response.statusCode = result.statusCode || 200;
-
-          Object.entries(result.headers || {}).forEach(([key, value]) => {
-            response.setHeader(key, value);
-          });
-
-          response.end(result.body || "");
+          await runLocalFunction(functionName, request, response);
         } catch (error) {
           server.config.logger.error(error);
           response.statusCode = 500;
           response.setHeader("Content-Type", "application/json");
           response.end(JSON.stringify({
-            error: error?.message || "Could not run the SNA GPT function.",
+            error: error?.message || `Could not run the ${functionName} function.`,
           }));
         }
       });
