@@ -284,9 +284,20 @@ function getYtDlpAuthArgs() {
 
 function getYtDlpJavaScriptArgs(platform) {
   const configuredRuntimes = cleanText(process.env.YTDLP_JS_RUNTIMES, 1000);
+  const configuredRemoteComponents = cleanText(process.env.YTDLP_REMOTE_COMPONENTS, 1000);
   const runtimes = configuredRuntimes || (platform === "YouTube" ? "node" : "");
+  const remoteComponents = configuredRemoteComponents || (platform === "YouTube" ? "ejs:github" : "");
+  const args = [];
 
-  return runtimes ? ["--js-runtimes", runtimes] : [];
+  if (runtimes) {
+    args.push("--js-runtimes", runtimes);
+  }
+
+  if (remoteComponents) {
+    args.push("--remote-components", remoteComponents);
+  }
+
+  return args;
 }
 
 function runProcess(command, args, options = {}) {
@@ -702,6 +713,7 @@ async function routeRequest(request, response) {
       cookies: getYtDlpCookieStatus(),
       jsRuntimes: cleanText(process.env.YTDLP_JS_RUNTIMES, 1000) || "node",
       ok: true,
+      remoteComponents: cleanText(process.env.YTDLP_REMOTE_COMPONENTS, 1000) || "ejs:github",
       service: "AISupport local video downloader",
     });
     return;
