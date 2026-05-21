@@ -33,10 +33,6 @@ const modes = [
 const compressProfiles = {
   25: {
     attempts: [
-      { quality: 0.72, scale: 1.15 },
-      { quality: 0.62, scale: 1 },
-      { quality: 0.52, scale: 0.85 },
-      { quality: 0.42, scale: 0.7 },
       { quality: 0.32, scale: 0.55 },
     ],
     label: "Smallest file",
@@ -44,51 +40,21 @@ const compressProfiles = {
   },
   50: {
     attempts: [
-      { quality: 0.98, scale: 5 },
-      { quality: 0.98, scale: 4 },
-      { quality: 0.96, scale: 3 },
-      { quality: 0.94, scale: 2 },
-      { quality: 0.88, scale: 1.7 },
-      { quality: 0.8, scale: 1.45 },
       { quality: 0.72, scale: 1.2 },
-      { quality: 0.62, scale: 1 },
-      { quality: 0.52, scale: 0.85 },
     ],
     label: "Balanced",
     targetRatio: 0.5,
   },
   75: {
     attempts: [
-      { quality: 0.98, scale: 7 },
-      { quality: 0.98, scale: 6 },
-      { quality: 0.98, scale: 5 },
-      { quality: 0.96, scale: 4 },
-      { quality: 0.96, scale: 3 },
-      { quality: 0.96, scale: 2.5 },
-      { quality: 0.94, scale: 2.2 },
       { quality: 0.9, scale: 1.9 },
-      { quality: 0.84, scale: 1.6 },
-      { quality: 0.78, scale: 1.35 },
-      { quality: 0.72, scale: 1.15 },
-      { quality: 0.62, scale: 1 },
     ],
     label: "Better quality",
     targetRatio: 0.75,
   },
   90: {
     attempts: [
-      { quality: 0.98, scale: 8 },
-      { quality: 0.98, scale: 7 },
-      { quality: 0.98, scale: 6 },
-      { quality: 0.98, scale: 5 },
-      { quality: 0.96, scale: 4 },
-      { quality: 0.98, scale: 3 },
       { quality: 0.96, scale: 2.6 },
-      { quality: 0.94, scale: 2.2 },
-      { quality: 0.9, scale: 1.9 },
-      { quality: 0.84, scale: 1.6 },
-      { quality: 0.78, scale: 1.35 },
-      { quality: 0.72, scale: 1.15 },
     ],
     label: "Best quality",
     targetRatio: 0.9,
@@ -241,7 +207,6 @@ export default function PdfTools() {
   const [compressFile, setCompressFile] = useState(null);
   const [compressProfile, setCompressProfile] = useState("50");
   const [compressResult, setCompressResult] = useState(null);
-  const [compressPreviewBusy, setCompressPreviewBusy] = useState(false);
   const [status, setStatus] = useState("Choose a mode and upload PDF files.");
   const [busy, setBusy] = useState(false);
 
@@ -337,53 +302,6 @@ export default function PdfTools() {
     };
   }, [splitFile]);
 
-  useEffect(() => {
-    let active = true;
-
-    async function prepareCompressedPreview() {
-      setCompressResult(null);
-
-      if (mode !== "compress" || !compressFile) {
-        return;
-      }
-
-      if (!isPdfFile(compressFile)) {
-        setStatus("Please choose a PDF file.");
-        return;
-      }
-
-      try {
-        setCompressPreviewBusy(true);
-        setStatus("Calculating compressed size...");
-
-        const result = await buildCompressedPdf(compressFile, compressProfile, (message) => {
-          if (active) {
-            setStatus(message);
-          }
-        });
-
-        if (active) {
-          setCompressResult(result);
-          setStatus(getCompressionStatusMessage(result));
-        }
-      } catch (error) {
-        if (active) {
-          setStatus(error?.message || "Could not calculate compressed size.");
-        }
-      } finally {
-        if (active) {
-          setCompressPreviewBusy(false);
-        }
-      }
-    }
-
-    prepareCompressedPreview();
-
-    return () => {
-      active = false;
-    };
-  }, [compressFile, compressProfile, mode]);
-
   function toggleSplitPage(pageIndex) {
     setSelectedSplitPages((current) => (
       current.includes(pageIndex)
@@ -424,7 +342,7 @@ export default function PdfTools() {
 
   function getCompressionSummary() {
     if (!compressFile || !compressResult?.compressedBytes) {
-      return compressPreviewBusy ? "Calculating..." : "Waiting for file";
+      return compressFile ? "Ready to compress" : "Waiting for file";
     }
 
     if (compressResult.originalReason === "target-unavailable") {
@@ -813,7 +731,7 @@ export default function PdfTools() {
                   <strong>
                     {compressResult?.compressedBytes
                       ? formatFileSize(compressResult.compressedBytes)
-                      : "Calculating..."}
+                      : "Ready"}
                   </strong>
                   <small>{getCompressionSummary()}</small>
                 </div>
@@ -840,7 +758,7 @@ export default function PdfTools() {
               className="button"
               type="button"
               onClick={handleCompress}
-              disabled={busy || compressPreviewBusy || Boolean(compressResult?.originalReason)}
+              disabled={busy || Boolean(compressResult?.originalReason)}
             >
               {compressResult?.originalReason ? "Original Kept" : "Compress PDF"}
             </button>
