@@ -144,7 +144,9 @@ function chooseTargetPdfResult(candidates, file, targetRatio) {
   }
 
   const targetBytes = file.size * targetRatio;
-  const minimumAcceptableBytes = file.size * Math.max(0.1, targetRatio * 0.55);
+  const minimumAcceptableBytes = targetRatio >= 0.75
+    ? file.size * Math.max(0.1, targetRatio * 0.55)
+    : 0;
   const underTarget = compressedCandidates
     .filter((candidate) => candidate.compressedBytes <= targetBytes)
     .sort((left, right) => right.compressedBytes - left.compressedBytes);
