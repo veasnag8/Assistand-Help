@@ -110,6 +110,41 @@ function getSafeCompressionViewport(page, requestedScale) {
   return page.getViewport({ scale });
 }
 
+function canvasHasVisibleContent(canvas) {
+  const sampleSize = 96;
+  const sampleCanvas = document.createElement("canvas");
+  const sampleContext = sampleCanvas.getContext("2d", { alpha: false, willReadFrequently: true });
+
+  if (!sampleContext) {
+    return true;
+  }
+
+  sampleCanvas.width = sampleSize;
+  sampleCanvas.height = sampleSize;
+  sampleContext.fillStyle = "#ffffff";
+  sampleContext.fillRect(0, 0, sampleSize, sampleSize);
+  sampleContext.drawImage(canvas, 0, 0, sampleSize, sampleSize);
+
+  const pixels = sampleContext.getImageData(0, 0, sampleSize, sampleSize).data;
+  let visiblePixels = 0;
+
+  for (let index = 0; index < pixels.length; index += 4) {
+    const red = pixels[index];
+    const green = pixels[index + 1];
+    const blue = pixels[index + 2];
+
+    if (red < 245 || green < 245 || blue < 245) {
+      visiblePixels += 1;
+    }
+
+    if (visiblePixels > 8) {
+      return true;
+    }
+  }
+
+  return false;
+}
+
 function getBaseName(fileName, fallback = "document") {
   return (fileName || fallback).replace(/\.[^.]+$/, "") || fallback;
 }
@@ -446,6 +481,7 @@ export default function PdfTools() {
 
       for (const attempt of profile.attempts) {
         const outputPdf = await PDFDocument.create();
+        let visiblePageCount = 0;
 
         for (let pageNumber = 1; pageNumber <= pdf.numPages; pageNumber += 1) {
           onProgress(`Compressing page ${pageNumber} of ${pdf.numPages} for ${profile.label} target...`);
@@ -468,6 +504,10 @@ export default function PdfTools() {
           const renderTask = page.render({ canvasContext: context, viewport });
           await renderTask.promise;
 
+          if (canvasHasVisibleContent(canvas)) {
+            visiblePageCount += 1;
+          }
+
           const blob = await new Promise((resolve) => {
             canvas.toBlob(resolve, "image/jpeg", attempt.quality);
           });
@@ -486,6 +526,11 @@ export default function PdfTools() {
             width: baseViewport.width,
             height: baseViewport.height,
           });
+        }
+
+        if (!visiblePageCount) {
+          onProgress("Compression render produced blank pages. Trying another setting...");
+          continue;
         }
 
         const bytes = await outputPdf.save({ useObjectStreams: true });
