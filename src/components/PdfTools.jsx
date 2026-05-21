@@ -207,6 +207,7 @@ export default function PdfTools() {
   const [compressFile, setCompressFile] = useState(null);
   const [compressProfile, setCompressProfile] = useState("50");
   const [compressResult, setCompressResult] = useState(null);
+  const [compressStarted, setCompressStarted] = useState(false);
   const [status, setStatus] = useState("Choose a mode and upload PDF files.");
   const [busy, setBusy] = useState(false);
 
@@ -329,6 +330,7 @@ export default function PdfTools() {
   function handleCompressFileChange(file) {
     setCompressFile(file);
     setCompressResult(null);
+    setCompressStarted(false);
 
     if (file) {
       setStatus(`Original file ready: ${formatFileSize(file.size)}.`);
@@ -338,6 +340,7 @@ export default function PdfTools() {
   function handleCompressProfileChange(value) {
     setCompressProfile(value);
     setCompressResult(null);
+    setCompressStarted(false);
   }
 
   function getCompressionSummary() {
@@ -541,6 +544,7 @@ export default function PdfTools() {
 
   async function handleCompress() {
     try {
+      setCompressStarted(true);
       setBusy(true);
       setStatus("Preparing compressed PDF...");
 
@@ -719,7 +723,7 @@ export default function PdfTools() {
               ) : null}
             </div>
 
-            {compressFile && (busy || compressResult) ? (
+            {compressFile && compressStarted ? (
               <div className="pdf-compress-result" aria-label="Compression size result">
                 <div className="pdf-size-card is-original">
                   <span>Original</span>
