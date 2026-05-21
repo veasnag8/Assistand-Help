@@ -95,6 +95,21 @@ const compressProfiles = {
   },
 };
 
+const maxCompressionCanvasPixels = 16_000_000;
+
+function getSafeCompressionViewport(page, requestedScale) {
+  const requestedViewport = page.getViewport({ scale: requestedScale });
+  const requestedPixels = requestedViewport.width * requestedViewport.height;
+
+  if (requestedPixels <= maxCompressionCanvasPixels) {
+    return requestedViewport;
+  }
+
+  const scale = requestedScale * Math.sqrt(maxCompressionCanvasPixels / requestedPixels);
+
+  return page.getViewport({ scale });
+}
+
 function getBaseName(fileName, fallback = "document") {
   return (fileName || fallback).replace(/\.[^.]+$/, "") || fallback;
 }
@@ -437,7 +452,7 @@ export default function PdfTools() {
 
           const page = await pdf.getPage(pageNumber);
           const baseViewport = page.getViewport({ scale: 1 });
-          const viewport = page.getViewport({ scale: attempt.scale });
+          const viewport = getSafeCompressionViewport(page, attempt.scale);
           const canvas = document.createElement("canvas");
           const context = canvas.getContext("2d", { alpha: false });
 
@@ -450,7 +465,8 @@ export default function PdfTools() {
           context.fillStyle = "#ffffff";
           context.fillRect(0, 0, canvas.width, canvas.height);
 
-          await page.render({ canvasContext: context, viewport }).promise;
+          const renderTask = page.render({ canvasContext: context, viewport });
+          await renderTask.promise;
 
           const blob = await new Promise((resolve) => {
             canvas.toBlob(resolve, "image/jpeg", attempt.quality);
