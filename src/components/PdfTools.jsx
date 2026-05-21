@@ -287,22 +287,18 @@ export default function PdfTools() {
     setCompressResult(null);
   }
 
-  function getCompressionChange() {
+  function getCompressionSummary() {
+    const profile = compressProfiles[compressProfile] || compressProfiles["50"];
+
     if (!compressFile || !compressResult?.compressedBytes) {
       return compressPreviewBusy ? "Calculating..." : "Waiting for file";
     }
 
-    const originalBytes = compressResult.originalBytes || compressFile.size;
-    const compressedBytes = compressResult.compressedBytes;
-    const difference = originalBytes - compressedBytes;
-
-    if (compressResult.alreadyOptimized || difference <= 0) {
+    if (compressResult.alreadyOptimized) {
       return "Already optimized";
     }
 
-    const percent = (difference / originalBytes) * 100;
-
-    return percent < 1 ? "Less than 1% smaller" : `${percent.toFixed(0)}% smaller`;
+    return profile.label;
   }
 
   async function buildCompressedPdf(file, profileKey, onProgress = () => {}) {
@@ -663,7 +659,7 @@ export default function PdfTools() {
                       ? formatFileSize(compressResult.compressedBytes)
                       : "Calculating..."}
                   </strong>
-                  <small>{getCompressionChange()}</small>
+                  <small>{getCompressionSummary()}</small>
                 </div>
               </div>
             ) : null}
