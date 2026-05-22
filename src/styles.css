@@ -2618,6 +2618,28 @@ img {
   appearance: none;
 }
 
+.checkbox-field {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  min-height: 32px;
+  align-self: end;
+  font-size: 0.76rem;
+  font-weight: 700;
+}
+
+.checkbox-field input {
+  width: 15px;
+  height: 15px;
+  accent-color: var(--accent);
+}
+
+.checkbox-field input:disabled,
+.checkbox-field input:disabled + span {
+  cursor: not-allowed;
+  opacity: 0.58;
+}
+
 .inline-actions {
   display: flex;
   flex-wrap: wrap;
@@ -2762,6 +2784,10 @@ img {
 
 .canvas-surface.is-loaded {
   cursor: grab;
+}
+
+.canvas-surface.can-move-badge:active {
+  cursor: grabbing;
 }
 
 .preview-canvas {

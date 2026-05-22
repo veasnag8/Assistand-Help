@@ -14,6 +14,10 @@ export const ZOOM_STEP = 0.01;
 export const BADGE_SCALE_MIN = 0.6;
 export const BADGE_SCALE_MAX = 1.6;
 export const BADGE_SCALE_STEP = 0.05;
+export const DEFAULT_BADGE_POSITION = {
+  x: OUTPUT_WIDTH / 2,
+  y: QR_FRAME.y + QR_FRAME.height / 2 + 12,
+};
 
 export const defaultQrDetails = {
   accountName: "",
@@ -21,6 +25,7 @@ export const defaultQrDetails = {
   currencyLabel: "USD $",
   badgeText: "$",
   badgeScale: 1,
+  badgePosition: DEFAULT_BADGE_POSITION,
 };
 
 export function clamp(value, min, max) {
@@ -207,6 +212,7 @@ export function renderQrLayout(canvas, settings, options = {}) {
     currencyLabel,
     badgeText,
     badgeScale = 1,
+    badgePosition = DEFAULT_BADGE_POSITION,
   } = settings;
 
   const { showGuide = true } = options;
@@ -284,8 +290,8 @@ export function renderQrLayout(canvas, settings, options = {}) {
       BADGE_SCALE_MIN,
       BADGE_SCALE_MAX,
     );
-    const badgeCenterX = OUTPUT_WIDTH / 2;
-    const badgeCenterY = QR_FRAME.y + QR_FRAME.height / 2 + 12;
+    const badgeCenterX = Number(badgePosition?.x) || DEFAULT_BADGE_POSITION.x;
+    const badgeCenterY = Number(badgePosition?.y) || DEFAULT_BADGE_POSITION.y;
 
     context.beginPath();
     context.arc(

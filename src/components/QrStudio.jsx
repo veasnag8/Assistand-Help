@@ -12,6 +12,7 @@ import {
   BADGE_SCALE_MAX,
   BADGE_SCALE_MIN,
   BADGE_SCALE_STEP,
+  DEFAULT_BADGE_POSITION,
   OUTPUT_HEIGHT,
   OUTPUT_WIDTH,
   ZOOM_MAX,
@@ -89,6 +90,7 @@ export default function QrStudio() {
     originX: 0,
     originY: 0,
     scale: 1,
+    target: "qr",
   });
 
   const [sourceImage, setSourceImage] = useState(null);
@@ -101,6 +103,7 @@ export default function QrStudio() {
   const [rotation, setRotation] = useState(0);
   const [crop, setCrop] = useState({ x: 0, y: 0 });
   const [details, setDetails] = useState(defaultQrDetails);
+  const [isBadgeLocked, setIsBadgeLocked] = useState(true);
 
   useEffect(() => {
     if (!previewRef.current) {
@@ -279,23 +282,77 @@ export default function QrStudio() {
     );
   }
 
+  function getCanvasPointer(event, bounds) {
+    const scale = OUTPUT_WIDTH / bounds.width;
+
+    return {
+      x: (event.clientX - bounds.left) * scale,
+      y: (event.clientY - bounds.top) * scale,
+      scale,
+    };
+  }
+
+  function isBadgePointer(event, bounds) {
+    if (isBadgeLocked || !details.badgeText.trim()) {
+      return false;
+    }
+
+    const pointer = getCanvasPointer(event, bounds);
+    const badgeScale = clamp(
+      Number(details.badgeScale) || defaultQrDetails.badgeScale,
+      BADGE_SCALE_MIN,
+      BADGE_SCALE_MAX,
+    );
+    const radius = 39 * badgeScale + 12;
+    const badgeX = Number(details.badgePosition?.x) || DEFAULT_BADGE_POSITION.x;
+    const badgeY = Number(details.badgePosition?.y) || DEFAULT_BADGE_POSITION.y;
+
+    return Math.hypot(pointer.x - badgeX, pointer.y - badgeY) <= radius;
+  }
+
   function handlePointerDown(event) {
-    if (!sourceImage) {
+    if (event.button !== 0) {
       return;
     }
 
-    const bounds = event.currentTarget.getBoundingClientRect();
-    const scale = OUTPUT_WIDTH / bounds.width;
+    const bounds = previewRef.current?.getBoundingClientRect();
+
+    if (!bounds) {
+      return;
+    }
+
+    const pointer = getCanvasPointer(event, bounds);
+    const canDragBadge = !isBadgeLocked && badgeEnabled;
+    const target = canDragBadge ? "badge" : "qr";
+
+    if (target === "qr" && !sourceImage) {
+      return;
+    }
+
+    const badgeX = Number(details.badgePosition?.x) || DEFAULT_BADGE_POSITION.x;
+    const badgeY = Number(details.badgePosition?.y) || DEFAULT_BADGE_POSITION.y;
+    const badgeWasClicked = isBadgePointer(event, bounds);
 
     dragRef.current = {
       active: true,
       pointerId: event.pointerId,
       startX: event.clientX,
       startY: event.clientY,
-      originX: crop.x,
-      originY: crop.y,
-      scale,
+      originX: target === "badge" ? (badgeWasClicked ? badgeX : pointer.x) : crop.x,
+      originY: target === "badge" ? (badgeWasClicked ? badgeY : pointer.y) : crop.y,
+      scale: pointer.scale,
+      target,
     };
+
+    if (target === "badge" && !badgeWasClicked) {
+      setDetails((current) => ({
+        ...current,
+        badgePosition: {
+          x: clamp(pointer.x, 0, OUTPUT_WIDTH),
+          y: clamp(pointer.y, 0, OUTPUT_HEIGHT),
+        },
+      }));
+    }
 
     event.currentTarget.setPointerCapture(event.pointerId);
   }
@@ -307,6 +364,18 @@ export default function QrStudio() {
 
     const deltaX = (event.clientX - dragRef.current.startX) * dragRef.current.scale;
     const deltaY = (event.clientY - dragRef.current.startY) * dragRef.current.scale;
+
+    if (dragRef.current.target === "badge") {
+      setDetails((current) => ({
+        ...current,
+        badgePosition: {
+          x: clamp(dragRef.current.originX + deltaX, 0, OUTPUT_WIDTH),
+          y: clamp(dragRef.current.originY + deltaY, 0, OUTPUT_HEIGHT),
+        },
+      }));
+      return;
+    }
+
     const nextCrop = normalizeCropPosition(
       sourceImage,
       {
@@ -326,6 +395,7 @@ export default function QrStudio() {
 
     dragRef.current.active = false;
     dragRef.current.pointerId = null;
+    dragRef.current.target = "qr";
 
     if (event.currentTarget.hasPointerCapture(event.pointerId)) {
       event.currentTarget.releasePointerCapture(event.pointerId);
@@ -404,6 +474,16 @@ export default function QrStudio() {
                 ))}
               </select>
             </div>
+
+            <label className="checkbox-field">
+              <input
+                type="checkbox"
+                checked={isBadgeLocked}
+                onChange={(event) => setIsBadgeLocked(event.target.checked)}
+                disabled={!badgeEnabled}
+              />
+              <span>Lock badge</span>
+            </label>
           </div>
 
           <div className="adjust-grid">
@@ -541,7 +621,9 @@ export default function QrStudio() {
           description="The exported canvas is locked to the final production size."
         >
           <div
-            className={`canvas-surface${sourceImage ? " is-loaded" : ""}`}
+            className={`canvas-surface${sourceImage ? " is-loaded" : ""}${
+              !isBadgeLocked && badgeEnabled ? " can-move-badge" : ""
+            }`}
             onPointerDown={handlePointerDown}
             onPointerMove={handlePointerMove}
             onPointerUp={handlePointerUp}
