@@ -192,14 +192,17 @@ function getModelName() {
   return model;
 }
 
-function getFallbackModelName() {
-  const model = cleanText(process.env.GEMMA_FALLBACK_MODEL || "", 80).replace(/^models\//, "");
+function getFallbackModelNames(primaryModel) {
+  const rawModels =
+    process.env.GEMMA_FALLBACK_MODELS ||
+    process.env.GEMMA_FALLBACK_MODEL ||
+    "";
+  const models = rawModels
+    .split(",")
+    .map((model) => cleanText(model, 80).replace(/^models\//, ""))
+    .filter((model) => model && /^[a-z0-9_.-]+$/i.test(model));
 
-  if (!model || !/^[a-z0-9_.-]+$/i.test(model)) {
-    return "";
-  }
-
-  return model;
+  return [...new Set(models)].filter((model) => model !== primaryModel);
 }
 
 function hasAttachments(messages) {
@@ -500,6 +503,24 @@ function isLimitResponse(response, payload) {
   );
 }
 
+function isModelUnavailableResponse(response, payload) {
+  const message = String(
+    payload?.error?.message ||
+    payload?.message ||
+    payload?.error ||
+    "",
+  );
+
+  return (
+    [400, 404].includes(response.status) &&
+    /model|not found|not supported|unavailable|invalid/i.test(message)
+  );
+}
+
+function shouldTryNextFallback(response, payload) {
+  return isLimitResponse(response, payload) || isModelUnavailableResponse(response, payload);
+}
+
 async function generateContent({ apiKey, contents, model }) {
   const response = await fetch(`${geminiBaseUrl}/${encodeURIComponent(model)}:generateContent`, {
     body: JSON.stringify({
@@ -567,7 +588,7 @@ export async function handler(event) {
     }
 
     const model = getModelName();
-    const fallbackModel = getFallbackModelName();
+    const fallbackModels = getFallbackModelNames(model);
     const contents = await buildContents(messages);
     let { response, result } = await generateContent({ apiKey, contents, model });
     let activeModel = model;
@@ -575,21 +596,26 @@ export async function handler(event) {
 
     if (
       !response.ok &&
-      fallbackModel &&
-      fallbackModel !== model &&
+      fallbackModels.length &&
       !hasAttachments(messages) &&
       isLimitResponse(response, result)
     ) {
-      const fallback = await generateContent({
-        apiKey,
-        contents,
-        model: fallbackModel,
-      });
+      for (const fallbackModel of fallbackModels) {
+        const fallback = await generateContent({
+          apiKey,
+          contents,
+          model: fallbackModel,
+        });
 
-      response = fallback.response;
-      result = fallback.result;
-      activeModel = fallbackModel;
-      usedFallback = response.ok;
+        response = fallback.response;
+        result = fallback.result;
+        activeModel = fallbackModel;
+        usedFallback = response.ok;
+
+        if (response.ok || !shouldTryNextFallback(response, result)) {
+          break;
+        }
+      }
     }
 
     if (!response.ok) {
@@ -607,11 +633,12 @@ export async function handler(event) {
     }
 
     const fallbackPrefix = usedFallback
-      ? "Primary chat limit was reached, so I switched to the fallback text model for this reply.\n\n"
+      ? `Primary chat limit was reached, so I switched to ${activeModel} for this text reply.\n\n`
       : "";
 
     return jsonResponse(200, {
       fallbackModelUsed: usedFallback,
+      fallbackModel: usedFallback ? activeModel : null,
       model: usedFallback ? fallbackPublicModelName : publicModelName,
       reply: `${fallbackPrefix}${extractReply(result)}`,
       usageMetadata: result?.usageMetadata || null,

@@ -12,10 +12,10 @@ npm run dev
 The Removal.AI and SNA GPT Gemini APIs run through Netlify functions so API keys
 are not exposed in the browser. Set `REMOVAL_AI_API_KEY` and `GEMINI_API_KEY` in
 Netlify environment variables before deploying. `GEMINI_MODEL` is optional and
-defaults to `gemini-2.5-flash`. Set `GEMMA_FALLBACK_MODEL` to let SNA GPT retry
-text-only chats with Gemma when the primary Gemini model reaches a quota or rate
-limit. For local API testing, create `.env` from `.env.example` and run the app
-with Netlify CLI, for example `npx netlify-cli dev`. Set
+defaults to `gemini-2.5-flash`. Set `GEMMA_FALLBACK_MODELS` to a comma-separated
+list to let SNA GPT retry text-only chats with Gemma when the primary Gemini
+model reaches a quota or rate limit. For local API testing, create `.env` from
+`.env.example` and run the app with Netlify CLI, for example `npx netlify-cli dev`. Set
 `VITE_SNA_GPT_DAILY_TOKEN_LIMIT` and
 `VITE_SNA_GPT_DAILY_MESSAGE_LIMIT` to show estimated remaining daily usage in
 the SNA GPT sidebar.
