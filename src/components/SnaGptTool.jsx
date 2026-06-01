@@ -28,6 +28,10 @@ const chatStorageKey = "sna-gpt-chat-v1";
 const sidebarStorageKey = "sna-gpt-sidebar-collapsed-v2";
 const usageStorageKey = "sna-gpt-usage-v1";
 const publicModelName = "SNA Version 26.5 Pro";
+const dailyTokenLimit = Math.max(
+  0,
+  Number(import.meta.env.VITE_SNA_GPT_DAILY_TOKEN_LIMIT || 0),
+);
 const maxAttachments = 6;
 const maxBinaryFileBytes = 4 * 1024 * 1024;
 const maxTextFileBytes = 1.2 * 1024 * 1024;
@@ -314,6 +318,32 @@ function summarizeUsageMetadata(usageMetadata) {
     outputTokens,
     totalTokens,
   };
+}
+
+function getRemainingTokens(tokensToday) {
+  if (!dailyTokenLimit) {
+    return null;
+  }
+
+  return Math.max(0, dailyTokenLimit - (Number(tokensToday) || 0));
+}
+
+function getUsageNote(usage) {
+  if (usage.limitMessage) {
+    return usage.limitMessage;
+  }
+
+  if (!dailyTokenLimit) {
+    return "Set daily token limit in Netlify to show remaining usage.";
+  }
+
+  const remainingTokens = getRemainingTokens(usage.tokensToday);
+
+  if (remainingTokens <= 0) {
+    return "Today message limit is over. Please wait until tomorrow.";
+  }
+
+  return "Remaining usage is estimated from this browser's daily token total.";
 }
 
 function getSnaGptEndpoint() {
@@ -1105,6 +1135,14 @@ export default function SnaGptTool({ onBack }) {
                 <dd>{formatNumber(usage.tokensToday)} tokens</dd>
               </div>
               <div>
+                <dt>Remaining</dt>
+                <dd>
+                  {dailyTokenLimit
+                    ? `${formatNumber(getRemainingTokens(usage.tokensToday))} tokens`
+                    : "Not set"}
+                </dd>
+              </div>
+              <div>
                 <dt>Messages</dt>
                 <dd>{formatNumber(usage.requestsToday)}</dd>
               </div>
@@ -1113,7 +1151,7 @@ export default function SnaGptTool({ onBack }) {
                 <dd>{formatNumber(usage.lastTotalTokens)} tokens</dd>
               </div>
             </dl>
-            <p>{usage.limitMessage || "Token totals update after each answer."}</p>
+            <p>{getUsageNote(usage)}</p>
           </div>
           <button className="button secondary" type="button" onClick={clearChat}>
             <Trash2 size={16} strokeWidth={2.2} />
