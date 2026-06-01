@@ -1523,8 +1523,44 @@ img {
 .sna-message-text {
   font-size: 0.94rem;
   overflow-wrap: anywhere;
-  white-space: pre-wrap;
   line-height: 1.56;
+}
+
+.sna-message-text p,
+.sna-message-text ul {
+  margin: 0;
+}
+
+.sna-message-text p + p,
+.sna-message-text p + ul,
+.sna-message-text ul + p,
+.sna-message-text ul + ul {
+  margin-top: 9px;
+}
+
+.sna-message-list-markdown {
+  display: grid;
+  gap: 5px;
+  padding-left: 1.25rem;
+}
+
+.sna-message-text strong {
+  color: inherit;
+  font-weight: 900;
+}
+
+.sna-message-text em {
+  font-style: italic;
+}
+
+.sna-inline-code {
+  border: 1px solid rgba(9, 16, 71, 0.08);
+  border-radius: 6px;
+  background: rgba(9, 16, 71, 0.06);
+  color: #194a5f;
+  padding: 1px 5px;
+  font-family: "Cascadia Code", "Consolas", "SFMono-Regular", monospace;
+  font-size: 0.88em;
 }
 
 .sna-message-content {
@@ -2006,6 +2042,12 @@ img {
   border-color: rgba(251, 146, 60, 0.34);
   background: rgba(67, 20, 7, 0.68);
   color: #fed7aa;
+}
+
+.sna-gpt-tool.is-dark-mode .sna-inline-code {
+  border-color: rgba(148, 163, 184, 0.2);
+  background: rgba(2, 6, 23, 0.56);
+  color: #bae6fd;
 }
 
 .sna-gpt-tool.is-dark-mode .sna-drop-overlay {

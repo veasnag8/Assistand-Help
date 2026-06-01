@@ -804,6 +804,98 @@ function CodeBlock({ code, language, onCopy }) {
   );
 }
 
+function renderInlineMarkdown(text, keyPrefix) {
+  const nodes = [];
+  const pattern = /(`[^`]+`|\*\*[^*\n][\s\S]*?\*\*|\*[^*\n][^*\n]*\*)/g;
+  let lastIndex = 0;
+  let match;
+
+  while ((match = pattern.exec(text)) !== null) {
+    const token = match[0];
+
+    if (match.index > lastIndex) {
+      nodes.push(text.slice(lastIndex, match.index));
+    }
+
+    if (token.startsWith("`")) {
+      nodes.push(
+        <code className="sna-inline-code" key={`${keyPrefix}-code-${match.index}`}>
+          {token.slice(1, -1)}
+        </code>,
+      );
+    } else if (token.startsWith("**")) {
+      nodes.push(
+        <strong key={`${keyPrefix}-strong-${match.index}`}>
+          {token.slice(2, -2)}
+        </strong>,
+      );
+    } else {
+      nodes.push(
+        <em key={`${keyPrefix}-em-${match.index}`}>
+          {token.slice(1, -1)}
+        </em>,
+      );
+    }
+
+    lastIndex = match.index + token.length;
+  }
+
+  if (lastIndex < text.length) {
+    nodes.push(text.slice(lastIndex));
+  }
+
+  return nodes;
+}
+
+function renderTextBlock(content, keyPrefix) {
+  const lines = String(content || "").split(/\r?\n/);
+  const blocks = [];
+  let listItems = [];
+
+  function flushList(index) {
+    if (!listItems.length) {
+      return;
+    }
+
+    blocks.push(
+      <ul className="sna-message-list-markdown" key={`${keyPrefix}-list-${index}`}>
+        {listItems}
+      </ul>,
+    );
+    listItems = [];
+  }
+
+  lines.forEach((line, index) => {
+    const bulletMatch = line.match(/^\s*(?:[-*]|\d+\.)\s+(.+)$/);
+
+    if (bulletMatch) {
+      listItems.push(
+        <li key={`${keyPrefix}-item-${index}`}>
+          {renderInlineMarkdown(bulletMatch[1], `${keyPrefix}-item-${index}`)}
+        </li>,
+      );
+      return;
+    }
+
+    flushList(index);
+
+    if (!line.trim()) {
+      blocks.push(<br key={`${keyPrefix}-break-${index}`} />);
+      return;
+    }
+
+    blocks.push(
+      <p key={`${keyPrefix}-paragraph-${index}`}>
+        {renderInlineMarkdown(line, `${keyPrefix}-paragraph-${index}`)}
+      </p>,
+    );
+  });
+
+  flushList(lines.length);
+
+  return blocks;
+}
+
 function MessageContent({ content, onCopy }) {
   return (
     <div className="sna-message-content">
@@ -817,7 +909,7 @@ function MessageContent({ content, onCopy }) {
           />
         ) : (
           <div className="sna-message-text" key={`${part.type}-${index}`}>
-            {part.content}
+            {renderTextBlock(part.content, `${part.type}-${index}`)}
           </div>
         )
       ))}
