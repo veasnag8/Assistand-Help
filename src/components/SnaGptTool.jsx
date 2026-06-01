@@ -994,6 +994,7 @@ export default function SnaGptTool({ onBack }) {
   const [busy, setBusy] = useState(false);
   const [model, setModel] = useState(publicModelName);
   const [freeMode, setFreeMode] = useState(false);
+  const [hideFreeModeNote, setHideFreeModeNote] = useState(false);
   const [usage, setUsage] = useState(loadStoredUsage);
   const fileInputRef = useRef(null);
   const scrollRef = useRef(null);
@@ -1063,6 +1064,7 @@ export default function SnaGptTool({ onBack }) {
     setBusy(false);
     setAttachments([]);
     setFreeMode(false);
+    setHideFreeModeNote(false);
     setModel(publicModelName);
     setMessages([createWelcomeMessage()]);
     setStatus("Ready.");
@@ -1148,6 +1150,7 @@ export default function SnaGptTool({ onBack }) {
       setMessages([...nextMessages, assistantMessage]);
       setModel(result.model || publicModelName);
       setFreeMode(Boolean(result.fallbackModelUsed));
+      setHideFreeModeNote(false);
       setUsage((current) => {
         const emptyUsage = createEmptyUsage();
         const dailyUsage = current.dayKey === emptyUsage.dayKey ? current : emptyUsage;
@@ -1178,6 +1181,7 @@ export default function SnaGptTool({ onBack }) {
       ]);
       if (shouldUseFreeTextMode) {
         setFreeMode(true);
+        setHideFreeModeNote(false);
         setModel("SNA Version 26.5 Free");
       }
       setUsage((current) => ({
@@ -1384,9 +1388,17 @@ export default function SnaGptTool({ onBack }) {
         ) : null}
 
         <form className="sna-composer" onSubmit={handleSubmit}>
-          {freeMode ? (
+          {freeMode && !hideFreeModeNote ? (
             <div className="sna-free-mode-note" role="status">
-              SNA Version 26.5 Free is active. File upload is disabled until Pro is available again.
+              <span>SNA Version 26.5 Free is active. File upload is disabled until Pro is available again.</span>
+              <button
+                type="button"
+                onClick={() => setHideFreeModeNote(true)}
+                aria-label="Hide free mode notice"
+                title="Hide"
+              >
+                <X size={14} strokeWidth={2.4} />
+              </button>
             </div>
           ) : null}
           <div className="sna-composer-main">

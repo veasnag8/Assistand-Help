@@ -1819,6 +1819,10 @@ img {
 
 .sna-free-mode-note {
   grid-column: 1 / -1;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
   border: 1px solid rgba(249, 115, 22, 0.18);
   border-radius: 12px;
   background: rgba(255, 247, 237, 0.94);
@@ -1827,6 +1831,27 @@ img {
   font-weight: 850;
   line-height: 1.35;
   padding: 8px 10px;
+}
+
+.sna-free-mode-note span {
+  min-width: 0;
+}
+
+.sna-free-mode-note button {
+  flex: 0 0 auto;
+  width: 24px;
+  height: 24px;
+  display: inline-grid;
+  place-items: center;
+  border: 0;
+  border-radius: 8px;
+  background: rgba(249, 115, 22, 0.12);
+  color: #9a3412;
+  padding: 0;
+}
+
+.sna-free-mode-note button:hover {
+  background: rgba(249, 115, 22, 0.2);
 }
 
 .sna-composer-main {
@@ -2042,6 +2067,15 @@ img {
   border-color: rgba(251, 146, 60, 0.34);
   background: rgba(67, 20, 7, 0.68);
   color: #fed7aa;
+}
+
+.sna-gpt-tool.is-dark-mode .sna-free-mode-note button {
+  background: rgba(251, 146, 60, 0.18);
+  color: #fed7aa;
+}
+
+.sna-gpt-tool.is-dark-mode .sna-free-mode-note button:hover {
+  background: rgba(251, 146, 60, 0.28);
 }
 
 .sna-gpt-tool.is-dark-mode .sna-inline-code {
