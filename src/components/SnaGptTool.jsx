@@ -373,13 +373,13 @@ function getUsageNote(usage) {
   const remainingMessages = getRemainingMessages(usage.requestsToday);
 
   if (remainingMessages !== null && remainingMessages <= 0) {
-    return "Today message limit is over. Please wait until tomorrow.";
+    return "Local chat counter reached today's message limit. Clear Chat resets this browser counter.";
   }
 
   const remainingTokens = getRemainingTokens(usage.tokensToday);
 
   if (remainingTokens !== null && remainingTokens <= 0) {
-    return "Today message limit is over. Please wait until tomorrow.";
+    return "Local token counter reached today's limit. Clear Chat resets this browser counter.";
   }
 
   return "Remaining usage is estimated from this browser's daily chat and token totals.";
@@ -1167,6 +1167,7 @@ export default function SnaGptTool({ onBack }) {
     setHideFreeModeNote(false);
     setModel(publicModelName);
     setMessages([createWelcomeMessage()]);
+    setUsage(createEmptyUsage());
     setStatus("Ready.");
   }
 
