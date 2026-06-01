@@ -14,8 +14,9 @@ are not exposed in the browser. Set `REMOVAL_AI_API_KEY` and `GEMINI_API_KEY` in
 Netlify environment variables before deploying. `GEMINI_MODEL` is optional and
 defaults to `gemini-2.5-flash`. For local API testing, create `.env` from
 `.env.example` and run the app with Netlify CLI, for example
-`npx netlify-cli dev`. Set `VITE_SNA_GPT_DAILY_TOKEN_LIMIT` to show an estimated
-remaining daily token count in the SNA GPT sidebar.
+`npx netlify-cli dev`. Set `VITE_SNA_GPT_DAILY_TOKEN_LIMIT` and
+`VITE_SNA_GPT_DAILY_MESSAGE_LIMIT` to show estimated remaining daily usage in
+the SNA GPT sidebar.
 
 ## Local video downloader
 

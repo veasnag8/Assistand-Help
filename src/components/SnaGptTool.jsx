@@ -32,6 +32,10 @@ const dailyTokenLimit = Math.max(
   0,
   Number(import.meta.env.VITE_SNA_GPT_DAILY_TOKEN_LIMIT || 0),
 );
+const dailyMessageLimit = Math.max(
+  0,
+  Number(import.meta.env.VITE_SNA_GPT_DAILY_MESSAGE_LIMIT || 0),
+);
 const maxAttachments = 6;
 const maxBinaryFileBytes = 4 * 1024 * 1024;
 const maxTextFileBytes = 1.2 * 1024 * 1024;
@@ -328,22 +332,36 @@ function getRemainingTokens(tokensToday) {
   return Math.max(0, dailyTokenLimit - (Number(tokensToday) || 0));
 }
 
+function getRemainingMessages(requestsToday) {
+  if (!dailyMessageLimit) {
+    return null;
+  }
+
+  return Math.max(0, dailyMessageLimit - (Number(requestsToday) || 0));
+}
+
 function getUsageNote(usage) {
   if (usage.limitMessage) {
     return usage.limitMessage;
   }
 
-  if (!dailyTokenLimit) {
-    return "Set daily token limit in Netlify to show remaining usage.";
+  if (!dailyTokenLimit && !dailyMessageLimit) {
+    return "Set daily token/message limits in Netlify to show remaining usage.";
+  }
+
+  const remainingMessages = getRemainingMessages(usage.requestsToday);
+
+  if (remainingMessages !== null && remainingMessages <= 0) {
+    return "Today message limit is over. Please wait until tomorrow.";
   }
 
   const remainingTokens = getRemainingTokens(usage.tokensToday);
 
-  if (remainingTokens <= 0) {
+  if (remainingTokens !== null && remainingTokens <= 0) {
     return "Today message limit is over. Please wait until tomorrow.";
   }
 
-  return "Remaining usage is estimated from this browser's daily token total.";
+  return "Remaining usage is estimated from this browser's daily chat and token totals.";
 }
 
 function getSnaGptEndpoint() {
@@ -1145,6 +1163,14 @@ export default function SnaGptTool({ onBack }) {
               <div>
                 <dt>Messages</dt>
                 <dd>{formatNumber(usage.requestsToday)}</dd>
+              </div>
+              <div>
+                <dt>Chats left</dt>
+                <dd>
+                  {dailyMessageLimit
+                    ? formatNumber(getRemainingMessages(usage.requestsToday))
+                    : "Not set"}
+                </dd>
               </div>
               <div>
                 <dt>Last</dt>
