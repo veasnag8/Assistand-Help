@@ -693,9 +693,6 @@ export async function handler(event) {
       });
     }
 
-    const fallbackPrefix = usedFallback
-      ? `Primary chat limit was reached, so I switched to ${activeModel} for this text reply.\n\n`
-      : "";
     const fileUploadSupported = supportsFileUpload(activeModel);
 
     return jsonResponse(200, {
@@ -703,7 +700,7 @@ export async function handler(event) {
       fallbackModel: usedFallback ? activeModel : null,
       fileUploadSupported,
       model: usedFallback && !fileUploadSupported ? fallbackPublicModelName : publicModelName,
-      reply: `${fallbackPrefix}${reply}`,
+      reply,
       usageMetadata: result?.usageMetadata || null,
     });
   } catch (error) {
