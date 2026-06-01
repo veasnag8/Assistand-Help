@@ -1757,9 +1757,22 @@ img {
 .sna-composer {
   display: grid;
   grid-template-columns: minmax(0, 1fr) 48px;
+  align-items: end;
   gap: 10px;
   border-top: 1px solid rgba(9, 16, 71, 0.08);
   padding: 12px max(22px, calc((100% - 1120px) / 2)) 15px;
+}
+
+.sna-free-mode-note {
+  grid-column: 1 / -1;
+  border: 1px solid rgba(249, 115, 22, 0.18);
+  border-radius: 12px;
+  background: rgba(255, 247, 237, 0.94);
+  color: #9a3412;
+  font-size: 0.78rem;
+  font-weight: 850;
+  line-height: 1.35;
+  padding: 8px 10px;
 }
 
 .sna-composer-main {

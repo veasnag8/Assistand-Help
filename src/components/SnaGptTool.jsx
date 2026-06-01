@@ -893,6 +893,7 @@ export default function SnaGptTool({ onBack }) {
   const [status, setStatus] = useState("Ready.");
   const [busy, setBusy] = useState(false);
   const [model, setModel] = useState(publicModelName);
+  const [freeMode, setFreeMode] = useState(false);
   const [usage, setUsage] = useState(loadStoredUsage);
   const fileInputRef = useRef(null);
   const scrollRef = useRef(null);
@@ -957,6 +958,8 @@ export default function SnaGptTool({ onBack }) {
     requestRef.current?.abort();
     setBusy(false);
     setAttachments([]);
+    setFreeMode(false);
+    setModel(publicModelName);
     setMessages([createWelcomeMessage()]);
     setStatus("Ready.");
   }
@@ -976,6 +979,11 @@ export default function SnaGptTool({ onBack }) {
     const incomingFiles = Array.from(files || []).filter(Boolean);
 
     if (!incomingFiles.length) {
+      return;
+    }
+
+    if (freeMode) {
+      setStatus("File upload is disabled in SNA Version 26.5 Free. Start a new chat when Pro is available.");
       return;
     }
 
@@ -1035,6 +1043,7 @@ export default function SnaGptTool({ onBack }) {
 
       setMessages([...nextMessages, assistantMessage]);
       setModel(result.model || publicModelName);
+      setFreeMode(Boolean(result.fallbackModelUsed));
       setUsage((current) => {
         const emptyUsage = createEmptyUsage();
         const dailyUsage = current.dayKey === emptyUsage.dayKey ? current : emptyUsage;
@@ -1253,6 +1262,11 @@ export default function SnaGptTool({ onBack }) {
         ) : null}
 
         <form className="sna-composer" onSubmit={handleSubmit}>
+          {freeMode ? (
+            <div className="sna-free-mode-note" role="status">
+              SNA Version 26.5 Free is active. File upload is disabled until Pro is available again.
+            </div>
+          ) : null}
           <div className="sna-composer-main">
             {attachments.length ? (
               <AttachmentList attachments={attachments} onRemove={removeAttachment} />
@@ -1262,9 +1276,9 @@ export default function SnaGptTool({ onBack }) {
                 className="sna-attach-button"
                 type="button"
                 onClick={() => fileInputRef.current?.click()}
-                disabled={busy || attachments.length >= maxAttachments}
+                disabled={freeMode || busy || attachments.length >= maxAttachments}
                 aria-label="Attach files"
-                title="Attach files"
+                title={freeMode ? "File upload is disabled in SNA Version 26.5 Free" : "Attach files"}
               >
                 <Paperclip size={20} strokeWidth={2.3} />
               </button>
