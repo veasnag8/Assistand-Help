@@ -191,6 +191,20 @@ function getModelName() {
   return model;
 }
 
+function getFallbackModelName() {
+  const model = cleanText(process.env.GEMMA_FALLBACK_MODEL || "", 80).replace(/^models\//, "");
+
+  if (!model || !/^[a-z0-9_.-]+$/i.test(model)) {
+    return "";
+  }
+
+  return model;
+}
+
+function hasAttachments(messages) {
+  return messages.some((message) => message.attachments.length > 0);
+}
+
 function getAttachmentMimeType(attachment) {
   if (attachment.mimeType) {
     return attachment.mimeType;
@@ -471,6 +485,47 @@ async function readGeminiPayload(response) {
   }
 }
 
+function isLimitResponse(response, payload) {
+  const message = String(
+    payload?.error?.message ||
+    payload?.message ||
+    payload?.error ||
+    "",
+  );
+
+  return (
+    response.status === 429 ||
+    /quota|billing|limit|resource exhausted|exceeded|rate limit/i.test(message)
+  );
+}
+
+async function generateContent({ apiKey, contents, model }) {
+  const response = await fetch(`${geminiBaseUrl}/${encodeURIComponent(model)}:generateContent`, {
+    body: JSON.stringify({
+      contents,
+      generationConfig: {
+        maxOutputTokens: 2048,
+        temperature: 0.7,
+        topP: 0.95,
+      },
+      systemInstruction: {
+        parts: [{ text: systemInstruction }],
+      },
+    }),
+    headers: {
+      "Content-Type": "application/json",
+      "x-goog-api-key": apiKey,
+    },
+    method: "POST",
+  });
+  const result = await readGeminiPayload(response);
+
+  return {
+    response,
+    result,
+  };
+}
+
 export async function handler(event) {
   if (event.httpMethod === "OPTIONS") {
     return {
@@ -511,26 +566,30 @@ export async function handler(event) {
     }
 
     const model = getModelName();
+    const fallbackModel = getFallbackModelName();
     const contents = await buildContents(messages);
-    const response = await fetch(`${geminiBaseUrl}/${encodeURIComponent(model)}:generateContent`, {
-      body: JSON.stringify({
+    let { response, result } = await generateContent({ apiKey, contents, model });
+    let activeModel = model;
+    let usedFallback = false;
+
+    if (
+      !response.ok &&
+      fallbackModel &&
+      fallbackModel !== model &&
+      !hasAttachments(messages) &&
+      isLimitResponse(response, result)
+    ) {
+      const fallback = await generateContent({
+        apiKey,
         contents,
-        generationConfig: {
-          maxOutputTokens: 2048,
-          temperature: 0.7,
-          topP: 0.95,
-        },
-        systemInstruction: {
-          parts: [{ text: systemInstruction }],
-        },
-      }),
-      headers: {
-        "Content-Type": "application/json",
-        "x-goog-api-key": apiKey,
-      },
-      method: "POST",
-    });
-    const result = await readGeminiPayload(response);
+        model: fallbackModel,
+      });
+
+      response = fallback.response;
+      result = fallback.result;
+      activeModel = fallbackModel;
+      usedFallback = response.ok;
+    }
 
     if (!response.ok) {
       const retryAfter = response.headers.get("retry-after");
@@ -546,9 +605,14 @@ export async function handler(event) {
       );
     }
 
+    const fallbackPrefix = usedFallback
+      ? "Primary chat limit was reached, so I switched to the fallback text model for this reply.\n\n"
+      : "";
+
     return jsonResponse(200, {
-      model: publicModelName,
-      reply: extractReply(result),
+      fallbackModelUsed: usedFallback,
+      model: usedFallback ? `${publicModelName} (${activeModel})` : publicModelName,
+      reply: `${fallbackPrefix}${extractReply(result)}`,
       usageMetadata: result?.usageMetadata || null,
     });
   } catch (error) {
