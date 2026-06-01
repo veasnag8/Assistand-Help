@@ -218,6 +218,14 @@ function supportsFileUpload(model) {
   return /^gemini-/i.test(model);
 }
 
+function getEligibleFallbackModels(models, requestHasAttachments) {
+  if (!requestHasAttachments) {
+    return models;
+  }
+
+  return models.filter(supportsFileUpload);
+}
+
 function getAttachmentMimeType(attachment) {
   if (attachment.mimeType) {
     return attachment.mimeType;
@@ -600,6 +608,7 @@ export async function handler(event) {
     const fallbackModels = getFallbackModelNames(model);
     const contents = await buildContents(messages);
     const requestHasAttachments = hasAttachments(messages);
+    const eligibleFallbackModels = getEligibleFallbackModels(fallbackModels, requestHasAttachments);
     let { response, result } = await generateContent({ apiKey, contents, model });
     let activeModel = model;
     let fallbackAttempted = false;
@@ -607,13 +616,12 @@ export async function handler(event) {
 
     if (
       !response.ok &&
-      fallbackModels.length &&
-      !requestHasAttachments &&
+      eligibleFallbackModels.length &&
       isLimitResponse(response, result)
     ) {
       fallbackAttempted = true;
 
-      for (const fallbackModel of fallbackModels) {
+      for (const fallbackModel of eligibleFallbackModels) {
         const fallback = await generateContent({
           apiKey,
           contents,
