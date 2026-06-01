@@ -3,7 +3,7 @@ import { inflateRawSync } from "node:zlib";
 
 const geminiBaseUrl = "https://generativelanguage.googleapis.com/v1beta/models";
 const defaultModel = "gemini-2.5-flash";
-const defaultFallbackModels = ["gemma-4-26b-it", "gemma-4-31b-it"];
+const defaultFallbackModels = ["gemini-3.1-flash-lite", "gemma-4-31b-it", "gemma-4-26b-it"];
 const publicModelName = "SNA Version 26.5 Pro";
 const fallbackPublicModelName = "SNA Version 26.5 Free";
 const maxMessages = 24;
@@ -195,6 +195,7 @@ function getModelName() {
 
 function getFallbackModelNames(primaryModel) {
   const rawModels =
+    process.env.SNA_GPT_FALLBACK_MODELS ||
     process.env.GEMMA_FALLBACK_MODELS ||
     process.env.GEMMA_FALLBACK_MODEL ||
     "";
