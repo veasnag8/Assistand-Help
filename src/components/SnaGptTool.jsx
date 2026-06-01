@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   ArrowLeft,
   Check,
@@ -1078,6 +1078,7 @@ function AttachmentList({ attachments, onRemove }) {
 
 export default function SnaGptTool({ onBack }) {
   const [messages, setMessages] = useState(loadStoredMessages);
+  const [animatedMessageIds, setAnimatedMessageIds] = useState(() => new Set());
   const [sidebarCollapsed, setSidebarCollapsed] = useState(loadSidebarCollapsed);
   const [theme, setTheme] = useState(loadTheme);
   const [draft, setDraft] = useState("");
@@ -1130,12 +1131,12 @@ export default function SnaGptTool({ onBack }) {
     });
   }, [messages, busy]);
 
-  function scrollMessagesToBottom() {
+  const scrollMessagesToBottom = useCallback(() => {
     scrollRef.current?.scrollTo({
       behavior: "smooth",
       top: scrollRef.current.scrollHeight,
     });
-  }
+  }, []);
 
   useEffect(() => () => requestRef.current?.abort(), []);
 
@@ -1256,6 +1257,7 @@ export default function SnaGptTool({ onBack }) {
       const uploadSupported = result.fileUploadSupported !== false;
 
       setMessages([...nextMessages, assistantMessage]);
+      setAnimatedMessageIds((current) => new Set(current).add(assistantMessage.id));
       setModel(result.model || publicModelName);
       setFreeMode(!uploadSupported);
       setHideFreeModeNote(false);
@@ -1465,7 +1467,7 @@ export default function SnaGptTool({ onBack }) {
         <div className="sna-message-list" ref={scrollRef} aria-live="polite">
           {messages.map((message) => (
             <ChatMessage
-              animate={message.role === "assistant" && message.id === latestAssistantMessage?.id && !busy}
+              animate={message.role === "assistant" && animatedMessageIds.has(message.id) && !busy}
               key={message.id}
               message={message}
               onCopy={copyText}
