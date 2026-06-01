@@ -944,7 +944,60 @@ function MessageContent({ content, onCopy }) {
   );
 }
 
-function ChatMessage({ message, onCopy }) {
+function AnimatedMessageContent({ animate, content, messageId, onCopy, onStep }) {
+  const [visibleLength, setVisibleLength] = useState(() => (animate ? 0 : content.length));
+  const reduceMotion = window.matchMedia?.("(prefers-reduced-motion: reduce)")?.matches;
+
+  useEffect(() => {
+    if (!animate || reduceMotion) {
+      setVisibleLength(content.length);
+      return undefined;
+    }
+
+    let frameId = 0;
+    let lastTime = 0;
+    let done = false;
+
+    setVisibleLength(0);
+
+    function reveal(timestamp) {
+      if (!lastTime || timestamp - lastTime >= 22) {
+        lastTime = timestamp;
+        setVisibleLength((current) => {
+          if (current >= content.length) {
+            done = true;
+            return current;
+          }
+
+          const remaining = content.length - current;
+          const nextLength = Math.min(content.length, current + Math.max(1, Math.ceil(remaining / 80)));
+          done = nextLength >= content.length;
+          onStep?.();
+          return nextLength;
+        });
+      }
+
+      if (!done) {
+        frameId = window.requestAnimationFrame(reveal);
+      }
+    }
+
+    frameId = window.requestAnimationFrame(reveal);
+    return () => window.cancelAnimationFrame(frameId);
+  }, [animate, content, messageId, onStep, reduceMotion]);
+
+  const visibleContent = animate ? content.slice(0, visibleLength) : content;
+  const isWriting = animate && visibleLength < content.length;
+
+  return (
+    <>
+      <MessageContent content={visibleContent} onCopy={onCopy} />
+      {isWriting ? <span className="sna-writing-cursor" aria-hidden="true" /> : null}
+    </>
+  );
+}
+
+function ChatMessage({ animate, message, onCopy, onStep }) {
   const isUser = message.role === "user";
   const attachments = message.attachments || [];
 
@@ -965,7 +1018,13 @@ function ChatMessage({ message, onCopy }) {
         {attachments.length ? (
           <AttachmentList attachments={attachments} />
         ) : null}
-        <MessageContent content={message.content} onCopy={onCopy} />
+        <AnimatedMessageContent
+          animate={animate}
+          content={message.content}
+          messageId={message.id}
+          onCopy={onCopy}
+          onStep={onStep}
+        />
         {!isUser ? (
           <button
             className="sna-copy-button"
@@ -1063,6 +1122,13 @@ export default function SnaGptTool({ onBack }) {
       top: scrollRef.current.scrollHeight,
     });
   }, [messages, busy]);
+
+  function scrollMessagesToBottom() {
+    scrollRef.current?.scrollTo({
+      behavior: "smooth",
+      top: scrollRef.current.scrollHeight,
+    });
+  }
 
   useEffect(() => () => requestRef.current?.abort(), []);
 
@@ -1389,7 +1455,13 @@ export default function SnaGptTool({ onBack }) {
 
         <div className="sna-message-list" ref={scrollRef} aria-live="polite">
           {messages.map((message) => (
-            <ChatMessage key={message.id} message={message} onCopy={copyText} />
+            <ChatMessage
+              animate={message.role === "assistant" && message.id === latestAssistantMessage?.id && !busy}
+              key={message.id}
+              message={message}
+              onCopy={copyText}
+              onStep={scrollMessagesToBottom}
+            />
           ))}
           {busy ? (
             <article className="sna-message is-assistant">

@@ -1586,6 +1586,30 @@ img {
   gap: 9px;
 }
 
+.sna-writing-cursor {
+  width: 7px;
+  height: 1.1em;
+  display: inline-block;
+  margin-left: 2px;
+  border-radius: 999px;
+  background: currentColor;
+  opacity: 0.55;
+  vertical-align: -0.18em;
+  animation: sna-cursor-blink 0.9s steps(2, start) infinite;
+}
+
+@keyframes sna-cursor-blink {
+  50% {
+    opacity: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sna-writing-cursor {
+    animation: none;
+  }
+}
+
 .sna-attachment-list {
   min-width: 0;
   display: flex;
