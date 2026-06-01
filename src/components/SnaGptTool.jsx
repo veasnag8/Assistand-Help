@@ -1146,10 +1146,11 @@ export default function SnaGptTool({ onBack }) {
       const result = await sendSnaGptMessage(nextMessages, controller.signal);
       const assistantMessage = createMessage("assistant", result.reply || "SNA GPT did not return a response.");
       const tokenUsage = summarizeUsageMetadata(result.usageMetadata);
+      const uploadSupported = result.fileUploadSupported !== false;
 
       setMessages([...nextMessages, assistantMessage]);
       setModel(result.model || publicModelName);
-      setFreeMode(Boolean(result.fallbackModelUsed));
+      setFreeMode(!uploadSupported);
       setHideFreeModeNote(false);
       setUsage((current) => {
         const emptyUsage = createEmptyUsage();

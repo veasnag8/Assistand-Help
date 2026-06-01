@@ -214,6 +214,10 @@ function hasAttachments(messages) {
   return messages.some((message) => message.attachments.length > 0);
 }
 
+function supportsFileUpload(model) {
+  return /^gemini-/i.test(model);
+}
+
 function getAttachmentMimeType(attachment) {
   if (attachment.mimeType) {
     return attachment.mimeType;
@@ -653,11 +657,13 @@ export async function handler(event) {
     const fallbackPrefix = usedFallback
       ? `Primary chat limit was reached, so I switched to ${activeModel} for this text reply.\n\n`
       : "";
+    const fileUploadSupported = supportsFileUpload(activeModel);
 
     return jsonResponse(200, {
       fallbackModelUsed: usedFallback,
       fallbackModel: usedFallback ? activeModel : null,
-      model: usedFallback ? fallbackPublicModelName : publicModelName,
+      fileUploadSupported,
+      model: usedFallback && !fileUploadSupported ? fallbackPublicModelName : publicModelName,
       reply: `${fallbackPrefix}${extractReply(result)}`,
       usageMetadata: result?.usageMetadata || null,
     });
