@@ -3,6 +3,7 @@ import { inflateRawSync } from "node:zlib";
 
 const geminiBaseUrl = "https://generativelanguage.googleapis.com/v1beta/models";
 const defaultModel = "gemini-2.5-flash";
+const defaultFallbackModels = ["gemma-4-26b-it", "gemma-4-31b-it"];
 const publicModelName = "SNA Version 26.5 Pro";
 const fallbackPublicModelName = "SNA Version 26.5 Free";
 const maxMessages = 24;
@@ -197,10 +198,13 @@ function getFallbackModelNames(primaryModel) {
     process.env.GEMMA_FALLBACK_MODELS ||
     process.env.GEMMA_FALLBACK_MODEL ||
     "";
-  const models = rawModels
-    .split(",")
-    .map((model) => cleanText(model, 80).replace(/^models\//, ""))
-    .filter((model) => model && /^[a-z0-9_.-]+$/i.test(model));
+  const configuredModels = rawModels
+    ? rawModels
+      .split(",")
+      .map((model) => cleanText(model, 80).replace(/^models\//, ""))
+      .filter((model) => model && /^[a-z0-9_.-]+$/i.test(model))
+    : [];
+  const models = configuredModels.length ? configuredModels : defaultFallbackModels;
 
   return [...new Set(models)].filter((model) => model !== primaryModel);
 }
@@ -590,16 +594,20 @@ export async function handler(event) {
     const model = getModelName();
     const fallbackModels = getFallbackModelNames(model);
     const contents = await buildContents(messages);
+    const requestHasAttachments = hasAttachments(messages);
     let { response, result } = await generateContent({ apiKey, contents, model });
     let activeModel = model;
+    let fallbackAttempted = false;
     let usedFallback = false;
 
     if (
       !response.ok &&
       fallbackModels.length &&
-      !hasAttachments(messages) &&
+      !requestHasAttachments &&
       isLimitResponse(response, result)
     ) {
+      fallbackAttempted = true;
+
       for (const fallbackModel of fallbackModels) {
         const fallback = await generateContent({
           apiKey,
@@ -620,12 +628,21 @@ export async function handler(event) {
 
     if (!response.ok) {
       const retryAfter = response.headers.get("retry-after");
+      const errorMessage =
+        requestHasAttachments && isLimitResponse(response, result)
+          ? "SNA Version 26.5 Pro file chat limit is over. SNA Version 26.5 Free can continue with text chat, but file upload is not supported until Pro quota resets."
+          : getGeminiError(result, retryAfter);
+      const fallbackNote =
+        fallbackAttempted && !usedFallback
+          ? " Fallback models were also unavailable or limited."
+          : "";
 
       return jsonResponse(
         response.status,
         {
           code: response.status === 429 ? "SNA_GPT_LIMIT_REACHED" : "SNA_GPT_ERROR",
-          error: getGeminiError(result, retryAfter),
+          error: `${errorMessage}${fallbackNote}`,
+          fallbackAttempted,
           retryAfter,
         },
         retryAfter ? { "Retry-After": retryAfter } : {},

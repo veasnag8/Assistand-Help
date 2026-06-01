@@ -1170,11 +1170,16 @@ export default function SnaGptTool({ onBack }) {
       }
 
       const message = error?.message || "Could not reach SNA GPT.";
+      const shouldUseFreeTextMode = /SNA Version 26\.5 Free|file upload is not supported/i.test(message);
 
       setMessages([
         ...nextMessages,
         createMessage("assistant", message),
       ]);
+      if (shouldUseFreeTextMode) {
+        setFreeMode(true);
+        setModel("SNA Version 26.5 Free");
+      }
       setUsage((current) => ({
         ...current,
         limitMessage: /limit|quota|wait|over/i.test(message) ? message : current.limitMessage,
