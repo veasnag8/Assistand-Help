@@ -1404,7 +1404,7 @@ export default function SnaGptTool({ onBack }) {
                 maxLength={6000}
                 onChange={(event) => setDraft(event.target.value)}
                 onKeyDown={handleKeyDown}
-                placeholder="Message SNA GPT, attach files, paste image, or drag and drop"
+                placeholder="Message SNA GPT"
                 rows={1}
                 value={draft}
               />
