@@ -185,6 +185,14 @@ function isCreatorQuestion(text) {
   return refersToAssistant && creatorWord && (asksWho || createdByPhrase);
 }
 
+function isAcumaticaSupportSystemQuestion(text) {
+  const normalized = text.toLowerCase();
+  const asksSupportSystem = /\b(what|which)\b/.test(normalized) && /\b(support|team)\b/.test(normalized) && /\b(system|software|app|application)\b/.test(normalized);
+  const mentionsTeam = /\b(this|your|my|our|team|staff|support)\b/.test(normalized);
+
+  return mentionsTeam && asksSupportSystem;
+}
+
 function getModelName() {
   const model = cleanText(process.env.GEMINI_MODEL || defaultModel, 80).replace(/^models\//, "");
 
@@ -603,6 +611,13 @@ export async function handler(event) {
       return jsonResponse(200, {
         model: publicModelName,
         reply: "I was created by Song Veasna.",
+      });
+    }
+
+    if (isAcumaticaSupportSystemQuestion(lastUserMessage)) {
+      return jsonResponse(200, {
+        model: publicModelName,
+        reply: "This team supports the Acumatica System.",
       });
     }
 

@@ -444,10 +444,50 @@ async function sendSnaGptMessage(messages, signal) {
   const result = await readJsonResponse(response, "Could not reach SNA GPT.");
 
   if (!response.ok) {
-    throw new Error(result?.error || "Could not reach SNA GPT.");
+    const error = new Error(result?.error || "Could not reach SNA GPT.");
+    error.code = result?.code || "";
+    throw error;
   }
 
   return result;
+}
+
+function wait(ms, signal) {
+  return new Promise((resolve, reject) => {
+    const timeoutId = window.setTimeout(resolve, ms);
+
+    signal?.addEventListener("abort", () => {
+      window.clearTimeout(timeoutId);
+      reject(new DOMException("Aborted", "AbortError"));
+    }, { once: true });
+  });
+}
+
+async function sendSnaGptMessageWithRetry(messages, signal, onRetry) {
+  const retryDelays = [900, 1600, 2600, 4200, 6500];
+
+  for (let attempt = 0; attempt <= retryDelays.length; attempt += 1) {
+    try {
+      const result = await sendSnaGptMessage(messages, signal);
+
+      if (!isProviderCapacityReply(result.reply)) {
+        return result;
+      }
+    } catch (error) {
+      const canRetry =
+        error?.code === "SNA_GPT_BUSY" ||
+        isProviderCapacityReply(error?.message);
+
+      if (!canRetry || attempt >= retryDelays.length) {
+        throw error;
+      }
+    }
+
+    onRetry?.(attempt + 1);
+    await wait(retryDelays[attempt], signal);
+  }
+
+  throw new Error("Could not reach SNA GPT.");
 }
 
 function readFileAsText(file) {
@@ -1245,7 +1285,11 @@ export default function SnaGptTool({ onBack }) {
     setStatus("Thinking...");
 
     try {
-      const result = await sendSnaGptMessage(nextMessages, controller.signal);
+      const result = await sendSnaGptMessageWithRetry(
+        nextMessages,
+        controller.signal,
+        (attempt) => setStatus(`Still working... retry ${attempt}`),
+      );
       const reply = result.reply || "SNA GPT did not return a response.";
 
       if (isProviderCapacityReply(reply)) {
@@ -1283,7 +1327,17 @@ export default function SnaGptTool({ onBack }) {
       }
 
       const rawMessage = error?.message || "Could not reach SNA GPT.";
-      const message = isProviderCapacityReply(rawMessage) ? providerCapacityMessage : rawMessage;
+      const isCapacityFailure = isProviderCapacityReply(rawMessage);
+
+      if (isCapacityFailure) {
+        setMessages(nextMessages);
+        setStatus("Still busy. Please send again.");
+        return;
+      }
+
+      const message = isProviderCapacityReply(rawMessage)
+        ? "SNA GPT could not finish that request yet. Please send it again."
+        : rawMessage;
       const shouldUseFreeTextMode = /SNA Version 26\.5 Free|file upload is not supported/i.test(message);
 
       setMessages([
