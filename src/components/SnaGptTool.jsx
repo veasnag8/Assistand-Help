@@ -11,6 +11,7 @@ import {
   Paperclip,
   RefreshCw,
   Send,
+  Gauge,
   Trash2,
   UserRound,
   X,
@@ -25,7 +26,8 @@ import snaGptLogo from "../image/sna-gpt.png";
 const snaGptEndpointPath = "/.netlify/functions/sna-gpt";
 const chatStorageKey = "sna-gpt-chat-v1";
 const sidebarStorageKey = "sna-gpt-sidebar-collapsed-v2";
-const publicModelName = "SNA 10.5 Pro";
+const usageStorageKey = "sna-gpt-usage-v1";
+const publicModelName = "SNA Version 26.5 Pro";
 const maxAttachments = 6;
 const maxBinaryFileBytes = 4 * 1024 * 1024;
 const maxTextFileBytes = 1.2 * 1024 * 1024;
@@ -243,6 +245,75 @@ function sanitizeMessageForStorage(message) {
 
 function loadSidebarCollapsed() {
   return window.localStorage.getItem(sidebarStorageKey) !== "false";
+}
+
+function getTodayKey() {
+  return new Intl.DateTimeFormat("en-CA", {
+    day: "2-digit",
+    month: "2-digit",
+    timeZone: "Asia/Bangkok",
+    year: "numeric",
+  }).format(new Date());
+}
+
+function createEmptyUsage() {
+  return {
+    dayKey: getTodayKey(),
+    lastInputTokens: 0,
+    lastOutputTokens: 0,
+    lastTotalTokens: 0,
+    limitMessage: "",
+    requestsToday: 0,
+    tokensToday: 0,
+  };
+}
+
+function loadStoredUsage() {
+  try {
+    const parsed = JSON.parse(window.localStorage.getItem(usageStorageKey) || "{}");
+    const emptyUsage = createEmptyUsage();
+
+    if (parsed?.dayKey === emptyUsage.dayKey) {
+      return {
+        ...emptyUsage,
+        ...parsed,
+      };
+    }
+  } catch {
+    // Fall back to a fresh daily usage view.
+  }
+
+  return createEmptyUsage();
+}
+
+function formatNumber(value) {
+  return new Intl.NumberFormat(undefined, {
+    maximumFractionDigits: 0,
+  }).format(Number(value) || 0);
+}
+
+function getTokenCount(usageMetadata, keys) {
+  for (const key of keys) {
+    const value = Number(usageMetadata?.[key]);
+
+    if (Number.isFinite(value)) {
+      return value;
+    }
+  }
+
+  return 0;
+}
+
+function summarizeUsageMetadata(usageMetadata) {
+  const inputTokens = getTokenCount(usageMetadata, ["promptTokenCount", "inputTokenCount"]);
+  const outputTokens = getTokenCount(usageMetadata, ["candidatesTokenCount", "outputTokenCount"]);
+  const totalTokens = getTokenCount(usageMetadata, ["totalTokenCount"]) || inputTokens + outputTokens;
+
+  return {
+    inputTokens,
+    outputTokens,
+    totalTokens,
+  };
 }
 
 function getSnaGptEndpoint() {
@@ -774,6 +845,7 @@ export default function SnaGptTool({ onBack }) {
   const [status, setStatus] = useState("Ready.");
   const [busy, setBusy] = useState(false);
   const [model, setModel] = useState(publicModelName);
+  const [usage, setUsage] = useState(loadStoredUsage);
   const fileInputRef = useRef(null);
   const scrollRef = useRef(null);
   const requestRef = useRef(null);
@@ -799,6 +871,10 @@ export default function SnaGptTool({ onBack }) {
   useEffect(() => {
     window.localStorage.setItem(sidebarStorageKey, String(sidebarCollapsed));
   }, [sidebarCollapsed]);
+
+  useEffect(() => {
+    window.localStorage.setItem(usageStorageKey, JSON.stringify(usage));
+  }, [usage]);
 
   useEffect(() => {
     scrollRef.current?.scrollTo({
@@ -907,21 +983,42 @@ export default function SnaGptTool({ onBack }) {
     try {
       const result = await sendSnaGptMessage(nextMessages, controller.signal);
       const assistantMessage = createMessage("assistant", result.reply || "SNA GPT did not return a response.");
+      const tokenUsage = summarizeUsageMetadata(result.usageMetadata);
 
       setMessages([...nextMessages, assistantMessage]);
       setModel(result.model || publicModelName);
-      setStatus("Ready.");
+      setUsage((current) => {
+        const emptyUsage = createEmptyUsage();
+        const dailyUsage = current.dayKey === emptyUsage.dayKey ? current : emptyUsage;
+
+        return {
+          ...dailyUsage,
+          lastInputTokens: tokenUsage.inputTokens,
+          lastOutputTokens: tokenUsage.outputTokens,
+          lastTotalTokens: tokenUsage.totalTokens,
+          limitMessage: "",
+          requestsToday: dailyUsage.requestsToday + 1,
+          tokensToday: dailyUsage.tokensToday + tokenUsage.totalTokens,
+        };
+      });
+      setStatus(tokenUsage.totalTokens ? `Ready. Used ${formatNumber(tokenUsage.totalTokens)} tokens.` : "Ready.");
     } catch (error) {
       if (error?.name === "AbortError") {
         setStatus("Stopped.");
         return;
       }
 
+      const message = error?.message || "Could not reach SNA GPT.";
+
       setMessages([
         ...nextMessages,
-        createMessage("assistant", error?.message || "Could not reach SNA GPT."),
+        createMessage("assistant", message),
       ]);
-      setStatus("Error.");
+      setUsage((current) => ({
+        ...current,
+        limitMessage: /limit|quota|wait|over/i.test(message) ? message : current.limitMessage,
+      }));
+      setStatus(/limit|quota|wait|over/i.test(message) ? "Limit reached." : "Error.");
     } finally {
       setBusy(false);
       requestRef.current = null;
@@ -997,6 +1094,27 @@ export default function SnaGptTool({ onBack }) {
         </div>
 
         <div className="sna-side-actions">
+          <div className="sna-usage-panel" aria-label="SNA GPT usage">
+            <div className="sna-usage-title">
+              <Gauge size={16} strokeWidth={2.2} />
+              <span>Usage</span>
+            </div>
+            <dl>
+              <div>
+                <dt>Today</dt>
+                <dd>{formatNumber(usage.tokensToday)} tokens</dd>
+              </div>
+              <div>
+                <dt>Messages</dt>
+                <dd>{formatNumber(usage.requestsToday)}</dd>
+              </div>
+              <div>
+                <dt>Last</dt>
+                <dd>{formatNumber(usage.lastTotalTokens)} tokens</dd>
+              </div>
+            </dl>
+            <p>{usage.limitMessage || "Token totals update after each answer."}</p>
+          </div>
           <button className="button secondary" type="button" onClick={clearChat}>
             <Trash2 size={16} strokeWidth={2.2} />
             <span>Clear Chat</span>

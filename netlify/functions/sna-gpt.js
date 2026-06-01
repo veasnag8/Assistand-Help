@@ -3,7 +3,7 @@ import { inflateRawSync } from "node:zlib";
 
 const geminiBaseUrl = "https://generativelanguage.googleapis.com/v1beta/models";
 const defaultModel = "gemini-2.5-flash";
-const publicModelName = "SNA 10.0 Pluse";
+const publicModelName = "SNA Version 26.5 Pro";
 const maxMessages = 24;
 const maxMessageLength = 8000;
 const maxAttachments = 6;
@@ -405,20 +405,57 @@ function extractReply(payload) {
   return "SNA GPT did not return a text response.";
 }
 
-function getGeminiError(payload) {
+function formatRetryAfter(value) {
+  if (!value) {
+    return "";
+  }
+
+  const seconds = Number(value);
+
+  if (Number.isFinite(seconds) && seconds > 0) {
+    if (seconds < 60) {
+      return ` Please wait ${Math.ceil(seconds)} second${seconds === 1 ? "" : "s"} and try again.`;
+    }
+
+    const minutes = Math.ceil(seconds / 60);
+
+    if (minutes < 60) {
+      return ` Please wait ${minutes} minute${minutes === 1 ? "" : "s"} and try again.`;
+    }
+
+    const hours = Math.ceil(minutes / 60);
+
+    return ` Please wait ${hours} hour${hours === 1 ? "" : "s"} and try again.`;
+  }
+
+  const retryDate = new Date(value);
+
+  if (!Number.isNaN(retryDate.getTime())) {
+    return ` Please wait until ${retryDate.toLocaleString("en-US", {
+      dateStyle: "medium",
+      timeStyle: "short",
+      timeZone: "Asia/Bangkok",
+    })} and try again.`;
+  }
+
+  return "";
+}
+
+function getGeminiError(payload, retryAfter = "") {
   const message = (
     payload?.error?.message ||
     payload?.message ||
     payload?.error ||
     "Gemini could not answer right now."
   );
+  const waitMessage = formatRetryAfter(retryAfter);
 
   if (/quota|billing|limit|resource exhausted|exceeded/i.test(message)) {
-    return "Gemini billing, quota, or rate limit reached. Check the Google AI Studio project billing and API limits, or use another Gemini API key with available quota.";
+    return `Today message limit is over.${waitMessage || " Please wait until the next available quota reset, then try again."}`;
   }
 
   if (/rate limit/i.test(message)) {
-    return "Gemini rate limit reached. Wait a moment and try again.";
+    return `SNA GPT is busy because the message rate limit was reached.${waitMessage || " Please wait a moment and try again."}`;
   }
 
   return message;
@@ -500,7 +537,11 @@ export async function handler(event) {
 
       return jsonResponse(
         response.status,
-        { error: getGeminiError(result) },
+        {
+          code: response.status === 429 ? "SNA_GPT_LIMIT_REACHED" : "SNA_GPT_ERROR",
+          error: getGeminiError(result, retryAfter),
+          retryAfter,
+        },
         retryAfter ? { "Retry-After": retryAfter } : {},
       );
     }

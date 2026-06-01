@@ -1232,7 +1232,8 @@ img {
 }
 
 .sna-gpt-tool.is-sidebar-collapsed .sna-brand-panel div,
-.sna-gpt-tool.is-sidebar-collapsed .sna-side-actions {
+.sna-gpt-tool.is-sidebar-collapsed .sna-side-actions,
+.sna-gpt-tool.is-sidebar-collapsed .sna-usage-panel {
   display: none;
 }
 
@@ -1284,6 +1285,58 @@ img {
 .sna-side-actions .button {
   width: 100%;
   gap: 7px;
+}
+
+.sna-usage-panel {
+  display: grid;
+  gap: 8px;
+  border: 1px solid rgba(9, 16, 71, 0.08);
+  border-radius: 14px;
+  background: #fff;
+  padding: 10px;
+}
+
+.sna-usage-title {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  color: #070d49;
+  font-size: 0.82rem;
+  font-weight: 900;
+}
+
+.sna-usage-panel dl {
+  display: grid;
+  gap: 6px;
+  margin: 0;
+}
+
+.sna-usage-panel dl div {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.sna-usage-panel dt,
+.sna-usage-panel dd,
+.sna-usage-panel p {
+  margin: 0;
+  font-size: 0.72rem;
+  font-weight: 800;
+}
+
+.sna-usage-panel dt,
+.sna-usage-panel p {
+  color: var(--muted);
+}
+
+.sna-usage-panel dd {
+  color: #070d49;
+}
+
+.sna-usage-panel p {
+  line-height: 1.35;
 }
 
 .sna-chat-panel {
