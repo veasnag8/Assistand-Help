@@ -9,10 +9,12 @@ npm install
 npm run dev
 ```
 
-The Removal.AI and SNA GPT DeepSeek APIs run through Netlify functions so API
-keys are not exposed in the browser. Set `REMOVAL_AI_API_KEY` and
-`DEEPSEEK_API_KEY` in Netlify environment variables before deploying.
-`DEEPSEEK_MODEL` is optional and defaults to `deepseek-v4-pro`.
+The Removal.AI and SNA GPT Gemini APIs run through Netlify functions so API keys
+are not exposed in the browser. Set `REMOVAL_AI_API_KEY` and `GEMINI_API_KEY` in
+Netlify environment variables before deploying. `GEMINI_MODEL` is optional and
+defaults to `gemini-2.5-flash`. For local API testing, create `.env` from
+`.env.example` and run the app with Netlify CLI, for example
+`npx netlify-cli dev`.
 
 ## Local video downloader
 
