@@ -19,7 +19,7 @@ testing, create `.env` from `.env.example` and run the app with Netlify CLI, for
 example `npx netlify-cli dev`. Set
 `VITE_SNA_GPT_DAILY_TOKEN_LIMIT` and
 `VITE_SNA_GPT_DAILY_MESSAGE_LIMIT` to show estimated remaining daily usage in
-the SNA GPT sidebar.
+the SNA GPT sidebar. The default fallback model is `gemini-2.5-flash-lite`.
 
 ## Local video downloader
 
@@ -96,7 +96,7 @@ This repo includes `netlify.toml`, so Netlify can use:
 
 - Image tools are browser-first, with Removal.AI background removal proxied by a
   Netlify function when `REMOVAL_AI_API_KEY` is configured
-- SNA GPT answers creator questions with "I was created by សង វាសនា."
+- SNA GPT answers creator questions with "I was created by Song Veasna."
 - Video downloads are for media the user owns or has permission to download.
   Local testing uses `server/video-download-server.js`.
 - QR exports are saved as PNG files at 631 x 892 pixels

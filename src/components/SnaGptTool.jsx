@@ -209,11 +209,10 @@ function createMessage(role, content, attachments = []) {
     role,
   };
 }
-
 function createWelcomeMessage() {
   return createMessage(
     "assistant",
-    "Hello, I am SNA GPT. I was created by សង វាសនា. How can I help today?",
+    "Hello, I am SNA GPT. I was created by \u179F\u1784 \u179C\u17B6\u179F\u1793\u17B6. How can I help today?",
   );
 }
 
@@ -1260,7 +1259,7 @@ export default function SnaGptTool({ onBack }) {
           <div>
             <p className="eyebrow">SNA GPT</p>
             <h1 id="sna-gpt-title">SNA GPT</h1>
-            <span>Created by សង វាសនា</span>
+            <span>Created by \u179F\u1784 \u179C\u17B6\u179F\u1793\u17B6</span>
           </div>
         </div>
 

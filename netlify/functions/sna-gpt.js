@@ -3,7 +3,7 @@ import { inflateRawSync } from "node:zlib";
 
 const geminiBaseUrl = "https://generativelanguage.googleapis.com/v1beta/models";
 const defaultModel = "gemini-2.5-flash";
-const defaultFallbackModels = ["gemini-3.1-flash-lite", "gemma-4-31b-it", "gemma-4-26b-it"];
+const defaultFallbackModels = ["gemini-2.5-flash-lite"];
 const publicModelName = "SNA Version 26.5 Pro";
 const fallbackPublicModelName = "SNA Version 26.5 Free";
 const maxMessages = 24;
@@ -440,6 +440,10 @@ function extractReply(payload) {
   return "SNA GPT did not return a text response.";
 }
 
+function isProviderCapacityReply(text) {
+  return /currently experiencing high demand|spikes in demand are usually temporary|please try again later/i.test(String(text || ""));
+}
+
 function formatRetryAfter(value) {
   if (!value) {
     return "";
@@ -535,7 +539,11 @@ function isModelUnavailableResponse(response, payload) {
 }
 
 function shouldTryNextFallback(response, payload) {
-  return isLimitResponse(response, payload) || isModelUnavailableResponse(response, payload);
+  return (
+    isLimitResponse(response, payload) ||
+    isModelUnavailableResponse(response, payload) ||
+    (response.ok && isProviderCapacityReply(extractReply(payload)))
+  );
 }
 
 async function generateContent({ apiKey, contents, model }) {
@@ -614,11 +622,7 @@ export async function handler(event) {
     let fallbackAttempted = false;
     let usedFallback = false;
 
-    if (
-      !response.ok &&
-      eligibleFallbackModels.length &&
-      isLimitResponse(response, result)
-    ) {
+    if (eligibleFallbackModels.length && shouldTryNextFallback(response, result)) {
       fallbackAttempted = true;
 
       for (const fallbackModel of eligibleFallbackModels) {
@@ -631,9 +635,9 @@ export async function handler(event) {
         response = fallback.response;
         result = fallback.result;
         activeModel = fallbackModel;
-        usedFallback = response.ok;
+        usedFallback = response.ok && !isProviderCapacityReply(extractReply(result));
 
-        if (response.ok || !shouldTryNextFallback(response, result)) {
+        if (usedFallback || !shouldTryNextFallback(response, result)) {
           break;
         }
       }
@@ -662,6 +666,16 @@ export async function handler(event) {
       );
     }
 
+    const reply = extractReply(result);
+
+    if (isProviderCapacityReply(reply)) {
+      return jsonResponse(503, {
+        code: "SNA_GPT_BUSY",
+        error: "SNA GPT is busy because the model is experiencing high demand. Please try again in a moment.",
+        fallbackAttempted,
+      });
+    }
+
     const fallbackPrefix = usedFallback
       ? `Primary chat limit was reached, so I switched to ${activeModel} for this text reply.\n\n`
       : "";
@@ -672,7 +686,7 @@ export async function handler(event) {
       fallbackModel: usedFallback ? activeModel : null,
       fileUploadSupported,
       model: usedFallback && !fileUploadSupported ? fallbackPublicModelName : publicModelName,
-      reply: `${fallbackPrefix}${extractReply(result)}`,
+      reply: `${fallbackPrefix}${reply}`,
       usageMetadata: result?.usageMetadata || null,
     });
   } catch (error) {
