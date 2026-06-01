@@ -961,7 +961,7 @@ function AnimatedMessageContent({ animate, content, messageId, onCopy, onStep })
     setVisibleLength(0);
 
     function reveal(timestamp) {
-      if (!lastTime || timestamp - lastTime >= 22) {
+      if (!lastTime || timestamp - lastTime >= 12) {
         lastTime = timestamp;
         setVisibleLength((current) => {
           if (current >= content.length) {
@@ -970,7 +970,8 @@ function AnimatedMessageContent({ animate, content, messageId, onCopy, onStep })
           }
 
           const remaining = content.length - current;
-          const nextLength = Math.min(content.length, current + Math.max(1, Math.ceil(remaining / 80)));
+          const chunkSize = Math.max(6, Math.ceil(remaining / 34));
+          const nextLength = Math.min(content.length, current + chunkSize);
           done = nextLength >= content.length;
           onStep?.();
           return nextLength;
