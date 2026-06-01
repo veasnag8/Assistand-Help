@@ -51,6 +51,8 @@ const starterPrompts = [
   "Help me write a professional message.",
   "Translate this text to Khmer.",
 ];
+const providerCapacityMessage =
+  "SNA GPT is busy because the model is experiencing high demand. Please try again in a moment.";
 
 const languageAliases = {
   bash: "bash",
@@ -216,6 +218,18 @@ function createWelcomeMessage() {
   );
 }
 
+function isProviderCapacityReply(text) {
+  return /currently experiencing high demand|spikes in demand are usually temporary|please try again later/i.test(String(text || ""));
+}
+
+function normalizeMessageContent(message) {
+  if (message?.role === "assistant" && isProviderCapacityReply(message.content)) {
+    return providerCapacityMessage;
+  }
+
+  return message.content;
+}
+
 function loadStoredMessages() {
   try {
     const parsed = JSON.parse(window.localStorage.getItem(chatStorageKey) || "[]");
@@ -226,6 +240,7 @@ function loadStoredMessages() {
         .map((message) => ({
           ...message,
           attachments: Array.isArray(message.attachments) ? message.attachments : [],
+          content: normalizeMessageContent(message),
         }))
         .slice(-40);
     }
@@ -865,7 +880,20 @@ function renderTextBlock(content, keyPrefix) {
   }
 
   lines.forEach((line, index) => {
+    const headingMatch = line.match(/^\s{0,3}(#{1,6})\s+(.+?)\s*#*\s*$/);
     const bulletMatch = line.match(/^\s*(?:[-*]|\d+\.)\s+(.+)$/);
+
+    if (headingMatch) {
+      const HeadingTag = `h${Math.min(headingMatch[1].length + 1, 6)}`;
+
+      flushList(index);
+      blocks.push(
+        <HeadingTag className="sna-message-heading" key={`${keyPrefix}-heading-${index}`}>
+          {renderInlineMarkdown(headingMatch[2], `${keyPrefix}-heading-${index}`)}
+        </HeadingTag>,
+      );
+      return;
+    }
 
     if (bulletMatch) {
       listItems.push(
@@ -1143,7 +1171,13 @@ export default function SnaGptTool({ onBack }) {
 
     try {
       const result = await sendSnaGptMessage(nextMessages, controller.signal);
-      const assistantMessage = createMessage("assistant", result.reply || "SNA GPT did not return a response.");
+      const reply = result.reply || "SNA GPT did not return a response.";
+
+      if (isProviderCapacityReply(reply)) {
+        throw new Error(providerCapacityMessage);
+      }
+
+      const assistantMessage = createMessage("assistant", reply);
       const tokenUsage = summarizeUsageMetadata(result.usageMetadata);
       const uploadSupported = result.fileUploadSupported !== false;
 
@@ -1259,7 +1293,7 @@ export default function SnaGptTool({ onBack }) {
           <div>
             <p className="eyebrow">SNA GPT</p>
             <h1 id="sna-gpt-title">SNA GPT</h1>
-            <span>Created by \u179F\u1784 \u179C\u17B6\u179F\u1793\u17B6</span>
+            <span>Created by {"\u179F\u1784 \u179C\u17B6\u179F\u1793\u17B6"}</span>
           </div>
         </div>
 

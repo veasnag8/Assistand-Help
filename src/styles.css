@@ -1527,15 +1527,32 @@ img {
 }
 
 .sna-message-text p,
+.sna-message-text h2,
+.sna-message-text h3,
+.sna-message-text h4,
+.sna-message-text h5,
+.sna-message-text h6,
 .sna-message-text ul {
   margin: 0;
 }
 
 .sna-message-text p + p,
 .sna-message-text p + ul,
+.sna-message-text p + .sna-message-heading,
+.sna-message-text ul + .sna-message-heading,
+.sna-message-text .sna-message-heading + p,
+.sna-message-text .sna-message-heading + ul,
+.sna-message-text .sna-message-heading + .sna-message-heading,
 .sna-message-text ul + p,
 .sna-message-text ul + ul {
   margin-top: 9px;
+}
+
+.sna-message-heading {
+  color: #0a1855;
+  font-size: 1rem;
+  font-weight: 900;
+  line-height: 1.35;
 }
 
 .sna-message-list-markdown {
