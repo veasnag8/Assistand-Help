@@ -4,6 +4,7 @@ import { inflateRawSync } from "node:zlib";
 const geminiBaseUrl = "https://generativelanguage.googleapis.com/v1beta/models";
 const defaultModel = "gemini-2.5-flash";
 const publicModelName = "SNA Version 26.5 Pro";
+const fallbackPublicModelName = "SNA Version 26.5 Free";
 const maxMessages = 24;
 const maxMessageLength = 8000;
 const maxAttachments = 6;
@@ -611,7 +612,7 @@ export async function handler(event) {
 
     return jsonResponse(200, {
       fallbackModelUsed: usedFallback,
-      model: usedFallback ? `${publicModelName} (${activeModel})` : publicModelName,
+      model: usedFallback ? fallbackPublicModelName : publicModelName,
       reply: `${fallbackPrefix}${extractReply(result)}`,
       usageMetadata: result?.usageMetadata || null,
     });
