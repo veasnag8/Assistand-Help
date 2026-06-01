@@ -1001,6 +1001,12 @@ function AnimatedMessageContent({ animate, content, messageId, onCopy, onStep })
 function ChatMessage({ animate, message, onCopy, onStep }) {
   const isUser = message.role === "user";
   const attachments = message.attachments || [];
+  const displayMessage = isUser
+    ? message
+    : {
+      ...message,
+      content: normalizeMessageContent(message),
+    };
 
   return (
     <article className={`sna-message ${isUser ? "is-user" : "is-assistant"}`}>
@@ -1021,7 +1027,7 @@ function ChatMessage({ animate, message, onCopy, onStep }) {
         ) : null}
         <AnimatedMessageContent
           animate={animate}
-          content={message.content}
+          content={displayMessage.content}
           messageId={message.id}
           onCopy={onCopy}
           onStep={onStep}
@@ -1030,7 +1036,7 @@ function ChatMessage({ animate, message, onCopy, onStep }) {
           <button
             className="sna-copy-button"
             type="button"
-            onClick={() => onCopy(message.content)}
+            onClick={() => onCopy(displayMessage.content)}
             aria-label="Copy SNA GPT message"
             title="Copy"
           >
@@ -1273,7 +1279,8 @@ export default function SnaGptTool({ onBack }) {
         return;
       }
 
-      const message = error?.message || "Could not reach SNA GPT.";
+      const rawMessage = error?.message || "Could not reach SNA GPT.";
+      const message = isProviderCapacityReply(rawMessage) ? providerCapacityMessage : rawMessage;
       const shouldUseFreeTextMode = /SNA Version 26\.5 Free|file upload is not supported/i.test(message);
 
       setMessages([
