@@ -8,10 +8,12 @@ import {
   FileSpreadsheet,
   FileText,
   Image as ImageIcon,
+  Moon,
   Paperclip,
   RefreshCw,
   Send,
   Gauge,
+  Sun,
   Trash2,
   UserRound,
   X,
@@ -26,6 +28,7 @@ import snaGptLogo from "../image/sna-gpt.png";
 const snaGptEndpointPath = "/.netlify/functions/sna-gpt";
 const chatStorageKey = "sna-gpt-chat-v1";
 const sidebarStorageKey = "sna-gpt-sidebar-collapsed-v2";
+const themeStorageKey = "sna-gpt-theme-v1";
 const usageStorageKey = "sna-gpt-usage-v1";
 const publicModelName = "SNA Version 26.5 Pro";
 const dailyTokenLimit = Math.max(
@@ -253,6 +256,10 @@ function sanitizeMessageForStorage(message) {
 
 function loadSidebarCollapsed() {
   return window.localStorage.getItem(sidebarStorageKey) !== "false";
+}
+
+function loadTheme() {
+  return window.localStorage.getItem(themeStorageKey) === "dark" ? "dark" : "light";
 }
 
 function getTodayKey() {
@@ -887,6 +894,7 @@ function AttachmentList({ attachments, onRemove }) {
 export default function SnaGptTool({ onBack }) {
   const [messages, setMessages] = useState(loadStoredMessages);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(loadSidebarCollapsed);
+  const [theme, setTheme] = useState(loadTheme);
   const [draft, setDraft] = useState("");
   const [attachments, setAttachments] = useState([]);
   const [dragActive, setDragActive] = useState(false);
@@ -920,6 +928,10 @@ export default function SnaGptTool({ onBack }) {
   useEffect(() => {
     window.localStorage.setItem(sidebarStorageKey, String(sidebarCollapsed));
   }, [sidebarCollapsed]);
+
+  useEffect(() => {
+    window.localStorage.setItem(themeStorageKey, theme);
+  }, [theme]);
 
   useEffect(() => {
     window.localStorage.setItem(usageStorageKey, JSON.stringify(usage));
@@ -1117,7 +1129,7 @@ export default function SnaGptTool({ onBack }) {
 
   return (
     <section
-      className={`sna-gpt-tool${sidebarCollapsed ? " is-sidebar-collapsed" : ""}${dragActive ? " is-dragging-file" : ""}`}
+      className={`sna-gpt-tool is-${theme}-mode${sidebarCollapsed ? " is-sidebar-collapsed" : ""}${dragActive ? " is-dragging-file" : ""}`}
       aria-labelledby="sna-gpt-title"
       onDragLeave={handleDragLeave}
       onDragOver={handleDragOver}
@@ -1225,6 +1237,19 @@ export default function SnaGptTool({ onBack }) {
             {busy ? <RefreshCw size={15} strokeWidth={2.2} /> : null}
             <span>{status}</span>
           </div>
+          <button
+            className="sna-theme-toggle"
+            type="button"
+            onClick={() => setTheme((current) => (current === "dark" ? "light" : "dark"))}
+            aria-label={theme === "dark" ? "Use light mode" : "Use dark mode"}
+            title={theme === "dark" ? "Light mode" : "Dark mode"}
+          >
+            {theme === "dark" ? (
+              <Sun size={17} strokeWidth={2.3} />
+            ) : (
+              <Moon size={17} strokeWidth={2.3} />
+            )}
+          </button>
         </header>
 
         <div className="sna-message-list" ref={scrollRef} aria-live="polite">
