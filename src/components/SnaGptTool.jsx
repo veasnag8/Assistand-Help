@@ -1567,19 +1567,6 @@ export default function SnaGptTool({ onBack }) {
             {busy ? <RefreshCw size={15} strokeWidth={2.2} /> : null}
             <span>{status}</span>
           </div>
-          <div className="sna-response-mode" aria-label="Choose answer style" role="group">
-            {responseModes.map((mode) => (
-              <button
-                className={responseMode === mode.id ? "is-active" : ""}
-                disabled={busy}
-                key={mode.id}
-                type="button"
-                onClick={() => setResponseMode(mode.id)}
-              >
-                {mode.label}
-              </button>
-            ))}
-          </div>
           <button
             className="sna-theme-toggle"
             type="button"
@@ -1674,6 +1661,19 @@ export default function SnaGptTool({ onBack }) {
                 rows={1}
                 value={draft}
               />
+              <div className="sna-response-mode" aria-label="Choose answer style" role="group">
+                {responseModes.map((mode) => (
+                  <button
+                    className={responseMode === mode.id ? "is-active" : ""}
+                    disabled={busy}
+                    key={mode.id}
+                    type="button"
+                    onClick={() => setResponseMode(mode.id)}
+                  >
+                    {mode.label}
+                  </button>
+                ))}
+              </div>
             </div>
             <input
               ref={fileInputRef}

@@ -1436,19 +1436,19 @@ img {
   align-items: center;
   gap: 3px;
   border: 1px solid rgba(9, 16, 71, 0.1);
-  border-radius: 12px;
+  border-radius: 999px;
   background: rgba(255, 255, 255, 0.88);
-  padding: 3px;
+  padding: 4px;
 }
 
 .sna-response-mode button {
-  min-width: 72px;
-  height: 30px;
+  min-width: 64px;
+  height: 32px;
   border: 0;
-  border-radius: 9px;
+  border-radius: 999px;
   background: transparent;
   color: var(--muted);
-  padding: 0 10px;
+  padding: 0 11px;
   font-size: 0.76rem;
   font-weight: 900;
 }
@@ -1954,7 +1954,8 @@ img {
 .sna-composer-row {
   min-width: 0;
   display: grid;
-  grid-template-columns: 48px minmax(0, 1fr);
+  grid-template-columns: 48px minmax(0, 1fr) auto;
+  align-items: end;
   gap: 10px;
 }
 
@@ -3484,13 +3485,13 @@ img {
     flex-shrink: 0;
   }
 
-  .sna-response-mode {
-    order: 3;
-    width: 100%;
+  .sna-composer-row {
+    grid-template-columns: 40px minmax(0, 1fr);
   }
 
-  .sna-response-mode button {
-    flex: 1 1 0;
+  .sna-composer-row .sna-response-mode {
+    grid-column: 2;
+    justify-self: start;
   }
 
   .sna-message-list {
