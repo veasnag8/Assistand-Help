@@ -2001,7 +2001,7 @@ img {
   gap: 4px;
   border: 1px solid rgba(249, 115, 22, 0.34);
   border-radius: 28px;
-  background: transparent;
+  background: #202124;
   padding: 6px;
   box-shadow: none;
 }
@@ -2221,7 +2221,7 @@ img {
 
 .sna-gpt-tool.is-dark-mode .sna-composer-row {
   border-color: rgba(249, 115, 22, 0.34);
-  background: transparent;
+  background: #202124;
 }
 
 .sna-gpt-tool.is-dark-mode .sna-composer textarea {
