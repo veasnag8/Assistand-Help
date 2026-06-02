@@ -8,6 +8,8 @@ const imageModelOptions = [
   "imagen-4.0-generate-001",
   "imagen-4.0-ultra-generate-001",
   "imagen-4.0-fast-generate-001",
+  "gemini-3.1-flash-image",
+  "gemini-2.5-flash-image",
 ];
 const publicModelName = "SNA Version 26.5 Pro";
 const fallbackPublicModelName = "SNA Version 26.5 Free";
@@ -247,7 +249,15 @@ function getImageFallbackModelNames(primaryModel) {
 }
 
 function isImageGenerationModel(model) {
+  return /^imagen-\d/i.test(model) || isNativeImageGenerationModel(model);
+}
+
+function isImagenModel(model) {
   return /^imagen-\d/i.test(model);
+}
+
+function isNativeImageGenerationModel(model) {
+  return /^gemini-(?:[\d.]+-|3-pro-)image/i.test(model);
 }
 
 function getPublicTextModelName(model) {
@@ -555,7 +565,7 @@ async function readGeminiPayload(response) {
 }
 
 function extractGeneratedImages(payload) {
-  return (payload?.predictions || [])
+  const imagenImages = (payload?.predictions || [])
     .map((prediction, index) => {
       const data = prediction?.bytesBase64Encoded || prediction?.image?.bytesBase64Encoded;
       const mimeType = prediction?.mimeType || prediction?.image?.mimeType || "image/png";
@@ -569,6 +579,23 @@ function extractGeneratedImages(payload) {
         : null;
     })
     .filter(Boolean);
+
+  const nativeImages = (payload?.candidates?.[0]?.content?.parts || [])
+    .map((part, index) => {
+      const data = part?.inlineData?.data || part?.inline_data?.data;
+      const mimeType = part?.inlineData?.mimeType || part?.inline_data?.mime_type || "image/png";
+
+      return data
+        ? {
+          alt: `Generated image ${imagenImages.length + index + 1}`,
+          data,
+          mimeType,
+        }
+        : null;
+    })
+    .filter(Boolean);
+
+  return [...imagenImages, ...nativeImages];
 }
 
 function buildImageReply(images, model) {
@@ -593,7 +620,7 @@ function isLimitResponse(response, payload) {
 
   return (
     response.status === 429 ||
-    /quota|billing|limit|resource exhausted|exceeded|rate limit/i.test(message)
+    /quota|billing|limit|resource exhausted|exceeded|rate limit|paid plan|paid plans|upgrade/i.test(message)
   );
 }
 
@@ -668,6 +695,39 @@ async function generateImages({ apiKey, model, prompt }) {
   };
 }
 
+async function generateNativeImages({ apiKey, model, prompt }) {
+  const response = await fetch(`${geminiBaseUrl}/${encodeURIComponent(model)}:generateContent`, {
+    body: JSON.stringify({
+      contents: [
+        {
+          parts: [{ text: prompt }],
+          role: "user",
+        },
+      ],
+      generationConfig: {
+        responseModalities: ["TEXT", "IMAGE"],
+      },
+    }),
+    headers: {
+      "Content-Type": "application/json",
+      "x-goog-api-key": apiKey,
+    },
+    method: "POST",
+  });
+  const result = await readGeminiPayload(response);
+
+  return {
+    response,
+    result,
+  };
+}
+
+async function generateImageByModel({ apiKey, model, prompt }) {
+  return isImagenModel(model)
+    ? generateImages({ apiKey, model, prompt })
+    : generateNativeImages({ apiKey, model, prompt });
+}
+
 export async function handler(event) {
   if (event.httpMethod === "OPTIONS") {
     return {
@@ -730,7 +790,7 @@ export async function handler(event) {
       ? fallbackModels
       : getEligibleFallbackModels(fallbackModels, requestHasAttachments);
     let { response, result } = imageGeneration
-      ? await generateImages({ apiKey, model, prompt: lastUserMessage })
+      ? await generateImageByModel({ apiKey, model, prompt: lastUserMessage })
       : await generateContent({ apiKey, contents, model });
     let activeModel = model;
     let fallbackAttempted = false;
@@ -741,7 +801,7 @@ export async function handler(event) {
 
       for (const fallbackModel of eligibleFallbackModels) {
         const fallback = imageGeneration
-          ? await generateImages({ apiKey, model: fallbackModel, prompt: lastUserMessage })
+          ? await generateImageByModel({ apiKey, model: fallbackModel, prompt: lastUserMessage })
           : await generateContent({
             apiKey,
             contents,

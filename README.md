@@ -19,7 +19,8 @@ testing, create `.env` from `.env.example` and run the app with Netlify CLI, for
 example `npx netlify-cli dev`. Set
 `SNA_GPT_IMAGE_FALLBACK_MODELS` to control the Imagen 4 retry order for image
 generation when a selected Imagen model reaches quota or is unavailable. It
-defaults to Imagen 4, Imagen 4 Ultra, then Imagen 4 Fast.
+defaults to Imagen 4, Imagen 4 Ultra, Imagen 4 Fast, then Gemini native image
+models as backups for accounts where Imagen is blocked by plan limits.
 `VITE_SNA_GPT_DAILY_TOKEN_LIMIT` and
 `VITE_SNA_GPT_DAILY_MESSAGE_LIMIT` to show estimated remaining daily usage in
 the SNA GPT sidebar. The default fallback model is `gemini-2.5-flash-lite`.
