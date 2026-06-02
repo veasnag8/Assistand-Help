@@ -1661,19 +1661,21 @@ export default function SnaGptTool({ onBack }) {
                 rows={1}
                 value={draft}
               />
-              <div className="sna-response-mode" aria-label="Choose answer style" role="group">
-                {responseModes.map((mode) => (
-                  <button
-                    className={responseMode === mode.id ? "is-active" : ""}
-                    disabled={busy}
-                    key={mode.id}
-                    type="button"
-                    onClick={() => setResponseMode(mode.id)}
-                  >
-                    {mode.label}
-                  </button>
-                ))}
-              </div>
+              <label className="sna-response-mode">
+                <span className="sr-only">Choose answer style</span>
+                <select
+                  value={responseMode}
+                  onChange={(event) => setResponseMode(event.target.value)}
+                  disabled={busy}
+                  aria-label="Choose answer style"
+                >
+                  {responseModes.map((mode) => (
+                    <option key={mode.id} value={mode.id}>
+                      {mode.label}
+                    </option>
+                  ))}
+                </select>
+              </label>
             </div>
             <input
               ref={fileInputRef}
