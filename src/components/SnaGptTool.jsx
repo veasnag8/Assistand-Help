@@ -984,13 +984,16 @@ function MessageContent({ content, onCopy }) {
   );
 }
 
-function AnimatedMessageContent({ animate, content, messageId, onCopy, onStep }) {
+function AnimatedMessageContent({ animate, content, messageId, onCopy, onDone, onStep }) {
   const [visibleLength, setVisibleLength] = useState(() => (animate ? 0 : content.length));
   const reduceMotion = window.matchMedia?.("(prefers-reduced-motion: reduce)")?.matches;
 
   useEffect(() => {
     if (!animate || reduceMotion) {
       setVisibleLength(content.length);
+      if (animate) {
+        onDone?.(messageId);
+      }
       return undefined;
     }
 
@@ -1014,6 +1017,9 @@ function AnimatedMessageContent({ animate, content, messageId, onCopy, onStep })
           const nextLength = Math.min(content.length, current + chunkSize);
           done = nextLength >= content.length;
           onStep?.();
+          if (done) {
+            onDone?.(messageId);
+          }
           return nextLength;
         });
       }
@@ -1025,7 +1031,7 @@ function AnimatedMessageContent({ animate, content, messageId, onCopy, onStep })
 
     frameId = window.requestAnimationFrame(reveal);
     return () => window.cancelAnimationFrame(frameId);
-  }, [animate, content, messageId, onStep, reduceMotion]);
+  }, [animate, content, messageId, onDone, onStep, reduceMotion]);
 
   const visibleContent = animate ? content.slice(0, visibleLength) : content;
   const isWriting = animate && visibleLength < content.length;
@@ -1038,7 +1044,7 @@ function AnimatedMessageContent({ animate, content, messageId, onCopy, onStep })
   );
 }
 
-function ChatMessage({ animate, message, onCopy, onStep }) {
+function ChatMessage({ animate, message, onCopy, onDone, onStep }) {
   const isUser = message.role === "user";
   const attachments = message.attachments || [];
   const displayMessage = isUser
@@ -1070,6 +1076,7 @@ function ChatMessage({ animate, message, onCopy, onStep }) {
           content={displayMessage.content}
           messageId={message.id}
           onCopy={onCopy}
+          onDone={onDone}
           onStep={onStep}
         />
         {!isUser ? (
@@ -1118,7 +1125,7 @@ function AttachmentList({ attachments, onRemove }) {
 
 export default function SnaGptTool({ onBack }) {
   const [messages, setMessages] = useState(loadStoredMessages);
-  const [animatedMessageIds, setAnimatedMessageIds] = useState(() => new Set());
+  const [animatedMessageId, setAnimatedMessageId] = useState("");
   const [sidebarCollapsed, setSidebarCollapsed] = useState(loadSidebarCollapsed);
   const [theme, setTheme] = useState(loadTheme);
   const [draft, setDraft] = useState("");
@@ -1176,6 +1183,10 @@ export default function SnaGptTool({ onBack }) {
       behavior: "smooth",
       top: scrollRef.current.scrollHeight,
     });
+  }, []);
+
+  const clearAnimatedMessage = useCallback((messageId) => {
+    setAnimatedMessageId((current) => (current === messageId ? "" : current));
   }, []);
 
   useEffect(() => () => requestRef.current?.abort(), []);
@@ -1301,7 +1312,7 @@ export default function SnaGptTool({ onBack }) {
       const uploadSupported = result.fileUploadSupported !== false;
 
       setMessages([...nextMessages, assistantMessage]);
-      setAnimatedMessageIds((current) => new Set(current).add(assistantMessage.id));
+      setAnimatedMessageId(assistantMessage.id);
       setModel(result.model || publicModelName);
       setFreeMode(!uploadSupported);
       setHideFreeModeNote(false);
@@ -1521,10 +1532,11 @@ export default function SnaGptTool({ onBack }) {
         <div className="sna-message-list" ref={scrollRef} aria-live="polite">
           {messages.map((message) => (
             <ChatMessage
-              animate={message.role === "assistant" && animatedMessageIds.has(message.id) && !busy}
+              animate={message.role === "assistant" && animatedMessageId === message.id && !busy}
               key={message.id}
               message={message}
               onCopy={copyText}
+              onDone={clearAnimatedMessage}
               onStep={scrollMessagesToBottom}
             />
           ))}
