@@ -21,8 +21,6 @@ example `npx netlify-cli dev`. Set
 generation when a selected Imagen model reaches quota or is unavailable. It
 defaults to Imagen 4, Imagen 4 Ultra, Imagen 4 Fast, then Gemini native image
 models as backups for accounts where Imagen is blocked by plan limits.
-Imagen uses the Gemini API `v1beta` `:predict` endpoint; native Gemini image
-fallbacks use the `v1` `:generateContent` endpoint.
 `VITE_SNA_GPT_DAILY_TOKEN_LIMIT` and
 `VITE_SNA_GPT_DAILY_MESSAGE_LIMIT` to show estimated remaining daily usage in
 the SNA GPT sidebar. The default fallback model is `gemini-2.5-flash-lite`.
