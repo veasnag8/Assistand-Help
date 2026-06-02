@@ -858,9 +858,23 @@ function CodeBlock({ code, language, onCopy }) {
   );
 }
 
+function normalizeLinkUrl(url) {
+  const trimmed = String(url || "").trim();
+
+  if (/^https?:\/\//i.test(trimmed)) {
+    return trimmed;
+  }
+
+  if (/^www\./i.test(trimmed)) {
+    return `https://${trimmed}`;
+  }
+
+  return "";
+}
+
 function renderInlineMarkdown(text, keyPrefix) {
   const nodes = [];
-  const pattern = /(`[^`]+`|\*\*[^*\n][\s\S]*?\*\*|\*[^*\n][^*\n]*\*)/g;
+  const pattern = /(\[[^\]\n]+\]\((?:https?:\/\/|www\.)[^)\s]+\)|(?:https?:\/\/|www\.)[^\s<>()]+|`[^`]+`|\*\*[^*\n][\s\S]*?\*\*|\*[^*\n][^*\n]*\*)/g;
   let lastIndex = 0;
   let match;
 
@@ -871,7 +885,22 @@ function renderInlineMarkdown(text, keyPrefix) {
       nodes.push(text.slice(lastIndex, match.index));
     }
 
-    if (token.startsWith("`")) {
+    const linkMatch = token.match(/^\[([^\]\n]+)\]\(((?:https?:\/\/|www\.)[^)\s]+)\)$/);
+    const linkUrl = normalizeLinkUrl(linkMatch ? linkMatch[2] : token);
+
+    if (linkUrl) {
+      nodes.push(
+        <a
+          className="sna-message-link"
+          href={linkUrl}
+          key={`${keyPrefix}-link-${match.index}`}
+          rel="noopener noreferrer"
+          target="_blank"
+        >
+          {linkMatch ? linkMatch[1] : token}
+        </a>,
+      );
+    } else if (token.startsWith("`")) {
       nodes.push(
         <code className="sna-inline-code" key={`${keyPrefix}-code-${match.index}`}>
           {token.slice(1, -1)}

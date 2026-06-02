@@ -1570,6 +1570,18 @@ img {
   font-style: italic;
 }
 
+.sna-message-link {
+  color: #1d4ed8;
+  font-weight: 850;
+  text-decoration: underline;
+  text-decoration-thickness: 1.5px;
+  text-underline-offset: 3px;
+}
+
+.sna-message-link:hover {
+  color: #0f766e;
+}
+
 .sna-inline-code {
   border: 1px solid rgba(9, 16, 71, 0.08);
   border-radius: 6px;
@@ -2123,6 +2135,14 @@ img {
   border-color: rgba(148, 163, 184, 0.2);
   background: rgba(2, 6, 23, 0.56);
   color: #bae6fd;
+}
+
+.sna-gpt-tool.is-dark-mode .sna-message-link {
+  color: #67e8f9;
+}
+
+.sna-gpt-tool.is-dark-mode .sna-message-link:hover {
+  color: #fed7aa;
 }
 
 .sna-gpt-tool.is-dark-mode .sna-drop-overlay {
