@@ -1901,44 +1901,6 @@ img {
   animation-delay: 240ms;
 }
 
-.sna-prompt-strip {
-  width: min(100%, 760px);
-  display: flex;
-  gap: 6px;
-  justify-self: center;
-  overflow-x: auto;
-  border-top: 1px solid rgba(9, 16, 71, 0.06);
-  margin: 0 auto 52px;
-  padding: 7px 0 5px;
-  scrollbar-width: none;
-}
-
-.sna-prompt-strip::-webkit-scrollbar {
-  display: none;
-}
-
-.sna-prompt-chip {
-  flex: 0 0 auto;
-  min-height: 25px;
-  border: 1px solid rgba(148, 163, 184, 0.2);
-  border-radius: 999px;
-  background: rgba(15, 23, 42, 0.45);
-  color: #f8fafc;
-  padding: 0 10px;
-  font-size: 0.65rem;
-  font-weight: 850;
-}
-
-.sna-prompt-chip:hover {
-  border-color: rgba(249, 115, 22, 0.32);
-  background: rgba(249, 115, 22, 0.12);
-}
-
-.sna-prompt-chip:disabled {
-  cursor: not-allowed;
-  opacity: 0.56;
-}
-
 .sna-composer {
   position: absolute;
   right: 0;
@@ -2189,8 +2151,7 @@ img {
     #020617;
 }
 
-.sna-gpt-tool.is-dark-mode .sna-chat-header,
-.sna-gpt-tool.is-dark-mode .sna-prompt-strip {
+.sna-gpt-tool.is-dark-mode .sna-chat-header {
   border-color: rgba(148, 163, 184, 0.14);
 }
 
@@ -2221,7 +2182,6 @@ img {
 
 .sna-gpt-tool.is-dark-mode .sna-usage-panel,
 .sna-gpt-tool.is-dark-mode .sna-attachment-chip,
-.sna-gpt-tool.is-dark-mode .sna-prompt-chip,
 .sna-gpt-tool.is-dark-mode .sna-drop-overlay div {
   border-color: rgba(148, 163, 184, 0.18);
   background: rgba(15, 23, 42, 0.88);
@@ -3567,10 +3527,6 @@ img {
     width: 100%;
     padding-right: 10px;
     padding-left: 10px;
-  }
-
-  .sna-prompt-strip {
-    width: calc(100% - 20px);
   }
 
   .sna-chat-title-row {

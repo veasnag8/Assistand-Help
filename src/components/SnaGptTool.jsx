@@ -58,11 +58,6 @@ const maxTextAttachmentLength = 260000;
 const supportedAttachmentTypes =
   "image/*,application/pdf,.pdf,.docx,.txt,.csv,.md,.json,.html,.xml,.log";
 
-const starterPrompts = [
-  "Who created you?",
-  "Help me write a professional message.",
-  "Translate this text to Khmer.",
-];
 const providerCapacityMessage =
   "SNA GPT is busy because the model is experiencing high demand. Please try again in a moment.";
 
@@ -1198,11 +1193,6 @@ export default function SnaGptTool({ onBack }) {
     () => [...messages].reverse().find((message) => message.role === "assistant"),
     [messages],
   );
-  const showStarterPrompts =
-    !busy &&
-    messages.length === 1 &&
-    messages[0]?.role === "assistant" &&
-    !messages[0]?.attachments?.length;
   const activeResponseMode = responseModes.find((mode) => mode.id === responseMode) || responseModes[1];
 
   useEffect(() => {
@@ -1644,22 +1634,6 @@ export default function SnaGptTool({ onBack }) {
             </article>
           ) : null}
         </div>
-
-        {showStarterPrompts ? (
-          <div className="sna-prompt-strip">
-            {starterPrompts.map((prompt) => (
-              <button
-                className="sna-prompt-chip"
-                disabled={busy}
-                key={prompt}
-                type="button"
-                onClick={() => submitMessage(prompt)}
-              >
-                {prompt}
-              </button>
-            ))}
-          </div>
-        ) : null}
 
         <form className="sna-composer" onSubmit={handleSubmit}>
           {freeMode && !hideFreeModeNote ? (
