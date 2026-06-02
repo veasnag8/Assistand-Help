@@ -2,6 +2,7 @@ import { Buffer } from "node:buffer";
 import { inflateRawSync } from "node:zlib";
 
 const geminiBaseUrl = "https://generativelanguage.googleapis.com/v1beta/models";
+const geminiV1BaseUrl = "https://generativelanguage.googleapis.com/v1/models";
 const defaultModel = "gemini-2.5-flash";
 const defaultFallbackModels = ["gemini-2.5-flash-lite"];
 const imageModelOptions = [
@@ -646,6 +647,14 @@ function shouldTryNextFallback(response, payload) {
   );
 }
 
+function shouldTryNextImageFallback(response, payload) {
+  return (
+    isLimitResponse(response, payload) ||
+    isModelUnavailableResponse(response, payload) ||
+    (response.ok && !extractGeneratedImages(payload).length)
+  );
+}
+
 async function generateContent({ apiKey, contents, model }) {
   const response = await fetch(`${geminiBaseUrl}/${encodeURIComponent(model)}:generateContent`, {
     body: JSON.stringify({
@@ -696,7 +705,7 @@ async function generateImages({ apiKey, model, prompt }) {
 }
 
 async function generateNativeImages({ apiKey, model, prompt }) {
-  const response = await fetch(`${geminiBaseUrl}/${encodeURIComponent(model)}:generateContent`, {
+  const response = await fetch(`${geminiV1BaseUrl}/${encodeURIComponent(model)}:generateContent`, {
     body: JSON.stringify({
       contents: [
         {
@@ -705,7 +714,7 @@ async function generateNativeImages({ apiKey, model, prompt }) {
         },
       ],
       generationConfig: {
-        responseModalities: ["TEXT", "IMAGE"],
+        response_modalities: ["TEXT", "IMAGE"],
       },
     }),
     headers: {
@@ -796,7 +805,10 @@ export async function handler(event) {
     let fallbackAttempted = false;
     let usedFallback = false;
 
-    if (eligibleFallbackModels.length && shouldTryNextFallback(response, result)) {
+    if (
+      eligibleFallbackModels.length &&
+      (imageGeneration ? shouldTryNextImageFallback(response, result) : shouldTryNextFallback(response, result))
+    ) {
       fallbackAttempted = true;
 
       for (const fallbackModel of eligibleFallbackModels) {
@@ -812,10 +824,13 @@ export async function handler(event) {
         result = fallback.result;
         activeModel = fallbackModel;
         usedFallback = response.ok && (
-          imageGeneration || !isProviderCapacityReply(extractReply(result))
+          imageGeneration ? extractGeneratedImages(result).length > 0 : !isProviderCapacityReply(extractReply(result))
         );
 
-        if (usedFallback || !shouldTryNextFallback(response, result)) {
+        if (
+          usedFallback ||
+          !(imageGeneration ? shouldTryNextImageFallback(response, result) : shouldTryNextFallback(response, result))
+        ) {
           break;
         }
       }
@@ -824,7 +839,9 @@ export async function handler(event) {
     if (!response.ok) {
       const retryAfter = response.headers.get("retry-after");
       const errorMessage =
-        requestHasAttachments && isLimitResponse(response, result)
+        imageGeneration && isLimitResponse(response, result)
+          ? "Image generation is currently blocked by quota, plan limits, or model availability for this Gemini API key. Please wait for quota reset or enable a paid plan for Imagen/image models."
+          : requestHasAttachments && isLimitResponse(response, result)
           ? "SNA Version 26.5 Pro file chat limit is over. SNA Version 26.5 Free can continue with text chat, but file upload is not supported until Pro quota resets."
           : getGeminiError(result, retryAfter);
       const fallbackNote =
@@ -844,9 +861,18 @@ export async function handler(event) {
       );
     }
 
+    const generatedImages = imageGeneration ? extractGeneratedImages(result) : [];
     const reply = imageGeneration
-      ? buildImageReply(extractGeneratedImages(result), activeModel)
+      ? buildImageReply(generatedImages, activeModel)
       : extractReply(result);
+
+    if (imageGeneration && !generatedImages.length) {
+      return jsonResponse(502, {
+        code: "SNA_GPT_IMAGE_NOT_RETURNED",
+        error: "The image model answered but did not return an image. Try a clearer English image prompt or choose another image model.",
+        fallbackAttempted,
+      });
+    }
 
     if (isProviderCapacityReply(reply)) {
       return jsonResponse(503, {
