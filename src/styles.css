@@ -1906,6 +1906,7 @@ img {
   gap: 7px;
   overflow-x: auto;
   border-top: 1px solid rgba(9, 16, 71, 0.06);
+  margin-bottom: 86px;
   padding: 10px max(22px, calc((100% - 1120px) / 2)) 9px;
 }
 
