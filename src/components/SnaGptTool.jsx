@@ -4,6 +4,7 @@ import {
   Check,
   ChevronLeft,
   ChevronRight,
+  ChevronDown,
   Copy,
   FileSpreadsheet,
   FileText,
@@ -1176,6 +1177,7 @@ export default function SnaGptTool({ onBack }) {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(loadSidebarCollapsed);
   const [theme, setTheme] = useState(loadTheme);
   const [responseMode, setResponseMode] = useState(loadResponseMode);
+  const [responseMenuOpen, setResponseMenuOpen] = useState(false);
   const [draft, setDraft] = useState("");
   const [attachments, setAttachments] = useState([]);
   const [dragActive, setDragActive] = useState(false);
@@ -1186,6 +1188,7 @@ export default function SnaGptTool({ onBack }) {
   const [hideFreeModeNote, setHideFreeModeNote] = useState(false);
   const [usage, setUsage] = useState(loadStoredUsage);
   const fileInputRef = useRef(null);
+  const responseModeRef = useRef(null);
   const scrollRef = useRef(null);
   const requestRef = useRef(null);
 
@@ -1199,6 +1202,7 @@ export default function SnaGptTool({ onBack }) {
     messages.length === 1 &&
     messages[0]?.role === "assistant" &&
     !messages[0]?.attachments?.length;
+  const activeResponseMode = responseModes.find((mode) => mode.id === responseMode) || responseModes[1];
 
   useEffect(() => {
     window.localStorage.setItem(
@@ -1218,6 +1222,28 @@ export default function SnaGptTool({ onBack }) {
   useEffect(() => {
     window.localStorage.setItem(responseModeStorageKey, responseMode);
   }, [responseMode]);
+
+  useEffect(() => {
+    function handlePointerDown(event) {
+      if (!responseModeRef.current?.contains(event.target)) {
+        setResponseMenuOpen(false);
+      }
+    }
+
+    function handleEscape(event) {
+      if (event.key === "Escape") {
+        setResponseMenuOpen(false);
+      }
+    }
+
+    document.addEventListener("pointerdown", handlePointerDown);
+    document.addEventListener("keydown", handleEscape);
+
+    return () => {
+      document.removeEventListener("pointerdown", handlePointerDown);
+      document.removeEventListener("keydown", handleEscape);
+    };
+  }, []);
 
   useEffect(() => {
     window.localStorage.setItem(usageStorageKey, JSON.stringify(usage));
@@ -1661,21 +1687,38 @@ export default function SnaGptTool({ onBack }) {
                 rows={1}
                 value={draft}
               />
-              <label className="sna-response-mode">
-                <span className="sr-only">Choose answer style</span>
-                <select
-                  value={responseMode}
-                  onChange={(event) => setResponseMode(event.target.value)}
+              <div className="sna-response-mode" ref={responseModeRef}>
+                <button
+                  aria-expanded={responseMenuOpen}
+                  aria-haspopup="listbox"
+                  className="sna-response-mode-trigger"
                   disabled={busy}
-                  aria-label="Choose answer style"
+                  type="button"
+                  onClick={() => setResponseMenuOpen((current) => !current)}
                 >
+                  <span>{activeResponseMode.label}</span>
+                  <ChevronDown size={15} strokeWidth={2.4} />
+                </button>
+                {responseMenuOpen ? (
+                  <div className="sna-response-mode-menu" role="listbox" aria-label="Choose answer style">
                   {responseModes.map((mode) => (
-                    <option key={mode.id} value={mode.id}>
-                      {mode.label}
-                    </option>
+                    <button
+                      aria-selected={responseMode === mode.id}
+                      className={responseMode === mode.id ? "is-active" : ""}
+                      key={mode.id}
+                      role="option"
+                      type="button"
+                      onClick={() => {
+                        setResponseMode(mode.id);
+                        setResponseMenuOpen(false);
+                      }}
+                    >
+                      <span>{mode.label}</span>
+                    </button>
                   ))}
-                </select>
-              </label>
+                  </div>
+                ) : null}
+              </div>
               <button className="sna-send-button" type="submit" disabled={!canSend} aria-label="Send message">
                 <Send size={20} strokeWidth={2.3} />
               </button>
