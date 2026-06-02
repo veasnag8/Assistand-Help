@@ -30,7 +30,18 @@ const chatStorageKey = "sna-gpt-chat-v1";
 const sidebarStorageKey = "sna-gpt-sidebar-collapsed-v2";
 const themeStorageKey = "sna-gpt-theme-v1";
 const usageStorageKey = "sna-gpt-usage-v1";
+const responseModeStorageKey = "sna-gpt-response-mode-v1";
 const publicModelName = "SNA Version 26.5 Pro";
+const responseModes = [
+  {
+    id: "summary",
+    label: "Summary",
+  },
+  {
+    id: "details",
+    label: "Details",
+  },
+];
 const dailyTokenLimit = Math.max(
   0,
   Number(import.meta.env.VITE_SNA_GPT_DAILY_TOKEN_LIMIT || 0),
@@ -276,6 +287,12 @@ function loadTheme() {
   return window.localStorage.getItem(themeStorageKey) === "dark" ? "dark" : "light";
 }
 
+function loadResponseMode() {
+  const storedMode = window.localStorage.getItem(responseModeStorageKey);
+
+  return responseModes.some((mode) => mode.id === storedMode) ? storedMode : "details";
+}
+
 function getTodayKey() {
   return new Intl.DateTimeFormat("en-CA", {
     day: "2-digit",
@@ -408,7 +425,7 @@ async function readJsonResponse(response, fallbackMessage) {
   throw new Error(text || fallbackMessage);
 }
 
-async function sendSnaGptMessage(messages, signal) {
+async function sendSnaGptMessage(messages, responseMode, signal) {
   let response;
 
   try {
@@ -426,6 +443,7 @@ async function sendSnaGptMessage(messages, signal) {
           content: message.content,
           role: message.role,
         })),
+        responseMode,
       }),
       headers: {
         "Content-Type": "application/json",
@@ -463,12 +481,12 @@ function wait(ms, signal) {
   });
 }
 
-async function sendSnaGptMessageWithRetry(messages, signal, onRetry) {
+async function sendSnaGptMessageWithRetry(messages, responseMode, signal, onRetry) {
   const retryDelays = [900, 1600, 2600, 4200, 6500];
 
   for (let attempt = 0; attempt <= retryDelays.length; attempt += 1) {
     try {
-      const result = await sendSnaGptMessage(messages, signal);
+      const result = await sendSnaGptMessage(messages, responseMode, signal);
 
       if (!isProviderCapacityReply(result.reply)) {
         return result;
@@ -1157,6 +1175,7 @@ export default function SnaGptTool({ onBack }) {
   const [animatedMessageId, setAnimatedMessageId] = useState("");
   const [sidebarCollapsed, setSidebarCollapsed] = useState(loadSidebarCollapsed);
   const [theme, setTheme] = useState(loadTheme);
+  const [responseMode, setResponseMode] = useState(loadResponseMode);
   const [draft, setDraft] = useState("");
   const [attachments, setAttachments] = useState([]);
   const [dragActive, setDragActive] = useState(false);
@@ -1195,6 +1214,10 @@ export default function SnaGptTool({ onBack }) {
   useEffect(() => {
     window.localStorage.setItem(themeStorageKey, theme);
   }, [theme]);
+
+  useEffect(() => {
+    window.localStorage.setItem(responseModeStorageKey, responseMode);
+  }, [responseMode]);
 
   useEffect(() => {
     window.localStorage.setItem(usageStorageKey, JSON.stringify(usage));
@@ -1327,6 +1350,7 @@ export default function SnaGptTool({ onBack }) {
     try {
       const result = await sendSnaGptMessageWithRetry(
         nextMessages,
+        responseMode,
         controller.signal,
         (attempt) => setStatus(`Still working... retry ${attempt}`),
       );
@@ -1542,6 +1566,19 @@ export default function SnaGptTool({ onBack }) {
           <div className="sna-status" role="status">
             {busy ? <RefreshCw size={15} strokeWidth={2.2} /> : null}
             <span>{status}</span>
+          </div>
+          <div className="sna-response-mode" aria-label="Choose answer style" role="group">
+            {responseModes.map((mode) => (
+              <button
+                className={responseMode === mode.id ? "is-active" : ""}
+                disabled={busy}
+                key={mode.id}
+                type="button"
+                onClick={() => setResponseMode(mode.id)}
+              >
+                {mode.label}
+              </button>
+            ))}
           </div>
           <button
             className="sna-theme-toggle"

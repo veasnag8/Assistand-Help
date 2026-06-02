@@ -32,6 +32,11 @@ const systemInstruction = [
   "Do not say that Google, Gemini, OpenAI, ChatGPT, or another company created you. If asked about the underlying technology, you may say your responses use the Gemini API, but your creator is Song Veasna.",
 ].join(" ");
 
+const responseModeInstructions = {
+  details: "Answer in detail. Include useful context, important caveats, and clear steps or bullets when they help.",
+  summary: "Answer with a short summary first. Keep it concise and focus only on the most important points unless the user asks for more detail.",
+};
+
 function jsonResponse(statusCode, payload, headers = {}) {
   return {
     body: JSON.stringify(payload),
@@ -62,6 +67,12 @@ function cleanText(value, maxLength = maxMessageLength) {
     .replace(/\u0000/g, "")
     .trim()
     .slice(0, maxLength);
+}
+
+function normalizeResponseMode(value) {
+  const mode = cleanText(value, 24).toLowerCase();
+
+  return mode === "summary" ? "summary" : "details";
 }
 
 function cleanAttachmentText(value, maxLength = maxAttachmentTextLength) {
@@ -556,7 +567,7 @@ function shouldTryNextFallback(response, payload) {
   );
 }
 
-async function generateContent({ apiKey, contents, model }) {
+async function generateContent({ apiKey, contents, model, responseMode }) {
   const response = await fetch(`${geminiBaseUrl}/${encodeURIComponent(model)}:generateContent`, {
     body: JSON.stringify({
       contents,
@@ -566,7 +577,7 @@ async function generateContent({ apiKey, contents, model }) {
         topP: 0.95,
       },
       systemInstruction: {
-        parts: [{ text: systemInstruction }],
+        parts: [{ text: `${systemInstruction} ${responseModeInstructions[responseMode]}` }],
       },
     }),
     headers: {
@@ -602,6 +613,7 @@ export async function handler(event) {
     const payload = await readJsonBody(event);
     const messages = normalizeMessages(payload.messages);
     const lastUserMessage = getLastUserMessage(messages);
+    const responseMode = normalizeResponseMode(payload.responseMode);
 
     if (!messages.length || !lastUserMessage) {
       return jsonResponse(400, { error: "Send at least one user message." });
@@ -634,7 +646,7 @@ export async function handler(event) {
     const contents = await buildContents(messages);
     const requestHasAttachments = hasAttachments(messages);
     const eligibleFallbackModels = getEligibleFallbackModels(fallbackModels, requestHasAttachments);
-    let { response, result } = await generateContent({ apiKey, contents, model });
+    let { response, result } = await generateContent({ apiKey, contents, model, responseMode });
     let activeModel = model;
     let fallbackAttempted = false;
     let usedFallback = false;
@@ -647,6 +659,7 @@ export async function handler(event) {
           apiKey,
           contents,
           model: fallbackModel,
+          responseMode,
         });
 
         response = fallback.response;
