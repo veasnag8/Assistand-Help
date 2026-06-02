@@ -1432,15 +1432,15 @@ img {
 
 .sna-response-mode {
   flex: 0 0 auto;
-  min-width: 112px;
-  height: 48px;
+  min-width: 108px;
+  height: 38px;
   display: inline-grid;
   place-items: center;
-  border: 1px solid rgba(9, 16, 71, 0.1);
+  border: 0;
   border-radius: 999px;
-  background: rgba(255, 255, 255, 0.88);
-  color: var(--muted);
-  padding: 0 12px;
+  background: rgba(255, 255, 255, 0.08);
+  color: #e8eaed;
+  padding: 0 10px;
 }
 
 .sna-response-mode select {
@@ -1456,9 +1456,8 @@ img {
 }
 
 .sna-response-mode:hover {
-  border-color: rgba(249, 115, 22, 0.28);
-  background: rgba(249, 115, 22, 0.08);
-  color: #194a5f;
+  background: rgba(255, 255, 255, 0.12);
+  color: #fff;
 }
 
 .sna-response-mode select:disabled {
@@ -1899,9 +1898,9 @@ img {
 
 .sna-composer {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 48px;
+  grid-template-columns: minmax(0, 1fr);
   align-items: end;
-  gap: 10px;
+  gap: 8px;
   border-top: 1px solid rgba(9, 16, 71, 0.08);
   padding: 12px max(22px, calc((100% - 1120px) / 2)) 15px;
 }
@@ -1952,27 +1951,31 @@ img {
 .sna-composer-row {
   min-width: 0;
   display: grid;
-  grid-template-columns: 48px minmax(0, 1fr) auto;
-  align-items: end;
-  gap: 10px;
+  grid-template-columns: 44px minmax(0, 1fr) auto 44px;
+  align-items: center;
+  gap: 4px;
+  border: 1px solid rgba(22, 49, 69, 0.1);
+  border-radius: 999px;
+  background: #202124;
+  padding: 6px;
+  box-shadow: 0 18px 36px rgba(39, 45, 88, 0.1);
 }
 
 .sna-attach-button {
-  width: 48px;
-  height: 48px;
+  width: 44px;
+  height: 44px;
   display: inline-grid;
   place-items: center;
-  border: 1px solid rgba(22, 49, 69, 0.12);
-  border-radius: 16px;
-  background: rgba(255, 255, 255, 0.86);
-  color: var(--muted);
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  color: #e8eaed;
   padding: 0;
 }
 
 .sna-attach-button:hover {
-  border-color: rgba(249, 115, 22, 0.28);
-  background: rgba(249, 115, 22, 0.08);
-  color: var(--ink);
+  background: rgba(255, 255, 255, 0.09);
+  color: #fff;
 }
 
 .sna-attach-button:disabled {
@@ -1983,15 +1986,20 @@ img {
 .sna-composer textarea {
   width: 100%;
   max-height: 150px;
-  min-height: 48px;
+  min-height: 44px;
   resize: vertical;
-  border: 1px solid rgba(22, 49, 69, 0.12);
-  border-radius: 16px;
-  background: rgba(255, 255, 255, 0.9);
-  padding: 13px 15px;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  color: #e8eaed;
+  padding: 11px 8px;
   font: inherit;
   font-size: 0.94rem;
   line-height: 1.45;
+}
+
+.sna-composer textarea::placeholder {
+  color: #bdc1c6;
 }
 
 .sna-drop-overlay {
@@ -2026,21 +2034,28 @@ img {
 
 .sna-composer textarea:focus {
   outline: none;
-  border-color: rgba(249, 115, 22, 0.34);
-  box-shadow: 0 0 0 4px rgba(249, 115, 22, 0.12);
+}
+
+.sna-composer-row:focus-within {
+  border-color: rgba(249, 115, 22, 0.42);
+  box-shadow: 0 0 0 4px rgba(249, 115, 22, 0.12), 0 18px 36px rgba(39, 45, 88, 0.1);
 }
 
 .sna-send-button {
-  width: 48px;
-  height: 48px;
+  width: 44px;
+  height: 44px;
   display: inline-grid;
   place-items: center;
   border: 0;
-  border-radius: 16px;
-  background: linear-gradient(135deg, #f97316, #194a5f);
-  color: #fff;
+  border-radius: 999px;
+  background: transparent;
+  color: #e8eaed;
   padding: 0;
-  box-shadow: 0 12px 20px rgba(249, 115, 22, 0.2);
+}
+
+.sna-send-button:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.09);
+  color: #fff;
 }
 
 .sna-send-button:disabled {
@@ -2143,15 +2158,23 @@ img {
 .sna-gpt-tool.is-dark-mode .sna-usage-panel,
 .sna-gpt-tool.is-dark-mode .sna-attachment-chip,
 .sna-gpt-tool.is-dark-mode .sna-prompt-chip,
-.sna-gpt-tool.is-dark-mode .sna-composer textarea,
 .sna-gpt-tool.is-dark-mode .sna-drop-overlay div {
   border-color: rgba(148, 163, 184, 0.18);
   background: rgba(15, 23, 42, 0.88);
   color: #e5edf7;
 }
 
+.sna-gpt-tool.is-dark-mode .sna-composer-row {
+  border-color: rgba(148, 163, 184, 0.16);
+  background: #202124;
+}
+
+.sna-gpt-tool.is-dark-mode .sna-composer textarea {
+  color: #e8eaed;
+}
+
 .sna-gpt-tool.is-dark-mode .sna-composer textarea::placeholder {
-  color: #8494ad;
+  color: #bdc1c6;
 }
 
 .sna-gpt-tool.is-dark-mode .sna-free-mode-note {
@@ -2176,12 +2199,11 @@ img {
 }
 
 .sna-gpt-tool.is-dark-mode .sna-response-mode select {
-  color: #9fb0c9;
+  color: #e8eaed;
 }
 
 .sna-gpt-tool.is-dark-mode .sna-response-mode:hover {
-  border-color: rgba(249, 115, 22, 0.32);
-  background: rgba(249, 115, 22, 0.16);
+  background: rgba(255, 255, 255, 0.12);
 }
 
 .sna-gpt-tool.is-dark-mode .sna-message-link {
@@ -3480,12 +3502,24 @@ img {
   }
 
   .sna-composer-row {
-    grid-template-columns: 40px minmax(0, 1fr);
+    grid-template-columns: 40px minmax(0, 1fr) auto 40px;
+    padding: 5px;
   }
 
-  .sna-composer-row .sna-response-mode {
-    grid-column: 2;
-    justify-self: start;
+  .sna-attach-button,
+  .sna-send-button {
+    width: 40px;
+    height: 40px;
+  }
+
+  .sna-response-mode {
+    min-width: 96px;
+    height: 36px;
+    padding: 0 7px;
+  }
+
+  .sna-response-mode select {
+    font-size: 0.76rem;
   }
 
   .sna-message-list {

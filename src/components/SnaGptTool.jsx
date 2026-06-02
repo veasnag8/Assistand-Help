@@ -1676,6 +1676,9 @@ export default function SnaGptTool({ onBack }) {
                   ))}
                 </select>
               </label>
+              <button className="sna-send-button" type="submit" disabled={!canSend} aria-label="Send message">
+                <Send size={20} strokeWidth={2.3} />
+              </button>
             </div>
             <input
               ref={fileInputRef}
@@ -1689,9 +1692,6 @@ export default function SnaGptTool({ onBack }) {
               }}
             />
           </div>
-          <button className="sna-send-button" type="submit" disabled={!canSend} aria-label="Send message">
-            <Send size={20} strokeWidth={2.3} />
-          </button>
         </form>
         <div className="sna-drop-overlay" aria-hidden="true">
           <div>
