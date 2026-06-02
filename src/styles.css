@@ -1902,28 +1902,36 @@ img {
 }
 
 .sna-prompt-strip {
+  width: min(100%, 480px);
   display: flex;
   gap: 6px;
+  justify-self: center;
   overflow-x: auto;
   border-top: 1px solid rgba(9, 16, 71, 0.06);
-  margin-bottom: 54px;
-  padding: 6px max(22px, calc((100% - 1120px) / 2)) 5px;
+  margin: 0 auto 52px;
+  padding: 7px 0 5px;
+  scrollbar-width: none;
+}
+
+.sna-prompt-strip::-webkit-scrollbar {
+  display: none;
 }
 
 .sna-prompt-chip {
   flex: 0 0 auto;
-  min-height: 24px;
-  border: 1px solid rgba(249, 115, 22, 0.16);
+  min-height: 25px;
+  border: 1px solid rgba(148, 163, 184, 0.2);
   border-radius: 999px;
-  background: rgba(255, 255, 255, 0.78);
-  color: var(--ink);
-  padding: 0 9px;
-  font-size: 0.64rem;
-  font-weight: 800;
+  background: rgba(15, 23, 42, 0.45);
+  color: #f8fafc;
+  padding: 0 10px;
+  font-size: 0.65rem;
+  font-weight: 850;
 }
 
 .sna-prompt-chip:hover {
-  background: rgba(249, 115, 22, 0.1);
+  border-color: rgba(249, 115, 22, 0.32);
+  background: rgba(249, 115, 22, 0.12);
 }
 
 .sna-prompt-chip:disabled {
@@ -1945,7 +1953,7 @@ img {
   justify-self: center;
   background: transparent;
   border-top: 0;
-  padding: 7px max(22px, calc((100% - 480px) / 2)) 10px;
+  padding: 6px max(22px, calc((100% - 480px) / 2)) 12px;
   pointer-events: none;
 }
 
@@ -3559,6 +3567,10 @@ img {
     width: 100%;
     padding-right: 10px;
     padding-left: 10px;
+  }
+
+  .sna-prompt-strip {
+    width: calc(100% - 20px);
   }
 
   .sna-chat-title-row {
