@@ -1190,6 +1190,7 @@ export default function SnaGptTool({ onBack }) {
   const fileInputRef = useRef(null);
   const responseModeRef = useRef(null);
   const scrollRef = useRef(null);
+  const textareaRef = useRef(null);
   const requestRef = useRef(null);
 
   const canSend = (draft.trim().length > 0 || attachments.length > 0) && !busy;
@@ -1248,6 +1249,17 @@ export default function SnaGptTool({ onBack }) {
   useEffect(() => {
     window.localStorage.setItem(usageStorageKey, JSON.stringify(usage));
   }, [usage]);
+
+  useEffect(() => {
+    const textarea = textareaRef.current;
+
+    if (!textarea) {
+      return;
+    }
+
+    textarea.style.height = "0px";
+    textarea.style.height = `${Math.min(textarea.scrollHeight, 132)}px`;
+  }, [draft]);
 
   useEffect(() => {
     scrollRef.current?.scrollTo({
@@ -1679,6 +1691,7 @@ export default function SnaGptTool({ onBack }) {
                 <Paperclip size={20} strokeWidth={2.3} />
               </button>
               <textarea
+                ref={textareaRef}
                 aria-label="Message SNA GPT"
                 maxLength={6000}
                 onChange={(event) => setDraft(event.target.value)}
