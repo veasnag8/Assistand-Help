@@ -1977,9 +1977,11 @@ img {
 }
 
 .sna-composer-main {
+  width: min(100%, 620px);
   min-width: 0;
   display: grid;
   gap: 8px;
+  justify-self: center;
 }
 
 .sna-composer-row {
