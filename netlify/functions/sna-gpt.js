@@ -4,6 +4,11 @@ import { inflateRawSync } from "node:zlib";
 const geminiBaseUrl = "https://generativelanguage.googleapis.com/v1beta/models";
 const defaultModel = "gemini-2.5-flash";
 const defaultFallbackModels = ["gemini-2.5-flash-lite"];
+const imageModelOptions = [
+  "imagen-4.0-generate-001",
+  "imagen-4.0-ultra-generate-001",
+  "imagen-4.0-fast-generate-001",
+];
 const publicModelName = "SNA Version 26.5 Pro";
 const fallbackPublicModelName = "SNA Version 26.5 Free";
 const maxMessages = 24;
@@ -203,6 +208,16 @@ function getModelName() {
   return model;
 }
 
+function getRequestedModel(payloadModel) {
+  const model = cleanText(payloadModel, 80).replace(/^models\//, "");
+
+  if (!model || !/^[a-z0-9_.-]+$/i.test(model)) {
+    return getModelName();
+  }
+
+  return model;
+}
+
 function getFallbackModelNames(primaryModel) {
   const rawModels =
     process.env.SNA_GPT_FALLBACK_MODELS ||
@@ -218,6 +233,25 @@ function getFallbackModelNames(primaryModel) {
   const models = configuredModels.length ? configuredModels : defaultFallbackModels;
 
   return [...new Set(models)].filter((model) => model !== primaryModel);
+}
+
+function getImageFallbackModelNames(primaryModel) {
+  const rawModels = process.env.SNA_GPT_IMAGE_FALLBACK_MODELS || imageModelOptions.join(",");
+  const configuredModels = rawModels
+    .split(",")
+    .map((model) => cleanText(model, 80).replace(/^models\//, ""))
+    .filter((model) => model && /^[a-z0-9_.-]+$/i.test(model));
+
+  return [...new Set(configuredModels.length ? configuredModels : imageModelOptions)]
+    .filter((model) => model !== primaryModel);
+}
+
+function isImageGenerationModel(model) {
+  return /^imagen-\d/i.test(model);
+}
+
+function getPublicTextModelName(model) {
+  return model === defaultModel ? publicModelName : fallbackPublicModelName;
 }
 
 function hasAttachments(messages) {
@@ -520,6 +554,35 @@ async function readGeminiPayload(response) {
   }
 }
 
+function extractGeneratedImages(payload) {
+  return (payload?.predictions || [])
+    .map((prediction, index) => {
+      const data = prediction?.bytesBase64Encoded || prediction?.image?.bytesBase64Encoded;
+      const mimeType = prediction?.mimeType || prediction?.image?.mimeType || "image/png";
+
+      return data
+        ? {
+          alt: `Generated image ${index + 1}`,
+          data,
+          mimeType,
+        }
+        : null;
+    })
+    .filter(Boolean);
+}
+
+function buildImageReply(images, model) {
+  if (!images.length) {
+    return "SNA GPT did not return an image.";
+  }
+
+  const imageMarkdown = images
+    .map((image) => `![${image.alt}](data:${image.mimeType};base64,${image.data})`)
+    .join("\n\n");
+
+  return `Generated with ${model}.\n\n${imageMarkdown}`;
+}
+
 function isLimitResponse(response, payload) {
   const message = String(
     payload?.error?.message ||
@@ -583,6 +646,28 @@ async function generateContent({ apiKey, contents, model }) {
   };
 }
 
+async function generateImages({ apiKey, model, prompt }) {
+  const response = await fetch(`${geminiBaseUrl}/${encodeURIComponent(model)}:predict`, {
+    body: JSON.stringify({
+      instances: [{ prompt }],
+      parameters: {
+        sampleCount: 1,
+      },
+    }),
+    headers: {
+      "Content-Type": "application/json",
+      "x-goog-api-key": apiKey,
+    },
+    method: "POST",
+  });
+  const result = await readGeminiPayload(response);
+
+  return {
+    response,
+    result,
+  };
+}
+
 export async function handler(event) {
   if (event.httpMethod === "OPTIONS") {
     return {
@@ -629,12 +714,24 @@ export async function handler(event) {
       });
     }
 
-    const model = getModelName();
-    const fallbackModels = getFallbackModelNames(model);
+    const model = getRequestedModel(payload.model);
+    const imageGeneration = isImageGenerationModel(model);
+    const fallbackModels = imageGeneration ? getImageFallbackModelNames(model) : getFallbackModelNames(model);
     const contents = await buildContents(messages);
     const requestHasAttachments = hasAttachments(messages);
-    const eligibleFallbackModels = getEligibleFallbackModels(fallbackModels, requestHasAttachments);
-    let { response, result } = await generateContent({ apiKey, contents, model });
+    if (imageGeneration && requestHasAttachments) {
+      return jsonResponse(400, {
+        code: "SNA_GPT_IMAGE_ATTACHMENTS_UNSUPPORTED",
+        error: "Imagen can generate from text only. Remove attached files or choose SNA Version 26.5 Pro for file chat.",
+      });
+    }
+
+    const eligibleFallbackModels = imageGeneration
+      ? fallbackModels
+      : getEligibleFallbackModels(fallbackModels, requestHasAttachments);
+    let { response, result } = imageGeneration
+      ? await generateImages({ apiKey, model, prompt: lastUserMessage })
+      : await generateContent({ apiKey, contents, model });
     let activeModel = model;
     let fallbackAttempted = false;
     let usedFallback = false;
@@ -643,16 +740,20 @@ export async function handler(event) {
       fallbackAttempted = true;
 
       for (const fallbackModel of eligibleFallbackModels) {
-        const fallback = await generateContent({
-          apiKey,
-          contents,
-          model: fallbackModel,
-        });
+        const fallback = imageGeneration
+          ? await generateImages({ apiKey, model: fallbackModel, prompt: lastUserMessage })
+          : await generateContent({
+            apiKey,
+            contents,
+            model: fallbackModel,
+          });
 
         response = fallback.response;
         result = fallback.result;
         activeModel = fallbackModel;
-        usedFallback = response.ok && !isProviderCapacityReply(extractReply(result));
+        usedFallback = response.ok && (
+          imageGeneration || !isProviderCapacityReply(extractReply(result))
+        );
 
         if (usedFallback || !shouldTryNextFallback(response, result)) {
           break;
@@ -683,7 +784,9 @@ export async function handler(event) {
       );
     }
 
-    const reply = extractReply(result);
+    const reply = imageGeneration
+      ? buildImageReply(extractGeneratedImages(result), activeModel)
+      : extractReply(result);
 
     if (isProviderCapacityReply(reply)) {
       return jsonResponse(503, {
@@ -693,13 +796,15 @@ export async function handler(event) {
       });
     }
 
-    const fileUploadSupported = supportsFileUpload(activeModel);
+    const fileUploadSupported = !imageGeneration && supportsFileUpload(activeModel);
 
     return jsonResponse(200, {
       fallbackModelUsed: usedFallback,
       fallbackModel: usedFallback ? activeModel : null,
       fileUploadSupported,
-      model: usedFallback && !fileUploadSupported ? fallbackPublicModelName : publicModelName,
+      model: imageGeneration
+        ? activeModel
+        : getPublicTextModelName(activeModel),
       reply,
       usageMetadata: result?.usageMetadata || null,
     });

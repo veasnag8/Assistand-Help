@@ -31,6 +31,34 @@ const sidebarStorageKey = "sna-gpt-sidebar-collapsed-v2";
 const themeStorageKey = "sna-gpt-theme-v1";
 const usageStorageKey = "sna-gpt-usage-v1";
 const publicModelName = "SNA Version 26.5 Pro";
+const defaultChatModelId = "gemini-2.5-flash";
+const modelOptions = [
+  {
+    description: "All-around help",
+    id: defaultChatModelId,
+    label: "SNA Pro Chat",
+  },
+  {
+    description: "Fastest text fallback",
+    id: "gemini-2.5-flash-lite",
+    label: "SNA Free Chat",
+  },
+  {
+    description: "High-quality image generation",
+    id: "imagen-4.0-generate-001",
+    label: "Imagen 4",
+  },
+  {
+    description: "Best image quality",
+    id: "imagen-4.0-ultra-generate-001",
+    label: "Imagen 4 Ultra",
+  },
+  {
+    description: "Fast image generation",
+    id: "imagen-4.0-fast-generate-001",
+    label: "Imagen 4 Fast",
+  },
+];
 const dailyTokenLimit = Math.max(
   0,
   Number(import.meta.env.VITE_SNA_GPT_DAILY_TOKEN_LIMIT || 0),
@@ -265,6 +293,10 @@ function sanitizeMessageForStorage(message) {
   return {
     ...message,
     attachments: (message.attachments || []).map(sanitizeAttachmentForStorage),
+    content: String(message.content || "").replace(
+      /!\[([^\]]*)\]\(data:image\/[^;)]+;base64,[^)]+\)/g,
+      "![Generated image removed from saved chat](generated-image)",
+    ),
   };
 }
 
@@ -408,7 +440,11 @@ async function readJsonResponse(response, fallbackMessage) {
   throw new Error(text || fallbackMessage);
 }
 
-async function sendSnaGptMessage(messages, signal) {
+function isImagenModel(modelId) {
+  return /^imagen-/i.test(modelId);
+}
+
+async function sendSnaGptMessage(messages, modelId, signal) {
   let response;
 
   try {
@@ -426,6 +462,7 @@ async function sendSnaGptMessage(messages, signal) {
           content: message.content,
           role: message.role,
         })),
+        model: modelId,
       }),
       headers: {
         "Content-Type": "application/json",
@@ -463,12 +500,12 @@ function wait(ms, signal) {
   });
 }
 
-async function sendSnaGptMessageWithRetry(messages, signal, onRetry) {
+async function sendSnaGptMessageWithRetry(messages, modelId, signal, onRetry) {
   const retryDelays = [900, 1600, 2600, 4200, 6500];
 
   for (let attempt = 0; attempt <= retryDelays.length; attempt += 1) {
     try {
-      const result = await sendSnaGptMessage(messages, signal);
+      const result = await sendSnaGptMessage(messages, modelId, signal);
 
       if (!isProviderCapacityReply(result.reply)) {
         return result;
@@ -901,6 +938,23 @@ function renderInlineMarkdown(text, keyPrefix) {
   return nodes;
 }
 
+function renderImageLine(line, key) {
+  const imageMatch = line.match(/^\s*!\[([^\]]*)\]\((data:image\/[^;)]+;base64,[^)]+)\)\s*$/);
+
+  if (!imageMatch) {
+    return null;
+  }
+
+  return (
+    <img
+      alt={imageMatch[1] || "Generated image"}
+      className="sna-generated-image"
+      key={key}
+      src={imageMatch[2]}
+    />
+  );
+}
+
 function renderTextBlock(content, keyPrefix) {
   const lines = String(content || "").split(/\r?\n/);
   const blocks = [];
@@ -922,6 +976,13 @@ function renderTextBlock(content, keyPrefix) {
   lines.forEach((line, index) => {
     const headingMatch = line.match(/^\s{0,3}(#{1,6})\s+(.+?)\s*#*\s*$/);
     const bulletMatch = line.match(/^\s*(?:[-*]|\d+\.)\s+(.+)$/);
+    const imageNode = renderImageLine(line, `${keyPrefix}-image-${index}`);
+
+    if (imageNode) {
+      flushList(index);
+      blocks.push(imageNode);
+      return;
+    }
 
     if (headingMatch) {
       const HeadingTag = `h${Math.min(headingMatch[1].length + 1, 6)}`;
@@ -1127,6 +1188,7 @@ export default function SnaGptTool({ onBack }) {
   const [status, setStatus] = useState("Ready.");
   const [busy, setBusy] = useState(false);
   const [model, setModel] = useState(publicModelName);
+  const [selectedModel, setSelectedModel] = useState(defaultChatModelId);
   const [freeMode, setFreeMode] = useState(false);
   const [hideFreeModeNote, setHideFreeModeNote] = useState(false);
   const [usage, setUsage] = useState(loadStoredUsage);
@@ -1207,6 +1269,7 @@ export default function SnaGptTool({ onBack }) {
     setFreeMode(false);
     setHideFreeModeNote(false);
     setModel(publicModelName);
+    setSelectedModel(defaultChatModelId);
     setMessages([createWelcomeMessage()]);
     setUsage(createEmptyUsage());
     setStatus("Ready.");
@@ -1282,11 +1345,12 @@ export default function SnaGptTool({ onBack }) {
     setDraft("");
     setAttachments([]);
     setBusy(true);
-    setStatus("Thinking...");
+    setStatus(isImagenModel(selectedModel) ? "Generating image..." : "Thinking...");
 
     try {
       const result = await sendSnaGptMessageWithRetry(
         nextMessages,
+        selectedModel,
         controller.signal,
         (attempt) => setStatus(`Still working... retry ${attempt}`),
       );
@@ -1516,6 +1580,21 @@ export default function SnaGptTool({ onBack }) {
               <Moon size={17} strokeWidth={2.3} />
             )}
           </button>
+          <label className="sna-model-select">
+            <span>Model</span>
+            <select
+              value={selectedModel}
+              onChange={(event) => setSelectedModel(event.target.value)}
+              disabled={busy}
+              aria-label="Choose SNA GPT model"
+            >
+              {modelOptions.map((option) => (
+                <option key={option.id} value={option.id}>
+                  {option.label} - {option.description}
+                </option>
+              ))}
+            </select>
+          </label>
         </header>
 
         <div className="sna-message-list" ref={scrollRef} aria-live="polite">
