@@ -658,13 +658,9 @@ export default function LogoCutTool() {
               <img className="logo-result-image" src={sourceUrl} alt={`${activePreset.label} editable result`} style={resultImageStyle} />
               <span className="logo-result-selection" style={resultImageStyle}>
                 <span className="logo-result-handle is-top-left" onPointerDown={(event) => handleResizePointerDown(event, "top-left")} />
-                <span className="logo-result-handle is-top" onPointerDown={(event) => handleResizePointerDown(event, "top")} />
                 <span className="logo-result-handle is-top-right" onPointerDown={(event) => handleResizePointerDown(event, "top-right")} />
-                <span className="logo-result-handle is-right" onPointerDown={(event) => handleResizePointerDown(event, "right")} />
                 <span className="logo-result-handle is-bottom-left" onPointerDown={(event) => handleResizePointerDown(event, "bottom-left")} />
-                <span className="logo-result-handle is-bottom" onPointerDown={(event) => handleResizePointerDown(event, "bottom")} />
                 <span className="logo-result-handle is-bottom-right" onPointerDown={(event) => handleResizePointerDown(event, "bottom-right")} />
-                <span className="logo-result-handle is-left" onPointerDown={(event) => handleResizePointerDown(event, "left")} />
               </span>
             </div>
           ) : (

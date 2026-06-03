@@ -1346,24 +1346,10 @@ img {
   cursor: nwse-resize;
 }
 
-.logo-result-handle.is-top {
-  top: -7px;
-  left: 50%;
-  transform: translateX(-50%);
-  cursor: ns-resize;
-}
-
 .logo-result-handle.is-top-right {
   top: -7px;
   right: -7px;
   cursor: nesw-resize;
-}
-
-.logo-result-handle.is-right {
-  top: 50%;
-  right: -7px;
-  transform: translateY(-50%);
-  cursor: ew-resize;
 }
 
 .logo-result-handle.is-bottom-left {
@@ -1372,24 +1358,10 @@ img {
   cursor: nesw-resize;
 }
 
-.logo-result-handle.is-bottom {
-  bottom: -7px;
-  left: 50%;
-  transform: translateX(-50%);
-  cursor: ns-resize;
-}
-
 .logo-result-handle.is-bottom-right {
   right: -7px;
   bottom: -7px;
   cursor: nwse-resize;
-}
-
-.logo-result-handle.is-left {
-  top: 50%;
-  left: -7px;
-  transform: translateY(-50%);
-  cursor: ew-resize;
 }
 
 .logo-preview-site > img {
