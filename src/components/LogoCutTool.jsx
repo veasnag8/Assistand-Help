@@ -314,8 +314,16 @@ export default function LogoCutTool() {
     };
   }
 
-  function getOffsetCropFocus(source, offsetX = 28, offsetY = 34) {
-    const renderData = getSourceRenderData(source);
+  function getOffsetCropFocus(source, offsetX = 28, offsetY = 34, settingsOverride = null) {
+    const renderData = settingsOverride
+      ? getSourceRenderData({
+        ...source,
+        presetSettings: {
+          ...(source.presetSettings || {}),
+          [presetId]: settingsOverride,
+        },
+      })
+      : getSourceRenderData(source);
 
     if (!renderData) {
       return source.cropFocus || { x: 50, y: 50 };
@@ -332,11 +340,11 @@ export default function LogoCutTool() {
     };
   }
 
-  function cloneSourceForCanvas(source, offsetX = 28, offsetY = 34) {
-    const settings = getPresetSettings(source, presetId);
+  function cloneSourceForCanvas(source, offsetX = 28, offsetY = 34, settingsOverride = null) {
+    const settings = settingsOverride || getPresetSettings(source, presetId);
     const nextSettings = {
       ...settings,
-      cropFocus: getOffsetCropFocus(source, offsetX, offsetY),
+      cropFocus: getOffsetCropFocus(source, offsetX, offsetY, settings),
       locked: false,
     };
 
@@ -390,6 +398,38 @@ export default function LogoCutTool() {
     window.addEventListener("click", closeContextMenu);
     return () => window.removeEventListener("click", closeContextMenu);
   }, []);
+
+  useEffect(() => {
+    function handleLogoShortcut(event) {
+      if (!sourceImage) {
+        return;
+      }
+
+      const key = event.key.toLowerCase();
+
+      if (event.ctrlKey && key === "c") {
+        copyActiveSource(event);
+        return;
+      }
+
+      if (event.ctrlKey && key === "v") {
+        pasteCopiedSource(event);
+        return;
+      }
+
+      if (event.ctrlKey && key === "d") {
+        duplicateActiveSource(event);
+        return;
+      }
+
+      if (event.key === "Delete") {
+        deleteActiveSource(event);
+      }
+    }
+
+    window.addEventListener("keydown", handleLogoShortcut);
+    return () => window.removeEventListener("keydown", handleLogoShortcut);
+  }, [activeSourceId, copiedSource, cropFocus, layoutMode, logoScale, presetId, sourceCrop, sourceImage, sources, splitPercent]);
 
   useEffect(() => {
     if (!sourceImage) {
@@ -824,6 +864,7 @@ export default function LogoCutTool() {
 
   function copyActiveSource(event) {
     event?.preventDefault?.();
+    event?.stopPropagation?.();
 
     const source = sources.find((item) => item.id === activeSourceId);
 
@@ -851,13 +892,14 @@ export default function LogoCutTool() {
 
   function pasteCopiedSource(event) {
     event?.preventDefault?.();
+    event?.stopPropagation?.();
 
     if (!copiedSource) {
       setStatus("Copy a logo first.");
       return;
     }
 
-    const duplicate = cloneSourceForCanvas(copiedSource, 34, 40);
+    const duplicate = cloneSourceForCanvas(copiedSource, 34, 40, getPresetSettings(copiedSource, presetId));
 
     setSources((current) => [...current, duplicate]);
     activateSource(duplicate);
@@ -867,6 +909,7 @@ export default function LogoCutTool() {
 
   function duplicateActiveSource(event) {
     event?.preventDefault?.();
+    event?.stopPropagation?.();
 
     const source = sources.find((item) => item.id === activeSourceId);
 
@@ -874,13 +917,15 @@ export default function LogoCutTool() {
       return;
     }
 
-    const duplicate = cloneSourceForCanvas({
-      ...source,
-      cropFocus,
+    const currentSettings = {
+      cropFocus: { ...cropFocus },
+      layoutMode,
+      locked: false,
       logoScale,
-      sourceCrop,
       splitPercent,
-    }, 42, 48);
+      sourceCrop: { ...sourceCrop },
+    };
+    const duplicate = cloneSourceForCanvas(source, activePreset.width * 0.08, activePreset.height * 0.18, currentSettings);
 
     setSources((current) => [...current, duplicate]);
     activateSource(duplicate);
@@ -890,6 +935,7 @@ export default function LogoCutTool() {
 
   function toggleActiveSourceLock(event) {
     event?.preventDefault?.();
+    event?.stopPropagation?.();
 
     const source = sources.find((item) => item.id === activeSourceId);
 
@@ -919,6 +965,7 @@ export default function LogoCutTool() {
 
   function deleteActiveSource(event) {
     event?.preventDefault?.();
+    event?.stopPropagation?.();
 
     const sourceIndex = sources.findIndex((item) => item.id === activeSourceId);
 
