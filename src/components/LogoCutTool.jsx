@@ -195,6 +195,7 @@ export default function LogoCutTool() {
   const [logoScale, setLogoScale] = useState(100);
   const [splitPercent, setSplitPercent] = useState(38);
   const [sourceCrop, setSourceCrop] = useState(defaultSourceCrop);
+  const [contextMenu, setContextMenu] = useState(null);
   const [status, setStatus] = useState("Choose a logo image to start.");
   const resultFrameRef = useRef(null);
   const dragRef = useRef(null);
@@ -271,6 +272,15 @@ export default function LogoCutTool() {
       window.removeEventListener("pointerup", handleWindowPointerUp);
     };
   });
+
+  useEffect(() => {
+    function closeContextMenu() {
+      setContextMenu(null);
+    }
+
+    window.addEventListener("click", closeContextMenu);
+    return () => window.removeEventListener("click", closeContextMenu);
+  }, []);
 
   useEffect(() => {
     if (!sourceImage) {
@@ -618,7 +628,7 @@ export default function LogoCutTool() {
   }
 
   function duplicateActiveSource(event) {
-    event.preventDefault();
+    event?.preventDefault?.();
 
     const source = sources.find((item) => item.id === activeSourceId);
 
@@ -639,6 +649,20 @@ export default function LogoCutTool() {
     setSources((current) => [...current, duplicate]);
     activateSource(duplicate);
     setStatus(`Duplicated ${source.file.name}.`);
+    setContextMenu(null);
+  }
+
+  function openContextMenu(event) {
+    event.preventDefault();
+
+    if (!sourceImage) {
+      return;
+    }
+
+    setContextMenu({
+      x: event.clientX,
+      y: event.clientY,
+    });
   }
 
 
@@ -745,7 +769,7 @@ export default function LogoCutTool() {
               onPointerUp={handleResultPointerUp}
               onPointerCancel={handleResultPointerUp}
               onWheel={handleResultWheel}
-              onContextMenu={duplicateActiveSource}
+              onContextMenu={openContextMenu}
               role="presentation"
             >
               <span className="logo-result-crop-layer" style={resultImageStyle}>
@@ -761,6 +785,20 @@ export default function LogoCutTool() {
                 <span className="logo-result-handle is-bottom-right" onPointerDown={(event) => handleResizePointerDown(event, "bottom-right")} />
                 <span className="logo-result-crop-handle is-left" onPointerDown={(event) => handleCropPointerDown(event, "left")} />
               </span>
+              {contextMenu ? (
+                <div
+                  className="logo-context-menu"
+                  style={{
+                    left: `${contextMenu.x}px`,
+                    top: `${contextMenu.y}px`,
+                  }}
+                  onClick={(event) => event.stopPropagation()}
+                >
+                  <button type="button" onClick={duplicateActiveSource}>
+                    Duplicate image
+                  </button>
+                </div>
+              ) : null}
             </div>
           ) : (
             <div className="logo-preview-empty">
