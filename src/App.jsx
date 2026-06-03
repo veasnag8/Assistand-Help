@@ -14,11 +14,13 @@ import {
   MessageSquare,
   QrCode,
   ScanText as ScanTextIcon,
+  Scissors,
   UserRound,
   X,
 } from "lucide-react";
 import CommentTool from "./components/CommentTool";
 import ImageTools from "./components/ImageTools";
+import LogoCutTool from "./components/LogoCutTool";
 import PdfTools from "./components/PdfTools";
 import QrStudio from "./components/QrStudio";
 import ScanTextTool from "./components/ScanTextTool";
@@ -110,6 +112,15 @@ const categories = [
     description: "Resize, compress, remove background, convert, crop, and enhance photos.",
     icon: FileImage,
     tone: "cyan",
+    enabled: true,
+  },
+  {
+    id: "logo-cut",
+    title: "Cut Logo",
+    tabTitle: "Cut Logo",
+    description: "Cut Site Logo 210 x 50 and Report Logo 300 x 300.",
+    icon: Scissors,
+    tone: "indigo",
     enabled: true,
   },
 ];
@@ -490,11 +501,12 @@ function ToolView({ activeId, onBack }) {
       {activeId === "qr" ? <QrStudio /> : null}
       {activeId === "pdf" ? <PdfTools /> : null}
       {activeId === "image" ? <ImageTools /> : null}
+      {activeId === "logo-cut" ? <LogoCutTool /> : null}
       {activeId === "scan-text" ? <ScanTextTool /> : null}
       {activeId === "sna-gpt" ? <SnaGptTool onBack={onBack} /> : null}
       {activeId === "comment" ? <CommentTool /> : null}
       {activeId === "video-download" ? <VideoDownloadTool /> : null}
-      {activeId !== "timer" && activeId !== "qr" && activeId !== "pdf" && activeId !== "image" && activeId !== "scan-text" && activeId !== "sna-gpt" && activeId !== "comment" && activeId !== "video-download" ? (
+      {activeId !== "timer" && activeId !== "qr" && activeId !== "pdf" && activeId !== "image" && activeId !== "logo-cut" && activeId !== "scan-text" && activeId !== "sna-gpt" && activeId !== "comment" && activeId !== "video-download" ? (
         <PlaceholderTool category={category} />
       ) : null}
     </section>

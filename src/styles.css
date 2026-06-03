@@ -1054,6 +1054,157 @@ img {
   box-shadow: 0 18px 34px rgba(39, 45, 88, 0.14);
 }
 
+.logo-cut-tool {
+  display: grid;
+  grid-template-columns: minmax(260px, 360px) minmax(0, 1fr);
+  gap: 18px;
+  align-items: start;
+}
+
+.logo-cut-controls,
+.logo-preview-panel {
+  display: grid;
+  gap: 14px;
+  border: 1px solid rgba(9, 16, 71, 0.08);
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.94);
+  box-shadow: 0 18px 34px rgba(39, 45, 88, 0.1);
+  padding: 16px;
+}
+
+.logo-upload-card {
+  min-height: 116px;
+  display: grid;
+  place-items: center;
+  gap: 6px;
+  border: 1px dashed rgba(37, 99, 235, 0.35);
+  border-radius: 16px;
+  background: rgba(37, 99, 235, 0.06);
+  color: #070d49;
+  padding: 16px;
+  text-align: center;
+  cursor: pointer;
+}
+
+.logo-upload-card input {
+  display: none;
+}
+
+.logo-upload-card span {
+  font-weight: 900;
+}
+
+.logo-upload-card small,
+.logo-cut-status,
+.logo-preview-header span,
+.logo-preview-header small {
+  color: var(--muted);
+  font-size: 0.78rem;
+  font-weight: 800;
+}
+
+.logo-preset-group {
+  display: grid;
+  gap: 8px;
+}
+
+.logo-preset-group button {
+  min-height: 64px;
+  display: grid;
+  grid-template-columns: 28px minmax(0, 1fr);
+  gap: 2px 9px;
+  align-items: center;
+  border: 1px solid rgba(9, 16, 71, 0.1);
+  border-radius: 14px;
+  background: #fff;
+  color: var(--ink);
+  padding: 10px 12px;
+  text-align: left;
+}
+
+.logo-preset-group button svg {
+  grid-row: span 2;
+  color: #2563eb;
+}
+
+.logo-preset-group button span {
+  font-weight: 900;
+}
+
+.logo-preset-group button small {
+  color: var(--muted);
+  font-size: 0.74rem;
+  font-weight: 800;
+}
+
+.logo-preset-group button.is-active {
+  border-color: rgba(37, 99, 235, 0.38);
+  background: rgba(37, 99, 235, 0.08);
+}
+
+.logo-cut-status {
+  margin: 0;
+  line-height: 1.4;
+}
+
+.logo-preview-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.logo-preview-header div {
+  display: grid;
+  gap: 3px;
+}
+
+.logo-preview-header strong {
+  color: #070d49;
+  font-size: 1rem;
+}
+
+.logo-preview-frame {
+  min-height: 340px;
+  display: grid;
+  place-items: center;
+  border: 1px solid rgba(9, 16, 71, 0.08);
+  border-radius: 16px;
+  background:
+    linear-gradient(45deg, rgba(9, 16, 71, 0.04) 25%, transparent 25%),
+    linear-gradient(-45deg, rgba(9, 16, 71, 0.04) 25%, transparent 25%),
+    linear-gradient(45deg, transparent 75%, rgba(9, 16, 71, 0.04) 75%),
+    linear-gradient(-45deg, transparent 75%, rgba(9, 16, 71, 0.04) 75%),
+    #fff;
+  background-position: 0 0, 0 10px, 10px -10px, -10px 0;
+  background-size: 20px 20px;
+  padding: 24px;
+}
+
+.logo-preview-frame img {
+  width: min(100%, 520px);
+  max-height: 300px;
+  aspect-ratio: var(--logo-preview-ratio);
+  object-fit: contain;
+}
+
+.logo-preview-site img {
+  width: min(100%, 630px);
+}
+
+.logo-preview-report img {
+  width: min(100%, 300px);
+}
+
+.logo-preview-empty {
+  display: grid;
+  justify-items: center;
+  gap: 10px;
+  color: var(--muted);
+  font-weight: 900;
+  text-align: center;
+}
+
 .image-empty-state {
   display: grid;
   place-items: center;
@@ -3599,6 +3750,10 @@ img {
   }
 
   .image-workspace {
+    grid-template-columns: 1fr;
+  }
+
+  .logo-cut-tool {
     grid-template-columns: 1fr;
   }
 
