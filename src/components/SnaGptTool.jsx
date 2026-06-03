@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   ArrowLeft,
+  BadgeCheck,
   Check,
   ChevronLeft,
   ChevronRight,
@@ -1109,6 +1110,11 @@ function ChatMessage({ animate, message, onCopy, onDone, onStep }) {
       <div className="sna-message-bubble">
         <div className="sna-message-top">
           <strong>{isUser ? "You" : "SNA GPT"}</strong>
+          {!isUser ? (
+            <span className="sna-message-verify-icon" aria-label="Verified SNA GPT" title="Verified SNA GPT">
+              <BadgeCheck size={16} strokeWidth={2.6} />
+            </span>
+          ) : null}
           <span>{formatTime(message.createdAt)}</span>
         </div>
         {attachments.length ? (
@@ -1485,6 +1491,8 @@ export default function SnaGptTool({ onBack }) {
     addFiles(event.dataTransfer.files);
   }
 
+  const isProMode = !freeMode;
+
   return (
     <section
       className={`sna-gpt-tool is-${theme}-mode${sidebarCollapsed ? " is-sidebar-collapsed" : ""}${dragActive ? " is-dragging-file" : ""}`}
@@ -1587,7 +1595,17 @@ export default function SnaGptTool({ onBack }) {
               <ArrowLeft size={18} strokeWidth={2.4} />
             </button>
             <div className="sna-chat-title">
-              <strong>SNA GPT Chat</strong>
+              <strong className="sna-chat-name">
+                <span>SNA GPT</span>
+                {isProMode ? (
+                  <>
+                    <span className="sna-pro-word">Pro</span>
+                    <span className="sna-verify-icon" aria-label="Verified Pro" title="Verified Pro">
+                      <BadgeCheck size={19} strokeWidth={2.6} />
+                    </span>
+                  </>
+                ) : null}
+              </strong>
               <span>{model}</span>
             </div>
           </div>

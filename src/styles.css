@@ -1413,11 +1413,56 @@ img {
   font-size: 1.08rem;
 }
 
+.sna-chat-name {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+
+.sna-chat-name span:first-child {
+  min-width: 0;
+}
+
+.sna-verify-icon {
+  width: 20px;
+  height: 20px;
+  flex: 0 0 auto;
+  display: inline-grid;
+  place-items: center;
+  color: #3b82f6;
+  filter: drop-shadow(0 4px 8px rgba(37, 99, 235, 0.22));
+}
+
+.sna-verify-icon svg {
+  fill: currentColor;
+  stroke: #fff;
+}
+
 .sna-chat-header span,
 .sna-status {
   color: var(--muted);
   font-size: 0.76rem;
   font-weight: 800;
+}
+
+.sna-chat-name > span {
+  font-size: inherit;
+}
+
+.sna-chat-name > span:first-child {
+  color: inherit;
+}
+
+.sna-chat-header .sna-verify-icon {
+  color: #1d9bf0;
+}
+
+.sna-chat-name .sna-pro-word {
+  background: linear-gradient(135deg, #f97316, #0891b2);
+  background-clip: text;
+  color: transparent;
+  font-weight: 950;
 }
 
 .sna-status {
@@ -1587,6 +1632,20 @@ img {
   color: var(--muted);
   font-size: 0.7rem;
   font-weight: 800;
+}
+
+.sna-message-top .sna-message-verify-icon {
+  width: 16px;
+  height: 16px;
+  display: inline-grid;
+  place-items: center;
+  color: #1d9bf0;
+  filter: drop-shadow(0 3px 6px rgba(37, 99, 235, 0.18));
+}
+
+.sna-message-verify-icon svg {
+  fill: currentColor;
+  stroke: #fff;
 }
 
 .sna-message-text {
@@ -2121,6 +2180,16 @@ img {
 .sna-gpt-tool.is-dark-mode .sna-usage-panel p,
 .sna-gpt-tool.is-dark-mode .sna-attachment-chip small {
   color: #9fb0c9;
+}
+
+.sna-gpt-tool.is-dark-mode .sna-chat-name > span:first-child {
+  color: #f8fafc;
+}
+
+.sna-gpt-tool.is-dark-mode .sna-chat-name .sna-pro-word {
+  background: linear-gradient(135deg, #fb923c, #22d3ee);
+  background-clip: text;
+  color: transparent;
 }
 
 .sna-gpt-tool.is-dark-mode .sna-side-actions .button,
