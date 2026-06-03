@@ -226,6 +226,17 @@ function UserAccessModal({ onClose }) {
   const markdownResult = buildAccessInfoMarkdown({ user, username });
   const htmlResult = buildAccessInfoHtml({ user, username });
 
+  useEffect(() => {
+    function handleEscape(event) {
+      if (event.key === "Escape") {
+        onClose();
+      }
+    }
+
+    window.addEventListener("keydown", handleEscape);
+    return () => window.removeEventListener("keydown", handleEscape);
+  }, [onClose]);
+
   async function copyResult() {
     try {
       if (window.ClipboardItem) {
