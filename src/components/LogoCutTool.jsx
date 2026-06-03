@@ -257,6 +257,49 @@ export default function LogoCutTool() {
       width: `${sourceSize.width * resultPlacement.scale * resultScale}px`,
     }
     : null;
+  const activeSource = sources.find((source) => source.id === activeSourceId) || null;
+  const activeGroupId = activeSource?.groupId || activeSource?.id || "";
+  const canvasSources = sources.filter((source) => (source.groupId || source.id) === activeGroupId);
+
+  function getSourceRenderData(source) {
+    const image = source.image;
+    const imageWidth = image?.naturalWidth || image?.width || 0;
+    const imageHeight = image?.naturalHeight || image?.height || 0;
+
+    if (!imageWidth || !imageHeight) {
+      return null;
+    }
+
+    const crop = source.sourceCrop || defaultSourceCrop;
+    const croppedSize = getCroppedSourceSize(imageWidth, imageHeight, crop);
+    const placement = getLogoPlacement(
+      croppedSize.width,
+      croppedSize.height,
+      activePreset.width,
+      activePreset.height,
+      source.logoScale || 100,
+      source.cropFocus?.x ?? 50,
+      source.cropFocus?.y ?? 50,
+    );
+
+    return {
+      croppedSize,
+      crop,
+      imageStyle: {
+        height: `${imageHeight * placement.scale * resultScale}px`,
+        left: `${-imageWidth * (crop.left / 100) * placement.scale * resultScale}px`,
+        top: `${-imageHeight * (crop.top / 100) * placement.scale * resultScale}px`,
+        width: `${imageWidth * placement.scale * resultScale}px`,
+      },
+      placement,
+      wrapperStyle: {
+        height: `${placement.drawHeight * resultScale}px`,
+        left: `${placement.x * resultScale}px`,
+        top: `${placement.y * resultScale}px`,
+        width: `${placement.drawWidth * resultScale}px`,
+      },
+    };
+  }
 
   useEffect(() => {
     sourcesRef.current = sources;
@@ -347,6 +390,46 @@ export default function LogoCutTool() {
       return canvasToBlob(drawStackedLogoToCanvas(image, splitPercent, preset.width, preset.height));
     }
 
+    if (canvasSources.length > 1) {
+      const canvas = document.createElement("canvas");
+      const context = canvas.getContext("2d");
+
+      if (!context) {
+        throw new Error("Could not prepare the logo canvas.");
+      }
+
+      canvas.width = preset.width;
+      canvas.height = preset.height;
+      context.imageSmoothingEnabled = true;
+      context.imageSmoothingQuality = "high";
+      context.clearRect(0, 0, canvas.width, canvas.height);
+
+      canvasSources.forEach((source) => {
+        const renderData = getSourceRenderData(source);
+        const itemImage = source.image;
+        const itemWidth = itemImage.naturalWidth || itemImage.width;
+        const itemHeight = itemImage.naturalHeight || itemImage.height;
+
+        if (!renderData) {
+          return;
+        }
+
+        context.drawImage(
+          itemImage,
+          itemWidth * (renderData.crop.left / 100),
+          itemHeight * (renderData.crop.top / 100),
+          renderData.croppedSize.width,
+          renderData.croppedSize.height,
+          renderData.placement.x,
+          renderData.placement.y,
+          renderData.placement.drawWidth,
+          renderData.placement.drawHeight,
+        );
+      });
+
+      return canvasToBlob(canvas);
+    }
+
     const placement = getLogoPlacement(
       croppedSource.width,
       croppedSource.height,
@@ -429,11 +512,13 @@ export default function LogoCutTool() {
       for (const file of supportedFiles) {
         const dataUrl = await readFileAsDataUrl(file);
         const image = await dataUrlToImage(dataUrl);
+        const id = `${file.name}-${file.size}-${file.lastModified}-${globalThis.crypto?.randomUUID?.() || Date.now()}`;
 
         nextSources.push({
           cropFocus: { x: 50, y: 50 },
           file,
-          id: `${file.name}-${file.size}-${file.lastModified}-${globalThis.crypto?.randomUUID?.() || Date.now()}`,
+          groupId: id,
+          id,
           image,
           layoutMode: "normal",
           logoScale: 100,
@@ -652,8 +737,13 @@ export default function LogoCutTool() {
 
     const duplicate = {
       ...source,
-      cropFocus: { ...cropFocus },
+      cropFocus: {
+        x: clampNumber(cropFocus.x + 8, 0, 100),
+        y: clampNumber(cropFocus.y + 14, 0, 100),
+      },
+      groupId: source.groupId || source.id,
       id: `${source.file.name}-copy-${globalThis.crypto?.randomUUID?.() || Date.now()}`,
+      isDuplicate: true,
       logoScale,
       sourceCrop: { ...sourceCrop },
       splitPercent,
@@ -730,7 +820,7 @@ export default function LogoCutTool() {
 
         {sources.length ? (
           <div className="logo-source-list" aria-label="Uploaded logos">
-            {sources.map((source, index) => (
+            {sources.filter((source) => !source.isDuplicate).map((source, index) => (
               <button
                 className={source.id === activeSourceId ? "is-active" : ""}
                 type="button"
@@ -818,19 +908,44 @@ export default function LogoCutTool() {
               onContextMenu={openContextMenu}
               role="presentation"
             >
-              <span className="logo-result-crop-layer" style={resultImageStyle}>
-                <img className="logo-result-image" src={sourceUrl} alt={`${activePreset.label} editable result`} style={croppedImageInnerStyle} />
-              </span>
-              <span className="logo-result-selection" style={resultImageStyle}>
-                <span className="logo-result-handle is-top-left" onPointerDown={(event) => handleResizePointerDown(event, "top-left")} />
-                <span className="logo-result-crop-handle is-top" onPointerDown={(event) => handleCropPointerDown(event, "top")} />
-                <span className="logo-result-handle is-top-right" onPointerDown={(event) => handleResizePointerDown(event, "top-right")} />
-                <span className="logo-result-crop-handle is-right" onPointerDown={(event) => handleCropPointerDown(event, "right")} />
-                <span className="logo-result-handle is-bottom-left" onPointerDown={(event) => handleResizePointerDown(event, "bottom-left")} />
-                <span className="logo-result-crop-handle is-bottom" onPointerDown={(event) => handleCropPointerDown(event, "bottom")} />
-                <span className="logo-result-handle is-bottom-right" onPointerDown={(event) => handleResizePointerDown(event, "bottom-right")} />
-                <span className="logo-result-crop-handle is-left" onPointerDown={(event) => handleCropPointerDown(event, "left")} />
-              </span>
+              {canvasSources.map((source) => {
+                const renderData = getSourceRenderData(source);
+
+                if (!renderData) {
+                  return null;
+                }
+
+                const isActive = source.id === activeSourceId;
+
+                return (
+                  <span key={source.id}>
+                    <span
+                      className="logo-result-crop-layer"
+                      style={renderData.wrapperStyle}
+                      onPointerDown={() => {
+                        if (!isActive) activateSource(source);
+                      }}
+                      onContextMenu={() => {
+                        if (!isActive) activateSource(source);
+                      }}
+                    >
+                      <img className="logo-result-image" src={source.url} alt={`${activePreset.label} editable result`} style={renderData.imageStyle} />
+                    </span>
+                    {isActive ? (
+                      <span className="logo-result-selection" style={renderData.wrapperStyle}>
+                        <span className="logo-result-handle is-top-left" onPointerDown={(event) => handleResizePointerDown(event, "top-left")} />
+                        <span className="logo-result-crop-handle is-top" onPointerDown={(event) => handleCropPointerDown(event, "top")} />
+                        <span className="logo-result-handle is-top-right" onPointerDown={(event) => handleResizePointerDown(event, "top-right")} />
+                        <span className="logo-result-crop-handle is-right" onPointerDown={(event) => handleCropPointerDown(event, "right")} />
+                        <span className="logo-result-handle is-bottom-left" onPointerDown={(event) => handleResizePointerDown(event, "bottom-left")} />
+                        <span className="logo-result-crop-handle is-bottom" onPointerDown={(event) => handleCropPointerDown(event, "bottom")} />
+                        <span className="logo-result-handle is-bottom-right" onPointerDown={(event) => handleResizePointerDown(event, "bottom-right")} />
+                        <span className="logo-result-crop-handle is-left" onPointerDown={(event) => handleCropPointerDown(event, "left")} />
+                      </span>
+                    ) : null}
+                  </span>
+                );
+              })}
               {contextMenu ? (
                 <div
                   className="logo-context-menu"
