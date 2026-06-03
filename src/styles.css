@@ -1094,6 +1094,57 @@ img {
   font-weight: 900;
 }
 
+.logo-source-list {
+  display: grid;
+  gap: 7px;
+  max-height: 180px;
+  overflow-y: auto;
+  padding-right: 2px;
+}
+
+.logo-source-list button {
+  min-width: 0;
+  min-height: 44px;
+  display: grid;
+  grid-template-columns: 34px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 8px;
+  border: 1px solid rgba(9, 16, 71, 0.1);
+  border-radius: 12px;
+  background: #fff;
+  color: var(--ink);
+  padding: 5px 8px;
+  text-align: left;
+}
+
+.logo-source-list button.is-active {
+  border-color: rgba(37, 99, 235, 0.4);
+  background: rgba(37, 99, 235, 0.08);
+}
+
+.logo-source-list img {
+  width: 34px;
+  height: 34px;
+  border-radius: 8px;
+  object-fit: contain;
+  background: rgba(9, 16, 71, 0.04);
+}
+
+.logo-source-list span {
+  min-width: 0;
+  overflow: hidden;
+  font-size: 0.76rem;
+  font-weight: 900;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.logo-source-list small {
+  color: var(--muted);
+  font-size: 0.72rem;
+  font-weight: 900;
+}
+
 .logo-upload-card small,
 .logo-cut-status,
 .logo-preview-header span,
@@ -1277,6 +1328,13 @@ img {
   overflow: hidden;
   background: #fff;
   box-shadow: 0 14px 28px rgba(2, 6, 23, 0.16);
+  cursor: grab;
+  touch-action: none;
+  user-select: none;
+}
+
+.logo-result-editor:active {
+  cursor: grabbing;
 }
 
 .logo-result-image,

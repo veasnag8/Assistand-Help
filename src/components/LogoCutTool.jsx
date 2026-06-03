@@ -107,16 +107,18 @@ function isSupportedImage(file) {
 
 export default function LogoCutTool() {
   const [presetId, setPresetId] = useState("site");
+  const [sources, setSources] = useState([]);
+  const [activeSourceId, setActiveSourceId] = useState("");
   const [sourceFile, setSourceFile] = useState(null);
   const [sourceImage, setSourceImage] = useState(null);
   const [sourceUrl, setSourceUrl] = useState("");
-  const [previewUrl, setPreviewUrl] = useState("");
   const [cropFocus, setCropFocus] = useState({ x: 50, y: 50 });
   const [logoScale, setLogoScale] = useState(100);
   const [status, setStatus] = useState("Choose a logo image to start.");
   const originalWrapRef = useRef(null);
   const resultFrameRef = useRef(null);
   const dragRef = useRef(null);
+  const sourcesRef = useRef([]);
   const activePreset = logoPresets[presetId];
   const sourceSize = useMemo(() => {
     if (!sourceImage) return null;
@@ -172,9 +174,13 @@ export default function LogoCutTool() {
     }
     : null;
 
+  useEffect(() => {
+    sourcesRef.current = sources;
+  }, [sources]);
+
   useEffect(() => () => {
-    if (sourceUrl) URL.revokeObjectURL(sourceUrl);
-  }, [sourceUrl]);
+    sourcesRef.current.forEach((source) => URL.revokeObjectURL(source.url));
+  }, []);
 
   useEffect(() => {
     if (!sourceImage) {
@@ -191,12 +197,6 @@ export default function LogoCutTool() {
           return;
         }
 
-        const nextUrl = URL.createObjectURL(blob);
-
-        setPreviewUrl((current) => {
-          if (current) URL.revokeObjectURL(current);
-          return nextUrl;
-        });
         setStatus(`Ready: ${activePreset.label} ${activePreset.width} x ${activePreset.height}px.`);
       } catch (error) {
         if (!cancelled) {
@@ -233,33 +233,65 @@ export default function LogoCutTool() {
     return canvasToBlob(canvas);
   }
 
-  async function handleFileChange(event) {
-    const file = event.target.files?.[0];
-
-    if (!file) {
+  function activateSource(source) {
+    if (!source) {
       return;
     }
 
-    if (!isSupportedImage(file)) {
+    setActiveSourceId(source.id);
+    setSourceFile(source.file);
+    setSourceImage(source.image);
+    setSourceUrl(source.url);
+    setCropFocus(source.cropFocus || { x: 50, y: 50 });
+    setLogoScale(source.logoScale || 100);
+  }
+
+  function updateActiveSourceTransform(nextCropFocus = cropFocus, nextLogoScale = logoScale) {
+    setCropFocus(nextCropFocus);
+    setLogoScale(nextLogoScale);
+    setSources((current) => current.map((source) => (
+      source.id === activeSourceId
+        ? { ...source, cropFocus: nextCropFocus, logoScale: nextLogoScale }
+        : source
+    )));
+  }
+
+  async function handleFileChange(event) {
+    const files = Array.from(event.target.files || []).filter(Boolean);
+
+    if (!files.length) {
+      return;
+    }
+
+    const supportedFiles = files.filter(isSupportedImage);
+
+    if (!supportedFiles.length) {
       setStatus("Please choose a PNG, JPG, or WebP image.");
       return;
     }
 
-    setStatus("Opening logo...");
+    setStatus(`Opening ${supportedFiles.length} logo${supportedFiles.length === 1 ? "" : "s"}...`);
 
     try {
-      const dataUrl = await readFileAsDataUrl(file);
-      const image = await dataUrlToImage(dataUrl);
-      const nextSourceUrl = URL.createObjectURL(file);
+      const nextSources = [];
 
-      setSourceFile(file);
-      setSourceImage(image);
-      setSourceUrl((current) => {
-        if (current) URL.revokeObjectURL(current);
-        return nextSourceUrl;
-      });
-      setCropFocus({ x: 50, y: 50 });
-      setLogoScale(100);
+      for (const file of supportedFiles) {
+        const dataUrl = await readFileAsDataUrl(file);
+        const image = await dataUrlToImage(dataUrl);
+
+        nextSources.push({
+          cropFocus: { x: 50, y: 50 },
+          file,
+          id: `${file.name}-${file.size}-${file.lastModified}-${globalThis.crypto?.randomUUID?.() || Date.now()}`,
+          image,
+          logoScale: 100,
+          url: URL.createObjectURL(file),
+        });
+      }
+
+      setSources((current) => [...current, ...nextSources]);
+      activateSource(nextSources[0]);
+      event.target.value = "";
     } catch (error) {
       setStatus(error?.message || "Could not open that logo.");
     }
@@ -301,7 +333,7 @@ export default function LogoCutTool() {
       ? clampNumber(((pointerY - activeCrop.height / 2) / maxY) * 100, 0, 100)
       : 50;
 
-    setCropFocus({ x: nextX, y: nextY });
+    updateActiveSourceTransform({ x: nextX, y: nextY }, logoScale);
   }
 
   function handleOriginalPointerDown(event) {
@@ -344,8 +376,7 @@ export default function LogoCutTool() {
       ? clampNumber((nextY / maxY) * 100, 0, 100)
       : 50;
 
-    setLogoScale(nextScale);
-    setCropFocus({ x: nextFocusX, y: nextFocusY });
+    updateActiveSourceTransform({ x: nextFocusX, y: nextFocusY }, nextScale);
   }
 
   function handleResultPointerDown(event) {
@@ -392,7 +423,7 @@ export default function LogoCutTool() {
       const nextWidth = Math.max(10, drag.startWidth + deltaX);
       const nextScale = clampNumber((nextWidth / drag.startWidth) * drag.startScale, 50, 250);
 
-      setLogoScale(nextScale);
+      updateActiveSourceTransform(cropFocus, nextScale);
       return;
     }
 
@@ -406,6 +437,17 @@ export default function LogoCutTool() {
     dragRef.current = null;
   }
 
+  function handleResultWheel(event) {
+    if (!sourceImage) {
+      return;
+    }
+
+    event.preventDefault();
+    const nextScale = clampNumber(logoScale + (event.deltaY > 0 ? -8 : 8), 50, 250);
+
+    updateActiveSourceTransform(cropFocus, nextScale);
+  }
+
   return (
     <section className="logo-cut-tool">
       <div className="logo-cut-controls">
@@ -416,10 +458,28 @@ export default function LogoCutTool() {
           <input
             id="logo-source"
             type="file"
+            multiple
             accept="image/png,image/jpeg,image/webp,.png,.jpg,.jpeg,.webp"
             onChange={handleFileChange}
           />
         </label>
+
+        {sources.length ? (
+          <div className="logo-source-list" aria-label="Uploaded logos">
+            {sources.map((source, index) => (
+              <button
+                className={source.id === activeSourceId ? "is-active" : ""}
+                type="button"
+                key={source.id}
+                onClick={() => activateSource(source)}
+              >
+                <img src={source.url} alt="" />
+                <span>{source.file.name}</span>
+                <small>{index + 1}</small>
+              </button>
+            ))}
+          </div>
+        ) : null}
 
         <div className="logo-preset-group" role="group" aria-label="Logo size">
           {Object.entries(logoPresets).map(([id, preset]) => (
@@ -446,7 +506,7 @@ export default function LogoCutTool() {
               min="50"
               max="250"
               value={logoScale}
-              onChange={(event) => setLogoScale(Number(event.target.value))}
+              onChange={(event) => updateActiveSourceTransform(cropFocus, Number(event.target.value))}
               disabled={!sourceImage}
             />
           </label>
@@ -457,7 +517,7 @@ export default function LogoCutTool() {
               min="0"
               max="100"
               value={cropFocus.x}
-              onChange={(event) => setCropFocus((current) => ({ ...current, x: Number(event.target.value) }))}
+              onChange={(event) => updateActiveSourceTransform({ ...cropFocus, x: Number(event.target.value) }, logoScale)}
               disabled={!sourceImage || !activeCrop || activeCrop.width >= sourceSize?.width}
             />
           </label>
@@ -468,7 +528,7 @@ export default function LogoCutTool() {
               min="0"
               max="100"
               value={cropFocus.y}
-              onChange={(event) => setCropFocus((current) => ({ ...current, y: Number(event.target.value) }))}
+              onChange={(event) => updateActiveSourceTransform({ ...cropFocus, y: Number(event.target.value) }, logoScale)}
               disabled={!sourceImage || !activeCrop || activeCrop.height >= sourceSize?.height}
             />
           </label>
@@ -548,6 +608,7 @@ export default function LogoCutTool() {
               onPointerMove={handleResultPointerMove}
               onPointerUp={handleResultPointerUp}
               onPointerCancel={handleResultPointerUp}
+              onWheel={handleResultWheel}
               role="presentation"
             >
               <img className="logo-result-image" src={sourceUrl} alt={`${activePreset.label} editable result`} style={resultImageStyle} />
