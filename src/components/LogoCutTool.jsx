@@ -925,8 +925,16 @@ export default function LogoCutTool() {
       splitPercent,
       sourceCrop: { ...sourceCrop },
     };
-    const duplicate = cloneSourceForCanvas(source, activePreset.width * 0.08, activePreset.height * 0.18, currentSettings);
+    const sourceSnapshot = {
+      ...source,
+      presetSettings: {
+        ...(source.presetSettings || {}),
+        [presetId]: currentSettings,
+      },
+    };
+    const duplicate = cloneSourceForCanvas(sourceSnapshot, 34, 40, currentSettings);
 
+    setCopiedSource(sourceSnapshot);
     setSources((current) => [...current, duplicate]);
     activateSource(duplicate);
     setStatus(`Duplicated ${source.file.name}.`);
