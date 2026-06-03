@@ -39,7 +39,7 @@ function clampNumber(value, min, max) {
 }
 
 function getLogoPlacement(sourceWidth, sourceHeight, targetWidth, targetHeight, logoScale, focusX = 50, focusY = 50) {
-  const baseScale = Math.max(targetWidth / sourceWidth, targetHeight / sourceHeight);
+  const baseScale = Math.min(targetWidth / sourceWidth, targetHeight / sourceHeight);
   const scale = baseScale * (logoScale / 100);
   const drawWidth = sourceWidth * scale;
   const drawHeight = sourceHeight * scale;
