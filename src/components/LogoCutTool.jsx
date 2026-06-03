@@ -20,6 +20,8 @@ const logoPresets = {
     filename: "report-logo.png",
   },
 };
+const minLogoScale = 20;
+const maxLogoScale = 900;
 
 function canvasToBlob(canvas) {
   return new Promise((resolve, reject) => {
@@ -497,7 +499,7 @@ export default function LogoCutTool() {
       const heightScale = ySign
         ? Math.max(10, drag.startHeight + deltaY * ySign) / drag.startHeight
         : 1;
-      const nextScale = clampNumber(Math.max(widthScale, heightScale) * drag.startScale, 50, 250);
+      const nextScale = clampNumber(Math.max(widthScale, heightScale) * drag.startScale, minLogoScale, maxLogoScale);
 
       updateActiveSourceTransform(cropFocus, nextScale);
       return;
@@ -519,7 +521,7 @@ export default function LogoCutTool() {
     }
 
     event.preventDefault();
-    const nextScale = clampNumber(logoScale + (event.deltaY > 0 ? -8 : 8), 50, 250);
+    const nextScale = clampNumber(logoScale + (event.deltaY > 0 ? -12 : 12), minLogoScale, maxLogoScale);
 
     updateActiveSourceTransform(cropFocus, nextScale);
   }
