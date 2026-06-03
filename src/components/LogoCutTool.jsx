@@ -1130,11 +1130,18 @@ export default function LogoCutTool() {
                     <span
                       className="logo-result-crop-layer"
                       style={renderData.wrapperStyle}
-                      onPointerDown={() => {
-                        if (!isActive) activateSource(source);
+                      onPointerDown={(event) => {
+                        if (!isActive) {
+                          event.preventDefault();
+                          event.stopPropagation();
+                          activateSource(source);
+                        }
                       }}
-                      onContextMenu={() => {
-                        if (!isActive) activateSource(source);
+                      onContextMenu={(event) => {
+                        if (!isActive) {
+                          event.stopPropagation();
+                          activateSource(source);
+                        }
                       }}
                     >
                       <img className="logo-result-image" src={source.url} alt={`${activePreset.label} editable result`} style={renderData.imageStyle} />
