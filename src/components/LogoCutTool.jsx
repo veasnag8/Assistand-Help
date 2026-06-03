@@ -1,14 +1,10 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
-  AlignHorizontalSpaceAround,
   Clipboard,
   Copy,
   Download,
   Image as ImageIcon,
-  Info,
-  Link,
   Lock,
-  MessageCircle,
   Move,
   Scissors,
   Trash2,
@@ -209,6 +205,7 @@ export default function LogoCutTool() {
   const [logoScale, setLogoScale] = useState(100);
   const [splitPercent, setSplitPercent] = useState(38);
   const [sourceCrop, setSourceCrop] = useState(defaultSourceCrop);
+  const [copiedSource, setCopiedSource] = useState(null);
   const [contextMenu, setContextMenu] = useState(null);
   const [status, setStatus] = useState("Choose a logo image to start.");
   const resultFrameRef = useRef(null);
@@ -298,6 +295,39 @@ export default function LogoCutTool() {
         top: `${placement.y * resultScale}px`,
         width: `${placement.drawWidth * resultScale}px`,
       },
+    };
+  }
+
+  function getOffsetCropFocus(source, offsetX = 28, offsetY = 34) {
+    const renderData = getSourceRenderData(source);
+
+    if (!renderData) {
+      return source.cropFocus || { x: 50, y: 50 };
+    }
+
+    const maxX = activePreset.width - renderData.placement.drawWidth;
+    const maxY = activePreset.height - renderData.placement.drawHeight;
+    const nextX = renderData.placement.x + offsetX;
+    const nextY = renderData.placement.y + offsetY;
+
+    return {
+      x: maxX !== 0 ? clampNumber((nextX / maxX) * 100, 0, 100) : 50,
+      y: maxY !== 0 ? clampNumber((nextY / maxY) * 100, 0, 100) : 50,
+    };
+  }
+
+  function cloneSourceForCanvas(source, offsetX = 28, offsetY = 34) {
+    return {
+      ...source,
+      cropFocus: getOffsetCropFocus(source, offsetX, offsetY),
+      groupId: source.groupId || source.id,
+      id: `${source.file.name}-copy-${globalThis.crypto?.randomUUID?.() || Date.now()}`,
+      isDuplicate: true,
+      locked: false,
+      logoScale: source.logoScale || logoScale,
+      sourceCrop: { ...(source.sourceCrop || defaultSourceCrop) },
+      splitPercent: source.splitPercent || splitPercent,
+      url: URL.createObjectURL(source.file),
     };
   }
 
@@ -588,6 +618,10 @@ export default function LogoCutTool() {
 
     event.preventDefault();
 
+    if (activeSource?.locked) {
+      return;
+    }
+
     if (isStackMode) {
       dragRef.current = { mode: "split" };
       updateSplitFromPointer(event);
@@ -610,7 +644,7 @@ export default function LogoCutTool() {
   }
 
   function handleResizePointerDown(event, direction = "bottom-right") {
-    if (!resultPlacement || !resultFrameRef.current) {
+    if (!resultPlacement || !resultFrameRef.current || activeSource?.locked) {
       return;
     }
 
@@ -629,7 +663,7 @@ export default function LogoCutTool() {
   }
 
   function handleCropPointerDown(event, direction) {
-    if (!resultPlacement || !resultFrameRef.current) {
+    if (!resultPlacement || !resultFrameRef.current || activeSource?.locked) {
       return;
     }
 
@@ -705,7 +739,7 @@ export default function LogoCutTool() {
   }
 
   function handleResultWheel(event) {
-    if (!sourceImage) {
+    if (!sourceImage || activeSource?.locked) {
       return;
     }
 
@@ -726,6 +760,42 @@ export default function LogoCutTool() {
     updateActiveSourceSettings({ nextSplitPercent: Math.round(nextSplit) });
   }
 
+  function copyActiveSource(event) {
+    event?.preventDefault?.();
+
+    const source = sources.find((item) => item.id === activeSourceId);
+
+    if (!source) {
+      return;
+    }
+
+    setCopiedSource({
+      ...source,
+      cropFocus: { ...cropFocus },
+      logoScale,
+      sourceCrop: { ...sourceCrop },
+      splitPercent,
+    });
+    setStatus(`Copied ${source.file.name}.`);
+    setContextMenu(null);
+  }
+
+  function pasteCopiedSource(event) {
+    event?.preventDefault?.();
+
+    if (!copiedSource) {
+      setStatus("Copy a logo first.");
+      return;
+    }
+
+    const duplicate = cloneSourceForCanvas(copiedSource, 34, 40);
+
+    setSources((current) => [...current, duplicate]);
+    activateSource(duplicate);
+    setStatus(`Pasted ${copiedSource.file.name}.`);
+    setContextMenu(null);
+  }
+
   function duplicateActiveSource(event) {
     event?.preventDefault?.();
 
@@ -735,24 +805,35 @@ export default function LogoCutTool() {
       return;
     }
 
-    const duplicate = {
+    const duplicate = cloneSourceForCanvas({
       ...source,
-      cropFocus: {
-        x: clampNumber(cropFocus.x + 8, 0, 100),
-        y: clampNumber(cropFocus.y + 14, 0, 100),
-      },
-      groupId: source.groupId || source.id,
-      id: `${source.file.name}-copy-${globalThis.crypto?.randomUUID?.() || Date.now()}`,
-      isDuplicate: true,
+      cropFocus,
       logoScale,
-      sourceCrop: { ...sourceCrop },
+      sourceCrop,
       splitPercent,
-      url: URL.createObjectURL(source.file),
-    };
+    }, 42, 48);
 
     setSources((current) => [...current, duplicate]);
     activateSource(duplicate);
     setStatus(`Duplicated ${source.file.name}.`);
+    setContextMenu(null);
+  }
+
+  function toggleActiveSourceLock(event) {
+    event?.preventDefault?.();
+
+    const source = sources.find((item) => item.id === activeSourceId);
+
+    if (!source) {
+      return;
+    }
+
+    const nextLocked = !source.locked;
+
+    setSources((current) => current.map((item) => (
+      item.id === activeSourceId ? { ...item, locked: nextLocked } : item
+    )));
+    setStatus(`${nextLocked ? "Locked" : "Unlocked"} ${source.file.name}.`);
     setContextMenu(null);
   }
 
@@ -955,12 +1036,12 @@ export default function LogoCutTool() {
                   }}
                   onClick={(event) => event.stopPropagation()}
                 >
-                  <button className="is-disabled" type="button" disabled>
+                  <button type="button" onClick={copyActiveSource}>
                     <Copy size={17} strokeWidth={2.2} />
                     <span>Copy</span>
                     <kbd>Ctrl+C</kbd>
                   </button>
-                  <button className="is-disabled" type="button" disabled>
+                  <button type="button" onClick={pasteCopiedSource}>
                     <Clipboard size={17} strokeWidth={2.2} />
                     <span>Paste</span>
                     <kbd>Ctrl+V</kbd>
@@ -975,31 +1056,9 @@ export default function LogoCutTool() {
                     <span>Delete</span>
                     <kbd>Delete</kbd>
                   </button>
-                  <hr />
-                  <button className="is-disabled" type="button" disabled>
-                    <AlignHorizontalSpaceAround size={17} strokeWidth={2.2} />
-                    <span>Align to page</span>
-                    <small>{">"}</small>
-                  </button>
-                  <button className="is-disabled" type="button" disabled>
-                    <MessageCircle size={17} strokeWidth={2.2} />
-                    <span>Comment</span>
-                    <kbd>Ctrl+Alt+N</kbd>
-                  </button>
-                  <button className="is-disabled" type="button" disabled>
+                  <button type="button" onClick={toggleActiveSourceLock}>
                     <Lock size={17} strokeWidth={2.2} />
-                    <span>Lock</span>
-                    <small>{">"}</small>
-                  </button>
-                  <button className="is-disabled" type="button" disabled>
-                    <Link size={17} strokeWidth={2.2} />
-                    <span>Link</span>
-                    <kbd>Ctrl+K</kbd>
-                  </button>
-                  <hr />
-                  <button className="is-disabled" type="button" disabled>
-                    <Info size={17} strokeWidth={2.2} />
-                    <span>Info</span>
+                    <span>{activeSource?.locked ? "Unlock" : "Lock"}</span>
                   </button>
                 </div>
               ) : null}
