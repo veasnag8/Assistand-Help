@@ -186,14 +186,14 @@ function BrandLogo() {
 }
 
 function buildAccessInfo({ user, username }) {
-  return `System Access Information
+  return `*System Access Information*
 =========================
 URL: https://acumatica.mam.com.kh:22888/MegaProduction/
-Name: ${user}
-Username Login: ${username}
-Password: MAM@123456
+*Name: ${user}*
+Username Login: \`${username}\`
+Password: \`MAM@123456\`
 
-Please change password after first login.`;
+_Please change password after first login._`;
 }
 
 function UserAccessModal({ onClose }) {
