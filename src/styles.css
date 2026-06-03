@@ -1221,15 +1221,8 @@ img {
   place-items: center;
   border: 1px solid rgba(9, 16, 71, 0.08);
   border-radius: 16px;
-  background:
-    linear-gradient(45deg, rgba(9, 16, 71, 0.04) 25%, transparent 25%),
-    linear-gradient(-45deg, rgba(9, 16, 71, 0.04) 25%, transparent 25%),
-    linear-gradient(45deg, transparent 75%, rgba(9, 16, 71, 0.04) 75%),
-    linear-gradient(-45deg, transparent 75%, rgba(9, 16, 71, 0.04) 75%),
-    #fff;
-  background-position: 0 0, 0 10px, 10px -10px, -10px 0;
-  background-size: 20px 20px;
-  padding: 24px;
+  background: #111218;
+  padding: 42px;
 }
 
 .logo-preview-frame img {

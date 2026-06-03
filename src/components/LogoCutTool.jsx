@@ -232,6 +232,23 @@ export default function LogoCutTool() {
   }, [previewUrl]);
 
   useEffect(() => {
+    function handleWindowPointerMove(event) {
+      handleResultPointerMove(event);
+    }
+
+    function handleWindowPointerUp() {
+      handleResultPointerUp();
+    }
+
+    window.addEventListener("pointermove", handleWindowPointerMove);
+    window.addEventListener("pointerup", handleWindowPointerUp);
+    return () => {
+      window.removeEventListener("pointermove", handleWindowPointerMove);
+      window.removeEventListener("pointerup", handleWindowPointerUp);
+    };
+  });
+
+  useEffect(() => {
     if (!sourceImage) {
       return;
     }
