@@ -1,5 +1,19 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Download, Image as ImageIcon, Move, Scissors, Upload } from "lucide-react";
+import {
+  AlignHorizontalSpaceAround,
+  Clipboard,
+  Copy,
+  Download,
+  Image as ImageIcon,
+  Info,
+  Link,
+  Lock,
+  MessageCircle,
+  Move,
+  Scissors,
+  Trash2,
+  Upload,
+} from "lucide-react";
 import {
   dataUrlToImage,
   downloadBlob,
@@ -652,6 +666,38 @@ export default function LogoCutTool() {
     setContextMenu(null);
   }
 
+  function deleteActiveSource(event) {
+    event?.preventDefault?.();
+
+    const sourceIndex = sources.findIndex((item) => item.id === activeSourceId);
+
+    if (sourceIndex < 0) {
+      return;
+    }
+
+    const source = sources[sourceIndex];
+    const nextSources = sources.filter((item) => item.id !== activeSourceId);
+    const nextActiveSource = nextSources[Math.max(0, sourceIndex - 1)] || nextSources[0] || null;
+
+    URL.revokeObjectURL(source.url);
+    setSources(nextSources);
+    if (nextActiveSource) {
+      activateSource(nextActiveSource);
+    } else {
+      setActiveSourceId("");
+      setSourceFile(null);
+      setSourceImage(null);
+      setSourceUrl("");
+      setCropFocus({ x: 50, y: 50 });
+      setLayoutMode("normal");
+      setLogoScale(100);
+      setSplitPercent(38);
+      setSourceCrop(defaultSourceCrop);
+    }
+    setStatus(`Deleted ${source.file.name}.`);
+    setContextMenu(null);
+  }
+
   function openContextMenu(event) {
     event.preventDefault();
 
@@ -794,8 +840,51 @@ export default function LogoCutTool() {
                   }}
                   onClick={(event) => event.stopPropagation()}
                 >
-                  <button type="button" onClick={duplicateActiveSource}>
-                    Duplicate image
+                  <button className="is-disabled" type="button" disabled>
+                    <Copy size={17} strokeWidth={2.2} />
+                    <span>Copy</span>
+                    <kbd>Ctrl+C</kbd>
+                  </button>
+                  <button className="is-disabled" type="button" disabled>
+                    <Clipboard size={17} strokeWidth={2.2} />
+                    <span>Paste</span>
+                    <kbd>Ctrl+V</kbd>
+                  </button>
+                  <button className="is-emphasis" type="button" onClick={duplicateActiveSource}>
+                    <Copy size={17} strokeWidth={2.2} />
+                    <span>Duplicate</span>
+                    <kbd>Ctrl+D</kbd>
+                  </button>
+                  <button type="button" onClick={deleteActiveSource}>
+                    <Trash2 size={17} strokeWidth={2.2} />
+                    <span>Delete</span>
+                    <kbd>Delete</kbd>
+                  </button>
+                  <hr />
+                  <button className="is-disabled" type="button" disabled>
+                    <AlignHorizontalSpaceAround size={17} strokeWidth={2.2} />
+                    <span>Align to page</span>
+                    <small>{">"}</small>
+                  </button>
+                  <button className="is-disabled" type="button" disabled>
+                    <MessageCircle size={17} strokeWidth={2.2} />
+                    <span>Comment</span>
+                    <kbd>Ctrl+Alt+N</kbd>
+                  </button>
+                  <button className="is-disabled" type="button" disabled>
+                    <Lock size={17} strokeWidth={2.2} />
+                    <span>Lock</span>
+                    <small>{">"}</small>
+                  </button>
+                  <button className="is-disabled" type="button" disabled>
+                    <Link size={17} strokeWidth={2.2} />
+                    <span>Link</span>
+                    <kbd>Ctrl+K</kbd>
+                  </button>
+                  <hr />
+                  <button className="is-disabled" type="button" disabled>
+                    <Info size={17} strokeWidth={2.2} />
+                    <span>Info</span>
                   </button>
                 </div>
               ) : null}
