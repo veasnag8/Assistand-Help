@@ -42,13 +42,15 @@ body {
 body,
 button,
 input,
-select {
+select,
+textarea {
   font: inherit;
 }
 
 button,
 input,
-select {
+select,
+textarea {
   color: inherit;
 }
 
@@ -141,6 +143,7 @@ img {
 }
 
 .dashboard-header {
+  position: relative;
   display: grid;
   grid-template-columns: 190px minmax(0, 1fr) 64px;
   align-items: start;
@@ -200,6 +203,150 @@ img {
   height: 6px;
   border-radius: 999px;
   background: #b8a5f3;
+}
+
+.access-generator-button {
+  position: absolute;
+  top: 26px;
+  right: 0;
+  width: 48px;
+  height: 48px;
+  display: inline-grid;
+  place-items: center;
+  border: 2px solid #ef4444;
+  border-radius: 0;
+  background: rgba(255, 255, 255, 0.72);
+  color: #070d49;
+  padding: 0;
+  box-shadow: 0 12px 24px rgba(39, 45, 88, 0.08);
+  transition:
+    background 160ms ease,
+    color 160ms ease,
+    transform 160ms ease;
+}
+
+.access-generator-button:hover {
+  background: #ef4444;
+  color: #fff;
+  transform: translateY(-2px);
+}
+
+.access-generator-button:focus-visible,
+.access-icon-button:focus-visible {
+  outline: 4px solid rgba(239, 68, 68, 0.22);
+  outline-offset: 4px;
+}
+
+.access-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  display: grid;
+  place-items: center;
+  background: rgba(7, 13, 73, 0.34);
+  padding: 20px;
+}
+
+.access-modal {
+  width: min(100%, 520px);
+  display: grid;
+  gap: 16px;
+  border: 1px solid rgba(9, 16, 71, 0.1);
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.98);
+  box-shadow: 0 28px 70px rgba(9, 16, 71, 0.22);
+  padding: 18px;
+}
+
+.access-modal-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.access-modal-header h2,
+.access-modal-header p {
+  margin: 0;
+}
+
+.access-modal-header h2 {
+  color: #070d49;
+  font-size: 1.35rem;
+  line-height: 1.15;
+}
+
+.access-icon-button {
+  width: 36px;
+  height: 36px;
+  flex: 0 0 auto;
+  display: inline-grid;
+  place-items: center;
+  border: 1px solid rgba(9, 16, 71, 0.1);
+  border-radius: 10px;
+  background: #fff;
+  color: #070d49;
+  padding: 0;
+}
+
+.access-icon-button:hover {
+  background: #fee2e2;
+  color: #b91c1c;
+}
+
+.access-field {
+  display: grid;
+  gap: 7px;
+}
+
+.access-field span {
+  color: #323b68;
+  font-size: 0.82rem;
+  font-weight: 900;
+}
+
+.access-field input {
+  width: 100%;
+  min-height: 44px;
+  border: 1px solid rgba(9, 16, 71, 0.14);
+  border-radius: 12px;
+  background: #fff;
+  padding: 0 12px;
+  outline: 0;
+}
+
+.access-field input:focus {
+  border-color: #2563eb;
+  box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.12);
+}
+
+.access-result {
+  min-height: 168px;
+  overflow-x: auto;
+  margin: 0;
+  border: 1px solid rgba(33, 77, 112, 0.18);
+  border-radius: 14px;
+  background: #2f5d88;
+  color: #fff;
+  padding: 14px 16px;
+  font-family: "Cascadia Code", "Consolas", "SFMono-Regular", monospace;
+  font-size: 0.86rem;
+  line-height: 1.45;
+  white-space: pre-wrap;
+}
+
+.access-modal-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.access-modal-actions > span {
+  min-height: 20px;
+  color: #2563eb;
+  font-size: 0.82rem;
+  font-weight: 800;
 }
 
 .category-grid {

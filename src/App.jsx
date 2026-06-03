@@ -4,6 +4,7 @@ import {
   BotMessageSquare,
   CheckSquare,
   ChevronRight,
+  Copy,
   Clock3,
   ExternalLink,
   HardDriveDownload,
@@ -13,6 +14,8 @@ import {
   MessageSquare,
   QrCode,
   ScanText as ScanTextIcon,
+  UserRound,
+  X,
 } from "lucide-react";
 import CommentTool from "./components/CommentTool";
 import ImageTools from "./components/ImageTools";
@@ -182,6 +185,97 @@ function BrandLogo() {
   );
 }
 
+function parseAccessUserInput(value) {
+  const normalized = value.replace(/^users?\s*:\s*/i, "").trim();
+  const match = normalized.match(/^(\S+)(?:\s+(?:and|,|-)\s+|\s+)(.+)$/i);
+
+  if (!match) {
+    return {
+      username: normalized,
+      user: "",
+    };
+  }
+
+  return {
+    username: match[1].trim(),
+    user: match[2].trim(),
+  };
+}
+
+function buildAccessInfo({ user, username }) {
+  return `System Access Information
+=========================
+URL: https://acumatica.mam.com.kh:22888/MegaProduction/
+User: ${user || "Seang Sophal"}
+Username: ${username || "M00780"}
+Password: MAM@123456
+
+Please change password after first login.`;
+}
+
+function UserAccessModal({ onClose }) {
+  const [input, setInput] = useState("M00780 and Seang Sophal");
+  const [copyStatus, setCopyStatus] = useState("");
+  const parsedUser = parseAccessUserInput(input);
+  const result = buildAccessInfo(parsedUser);
+
+  async function copyResult() {
+    try {
+      await navigator.clipboard.writeText(result);
+      setCopyStatus("Copied.");
+    } catch {
+      setCopyStatus("Could not copy.");
+    }
+  }
+
+  return (
+    <div className="access-modal-backdrop" role="presentation" onMouseDown={onClose}>
+      <section
+        className="access-modal"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="access-modal-title"
+        onMouseDown={(event) => event.stopPropagation()}
+      >
+        <header className="access-modal-header">
+          <div>
+            <p className="eyebrow">User Access</p>
+            <h2 id="access-modal-title">Generate Login Info</h2>
+          </div>
+          <button className="access-icon-button" type="button" onClick={onClose} aria-label="Close">
+            <X size={18} strokeWidth={2.4} />
+          </button>
+        </header>
+
+        <label className="access-field" htmlFor="access-users-input">
+          <span>Users</span>
+          <input
+            id="access-users-input"
+            type="text"
+            value={input}
+            onChange={(event) => {
+              setInput(event.target.value);
+              setCopyStatus("");
+            }}
+            placeholder="M00780 and Seang Sophal"
+            autoFocus
+          />
+        </label>
+
+        <pre className="access-result">{result}</pre>
+
+        <footer className="access-modal-actions">
+          <span>{copyStatus}</span>
+          <button className="button primary" type="button" onClick={copyResult}>
+            <Copy size={16} strokeWidth={2.2} />
+            <span>Copy</span>
+          </button>
+        </footer>
+      </section>
+    </div>
+  );
+}
+
 function CategoryCard({ category, onOpen }) {
   const Icon = category.icon;
   const isExternal = Boolean(category.externalUrl);
@@ -242,6 +336,8 @@ function CategoryCard({ category, onOpen }) {
 }
 
 function Dashboard({ onOpen }) {
+  const [accessModalOpen, setAccessModalOpen] = useState(false);
+
   return (
     <section className="dashboard" aria-labelledby="dashboard-title">
       <header className="dashboard-header">
@@ -257,7 +353,19 @@ function Dashboard({ onOpen }) {
             <span key={index} />
           ))}
         </div>
+
+        <button
+          className="access-generator-button"
+          type="button"
+          onClick={() => setAccessModalOpen(true)}
+          aria-label="Generate user access information"
+          title="Generate user access information"
+        >
+          <UserRound size={22} strokeWidth={2.2} />
+        </button>
       </header>
+
+      {accessModalOpen ? <UserAccessModal onClose={() => setAccessModalOpen(false)} /> : null}
 
       <div className="category-grid">
         {categories.map((category) => (
