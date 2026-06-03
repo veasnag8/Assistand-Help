@@ -1228,6 +1228,29 @@ img {
   opacity: 0.45;
 }
 
+.logo-layout-toggle {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px;
+}
+
+.logo-layout-toggle button {
+  min-height: 34px;
+  border: 1px solid rgba(9, 16, 71, 0.1);
+  border-radius: 10px;
+  background: #fff;
+  color: var(--ink);
+  padding: 0 8px;
+  font-size: 0.72rem;
+  font-weight: 900;
+}
+
+.logo-layout-toggle button.is-active {
+  border-color: rgba(37, 99, 235, 0.38);
+  background: rgba(37, 99, 235, 0.1);
+  color: #1d4ed8;
+}
+
 .logo-preview-header {
   display: flex;
   align-items: flex-start;
@@ -1314,12 +1337,42 @@ img {
   padding: 3px;
 }
 
+.logo-split-overlay {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 0;
+  border-left: 2px solid #38bdf8;
+  box-shadow: 0 0 0 9999px rgba(2, 6, 23, 0.22);
+  pointer-events: none;
+}
+
+.logo-split-overlay span {
+  position: absolute;
+  top: 8px;
+  left: 8px;
+  border-radius: 999px;
+  background: rgba(2, 6, 23, 0.72);
+  color: #fff;
+  padding: 4px 8px;
+  font-size: 0.68rem;
+  font-weight: 900;
+  line-height: 1;
+  white-space: nowrap;
+}
+
 .logo-preview-frame img {
   width: auto;
   max-width: 100%;
   height: auto;
   max-height: 300px;
   aspect-ratio: var(--logo-preview-ratio);
+  object-fit: contain;
+}
+
+.logo-stacked-result {
+  width: 300px;
+  height: 300px;
   object-fit: contain;
 }
 

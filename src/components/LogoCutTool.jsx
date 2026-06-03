@@ -101,6 +101,67 @@ function drawLogoToCanvas(image, placement, targetWidth, targetHeight) {
   return canvas;
 }
 
+function fitRect(sourceWidth, sourceHeight, maxWidth, maxHeight) {
+  const scale = Math.min(maxWidth / sourceWidth, maxHeight / sourceHeight);
+
+  return {
+    height: sourceHeight * scale,
+    width: sourceWidth * scale,
+  };
+}
+
+function drawStackedLogoToCanvas(image, splitPercent, targetWidth, targetHeight) {
+  const sourceWidth = image.naturalWidth || image.width;
+  const sourceHeight = image.naturalHeight || image.height;
+  const splitX = clampNumber(Math.round(sourceWidth * (splitPercent / 100)), 1, sourceWidth - 1);
+  const iconSourceWidth = splitX;
+  const textSourceWidth = sourceWidth - splitX;
+  const canvas = document.createElement("canvas");
+  const context = canvas.getContext("2d");
+
+  if (!context) {
+    throw new Error("Could not prepare the stacked logo canvas.");
+  }
+
+  canvas.width = targetWidth;
+  canvas.height = targetHeight;
+  context.imageSmoothingEnabled = true;
+  context.imageSmoothingQuality = "high";
+  context.clearRect(0, 0, canvas.width, canvas.height);
+
+  const iconBox = fitRect(iconSourceWidth, sourceHeight, targetWidth * 0.62, targetHeight * 0.48);
+  const textBox = fitRect(textSourceWidth, sourceHeight, targetWidth * 0.86, targetHeight * 0.28);
+  const iconX = (targetWidth - iconBox.width) / 2;
+  const iconY = 24;
+  const textX = (targetWidth - textBox.width) / 2;
+  const textY = targetHeight - textBox.height - 32;
+
+  context.drawImage(
+    image,
+    0,
+    0,
+    iconSourceWidth,
+    sourceHeight,
+    iconX,
+    iconY,
+    iconBox.width,
+    iconBox.height,
+  );
+  context.drawImage(
+    image,
+    splitX,
+    0,
+    textSourceWidth,
+    sourceHeight,
+    textX,
+    textY,
+    textBox.width,
+    textBox.height,
+  );
+
+  return canvas;
+}
+
 function isSupportedImage(file) {
   return file?.type?.startsWith("image/") || /\.(png|jpe?g|webp)$/i.test(file?.name || "");
 }
@@ -112,14 +173,18 @@ export default function LogoCutTool() {
   const [sourceFile, setSourceFile] = useState(null);
   const [sourceImage, setSourceImage] = useState(null);
   const [sourceUrl, setSourceUrl] = useState("");
+  const [previewUrl, setPreviewUrl] = useState("");
   const [cropFocus, setCropFocus] = useState({ x: 50, y: 50 });
+  const [layoutMode, setLayoutMode] = useState("normal");
   const [logoScale, setLogoScale] = useState(100);
+  const [splitPercent, setSplitPercent] = useState(38);
   const [status, setStatus] = useState("Choose a logo image to start.");
   const originalWrapRef = useRef(null);
   const resultFrameRef = useRef(null);
   const dragRef = useRef(null);
   const sourcesRef = useRef([]);
   const activePreset = logoPresets[presetId];
+  const isStackMode = presetId === "report" && layoutMode === "stack";
   const sourceSize = useMemo(() => {
     if (!sourceImage) return null;
 
@@ -148,6 +213,9 @@ export default function LogoCutTool() {
       top: `${(activeCrop.y / sourceSize.height) * 100}%`,
       width: `${(activeCrop.width / sourceSize.width) * 100}%`,
     }
+    : null;
+  const splitOverlayStyle = isStackMode
+    ? { left: `${splitPercent}%` }
     : null;
   const resultPlacement = sourceSize
     ? getLogoPlacement(
@@ -182,6 +250,10 @@ export default function LogoCutTool() {
     sourcesRef.current.forEach((source) => URL.revokeObjectURL(source.url));
   }, []);
 
+  useEffect(() => () => {
+    if (previewUrl) URL.revokeObjectURL(previewUrl);
+  }, [previewUrl]);
+
   useEffect(() => {
     if (!sourceImage) {
       return;
@@ -197,6 +269,14 @@ export default function LogoCutTool() {
           return;
         }
 
+        if (isStackMode) {
+          const nextUrl = URL.createObjectURL(blob);
+
+          setPreviewUrl((current) => {
+            if (current) URL.revokeObjectURL(current);
+            return nextUrl;
+          });
+        }
         setStatus(`Ready: ${activePreset.label} ${activePreset.width} x ${activePreset.height}px.`);
       } catch (error) {
         if (!cancelled) {
@@ -210,7 +290,7 @@ export default function LogoCutTool() {
     return () => {
       cancelled = true;
     };
-  }, [activePreset, cropFocus.x, cropFocus.y, logoScale, sourceImage]);
+  }, [activePreset, cropFocus.x, cropFocus.y, isStackMode, layoutMode, logoScale, sourceImage, splitPercent]);
 
   async function buildLogoBlob(preset = activePreset, image = sourceImage) {
     if (!image) {
@@ -219,6 +299,11 @@ export default function LogoCutTool() {
 
     const sourceWidth = image.naturalWidth || image.width;
     const sourceHeight = image.naturalHeight || image.height;
+
+    if (preset.id === "report" && layoutMode === "stack") {
+      return canvasToBlob(drawStackedLogoToCanvas(image, splitPercent, preset.width, preset.height));
+    }
+
     const placement = getLogoPlacement(
       sourceWidth,
       sourceHeight,
@@ -243,17 +328,36 @@ export default function LogoCutTool() {
     setSourceImage(source.image);
     setSourceUrl(source.url);
     setCropFocus(source.cropFocus || { x: 50, y: 50 });
+    setLayoutMode(source.layoutMode || "normal");
     setLogoScale(source.logoScale || 100);
+    setSplitPercent(source.splitPercent || 38);
+  }
+
+  function updateActiveSourceSettings({
+    nextCropFocus = cropFocus,
+    nextLayoutMode = layoutMode,
+    nextLogoScale = logoScale,
+    nextSplitPercent = splitPercent,
+  } = {}) {
+    setCropFocus(nextCropFocus);
+    setLayoutMode(nextLayoutMode);
+    setLogoScale(nextLogoScale);
+    setSplitPercent(nextSplitPercent);
+    setSources((current) => current.map((source) => (
+      source.id === activeSourceId
+        ? {
+          ...source,
+          cropFocus: nextCropFocus,
+          layoutMode: nextLayoutMode,
+          logoScale: nextLogoScale,
+          splitPercent: nextSplitPercent,
+        }
+        : source
+    )));
   }
 
   function updateActiveSourceTransform(nextCropFocus = cropFocus, nextLogoScale = logoScale) {
-    setCropFocus(nextCropFocus);
-    setLogoScale(nextLogoScale);
-    setSources((current) => current.map((source) => (
-      source.id === activeSourceId
-        ? { ...source, cropFocus: nextCropFocus, logoScale: nextLogoScale }
-        : source
-    )));
+    updateActiveSourceSettings({ nextCropFocus, nextLogoScale });
   }
 
   async function handleFileChange(event) {
@@ -284,7 +388,9 @@ export default function LogoCutTool() {
           file,
           id: `${file.name}-${file.size}-${file.lastModified}-${globalThis.crypto?.randomUUID?.() || Date.now()}`,
           image,
+          layoutMode: "normal",
           logoScale: 100,
+          splitPercent: 38,
           url: URL.createObjectURL(file),
         });
       }
@@ -499,6 +605,37 @@ export default function LogoCutTool() {
         </div>
 
         <div className="logo-cut-sliders" aria-label="Cut position">
+          {presetId === "report" ? (
+            <div className="logo-layout-toggle" role="group" aria-label="Report logo layout">
+              <button
+                className={layoutMode === "normal" ? "is-active" : ""}
+                type="button"
+                onClick={() => updateActiveSourceSettings({ nextLayoutMode: "normal" })}
+              >
+                Normal Crop
+              </button>
+              <button
+                className={layoutMode === "stack" ? "is-active" : ""}
+                type="button"
+                onClick={() => updateActiveSourceSettings({ nextLayoutMode: "stack" })}
+              >
+                Text Below Logo
+              </button>
+            </div>
+          ) : null}
+          {isStackMode ? (
+            <label>
+              <span>Text Split: {splitPercent}%</span>
+              <input
+                type="range"
+                min="15"
+                max="75"
+                value={splitPercent}
+                onChange={(event) => updateActiveSourceSettings({ nextSplitPercent: Number(event.target.value) })}
+                disabled={!sourceImage}
+              />
+            </label>
+          ) : null}
           <label>
             <span>Logo Size: {logoScale}%</span>
             <input
@@ -507,7 +644,7 @@ export default function LogoCutTool() {
               max="250"
               value={logoScale}
               onChange={(event) => updateActiveSourceTransform(cropFocus, Number(event.target.value))}
-              disabled={!sourceImage}
+              disabled={!sourceImage || isStackMode}
             />
           </label>
           <label>
@@ -518,7 +655,7 @@ export default function LogoCutTool() {
               max="100"
               value={cropFocus.x}
               onChange={(event) => updateActiveSourceTransform({ ...cropFocus, x: Number(event.target.value) }, logoScale)}
-              disabled={!sourceImage || !activeCrop || activeCrop.width >= sourceSize?.width}
+              disabled={isStackMode || !sourceImage || !activeCrop || activeCrop.width >= sourceSize?.width}
             />
           </label>
           <label>
@@ -529,7 +666,7 @@ export default function LogoCutTool() {
               max="100"
               value={cropFocus.y}
               onChange={(event) => updateActiveSourceTransform({ ...cropFocus, y: Number(event.target.value) }, logoScale)}
-              disabled={!sourceImage || !activeCrop || activeCrop.height >= sourceSize?.height}
+              disabled={isStackMode || !sourceImage || !activeCrop || activeCrop.height >= sourceSize?.height}
             />
           </label>
         </div>
@@ -565,7 +702,11 @@ export default function LogoCutTool() {
               role="presentation"
             >
               <img src={sourceUrl} alt="Original logo" />
-              {cropOverlayStyle ? (
+              {splitOverlayStyle ? (
+                <span className="logo-split-overlay" style={splitOverlayStyle}>
+                  <span>Text Split</span>
+                </span>
+              ) : cropOverlayStyle ? (
                 <span className="logo-crop-overlay" style={cropOverlayStyle}>
                   <Move size={18} strokeWidth={2.4} />
                 </span>
@@ -599,7 +740,9 @@ export default function LogoCutTool() {
           className={`logo-preview-frame logo-preview-${presetId}`}
           style={{ "--logo-preview-ratio": `${activePreset.width} / ${activePreset.height}` }}
         >
-          {sourceUrl && resultImageStyle ? (
+          {isStackMode && previewUrl ? (
+            <img className="logo-stacked-result" src={previewUrl} alt={`${activePreset.label} text below preview`} />
+          ) : sourceUrl && resultImageStyle ? (
             <div
               className="logo-result-editor"
               style={resultEditorStyle}
