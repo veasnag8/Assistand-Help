@@ -33,6 +33,13 @@ const logoPresets = {
 const minLogoScale = 20;
 const maxLogoScale = 900;
 const defaultSourceCrop = { bottom: 0, left: 0, right: 0, top: 0 };
+const defaultLogoSettings = {
+  cropFocus: { x: 50, y: 50 },
+  layoutMode: "normal",
+  logoScale: 100,
+  splitPercent: 38,
+  sourceCrop: defaultSourceCrop,
+};
 
 function canvasToBlob(canvas) {
   return new Promise((resolve, reject) => {
@@ -192,6 +199,13 @@ function isSupportedImage(file) {
   return file?.type?.startsWith("image/") || /\.(png|jpe?g|webp)$/i.test(file?.name || "");
 }
 
+function getPresetSettings(source, presetId) {
+  return {
+    ...defaultLogoSettings,
+    ...(source?.presetSettings?.[presetId] || {}),
+  };
+}
+
 export default function LogoCutTool() {
   const [presetId, setPresetId] = useState("site");
   const [sources, setSources] = useState([]);
@@ -211,7 +225,7 @@ export default function LogoCutTool() {
   const resultFrameRef = useRef(null);
   const dragRef = useRef(null);
   const sourcesRef = useRef([]);
-  const activePreset = logoPresets[presetId];
+  const activePreset = useMemo(() => ({ ...logoPresets[presetId], id: presetId }), [presetId]);
   const isStackMode = presetId === "report" && layoutMode === "stack";
   const sourceSize = useMemo(() => {
     if (!sourceImage) return null;
@@ -255,6 +269,7 @@ export default function LogoCutTool() {
     }
     : null;
   const activeSource = sources.find((source) => source.id === activeSourceId) || null;
+  const activeSourceSettings = getPresetSettings(activeSource, presetId);
   const activeGroupId = activeSource?.groupId || activeSource?.id || "";
   const canvasSources = sources.filter((source) => (source.groupId || source.id) === activeGroupId);
 
@@ -267,16 +282,17 @@ export default function LogoCutTool() {
       return null;
     }
 
-    const crop = source.sourceCrop || defaultSourceCrop;
+    const settings = getPresetSettings(source, presetId);
+    const crop = settings.sourceCrop || defaultSourceCrop;
     const croppedSize = getCroppedSourceSize(imageWidth, imageHeight, crop);
     const placement = getLogoPlacement(
       croppedSize.width,
       croppedSize.height,
       activePreset.width,
       activePreset.height,
-      source.logoScale || 100,
-      source.cropFocus?.x ?? 50,
-      source.cropFocus?.y ?? 50,
+      settings.logoScale || 100,
+      settings.cropFocus?.x ?? 50,
+      settings.cropFocus?.y ?? 50,
     );
 
     return {
@@ -317,16 +333,22 @@ export default function LogoCutTool() {
   }
 
   function cloneSourceForCanvas(source, offsetX = 28, offsetY = 34) {
+    const settings = getPresetSettings(source, presetId);
+    const nextSettings = {
+      ...settings,
+      cropFocus: getOffsetCropFocus(source, offsetX, offsetY),
+      locked: false,
+    };
+
     return {
       ...source,
-      cropFocus: getOffsetCropFocus(source, offsetX, offsetY),
       groupId: source.groupId || source.id,
       id: `${source.file.name}-copy-${globalThis.crypto?.randomUUID?.() || Date.now()}`,
       isDuplicate: true,
-      locked: false,
-      logoScale: source.logoScale || logoScale,
-      sourceCrop: { ...(source.sourceCrop || defaultSourceCrop) },
-      splitPercent: source.splitPercent || splitPercent,
+      presetSettings: {
+        ...(source.presetSettings || {}),
+        [presetId]: nextSettings,
+      },
       url: URL.createObjectURL(source.file),
     };
   }
@@ -474,20 +496,22 @@ export default function LogoCutTool() {
     return canvasToBlob(canvas);
   }
 
-  function activateSource(source) {
+  function activateSource(source, targetPresetId = presetId) {
     if (!source) {
       return;
     }
+
+    const settings = getPresetSettings(source, targetPresetId);
 
     setActiveSourceId(source.id);
     setSourceFile(source.file);
     setSourceImage(source.image);
     setSourceUrl(source.url);
-    setCropFocus(source.cropFocus || { x: 50, y: 50 });
-    setLayoutMode(source.layoutMode || "normal");
-    setLogoScale(source.logoScale || 100);
-    setSplitPercent(source.splitPercent || 38);
-    setSourceCrop(source.sourceCrop || defaultSourceCrop);
+    setCropFocus(settings.cropFocus);
+    setLayoutMode(settings.layoutMode);
+    setLogoScale(settings.logoScale);
+    setSplitPercent(settings.splitPercent);
+    setSourceCrop(settings.sourceCrop);
   }
 
   function updateActiveSourceSettings({
@@ -506,11 +530,17 @@ export default function LogoCutTool() {
       source.id === activeSourceId
         ? {
           ...source,
-          cropFocus: nextCropFocus,
-          layoutMode: nextLayoutMode,
-          logoScale: nextLogoScale,
-          splitPercent: nextSplitPercent,
-          sourceCrop: nextSourceCrop,
+          presetSettings: {
+            ...(source.presetSettings || {}),
+            [presetId]: {
+              cropFocus: nextCropFocus,
+              layoutMode: nextLayoutMode,
+              locked: getPresetSettings(source, presetId).locked || false,
+              logoScale: nextLogoScale,
+              splitPercent: nextSplitPercent,
+              sourceCrop: nextSourceCrop,
+            },
+          },
         }
         : source
     )));
@@ -545,15 +575,14 @@ export default function LogoCutTool() {
         const id = `${file.name}-${file.size}-${file.lastModified}-${globalThis.crypto?.randomUUID?.() || Date.now()}`;
 
         nextSources.push({
-          cropFocus: { x: 50, y: 50 },
           file,
           groupId: id,
           id,
           image,
-          layoutMode: "normal",
-          logoScale: 100,
-          splitPercent: 38,
-          sourceCrop: defaultSourceCrop,
+          presetSettings: {
+            site: defaultLogoSettings,
+            report: defaultLogoSettings,
+          },
           url: URL.createObjectURL(file),
         });
       }
@@ -568,8 +597,41 @@ export default function LogoCutTool() {
 
   async function handlePresetChange(nextPresetId) {
     const nextPreset = logoPresets[nextPresetId] || logoPresets.site;
+    const currentSettings = {
+      cropFocus,
+      layoutMode,
+      locked: activeSourceSettings.locked || false,
+      logoScale,
+      splitPercent,
+      sourceCrop,
+    };
+    const sourceForNextPreset = activeSource
+      ? {
+        ...activeSource,
+        presetSettings: {
+          ...(activeSource.presetSettings || {}),
+          [presetId]: currentSettings,
+        },
+      }
+      : null;
 
     setPresetId(nextPresetId);
+    if (activeSourceId) {
+      setSources((current) => current.map((source) => (
+        source.id === activeSourceId
+          ? {
+            ...source,
+            presetSettings: {
+              ...(source.presetSettings || {}),
+              [presetId]: currentSettings,
+            },
+          }
+          : source
+      )));
+    }
+    if (sourceForNextPreset) {
+      activateSource(sourceForNextPreset, nextPresetId);
+    }
     setStatus(`Selected ${nextPreset.label} ${nextPreset.width} x ${nextPreset.height}px.`);
   }
 
@@ -618,7 +680,7 @@ export default function LogoCutTool() {
 
     event.preventDefault();
 
-    if (activeSource?.locked) {
+    if (activeSourceSettings.locked) {
       return;
     }
 
@@ -644,7 +706,7 @@ export default function LogoCutTool() {
   }
 
   function handleResizePointerDown(event, direction = "bottom-right") {
-    if (!resultPlacement || !resultFrameRef.current || activeSource?.locked) {
+    if (!resultPlacement || !resultFrameRef.current || activeSourceSettings.locked) {
       return;
     }
 
@@ -663,7 +725,7 @@ export default function LogoCutTool() {
   }
 
   function handleCropPointerDown(event, direction) {
-    if (!resultPlacement || !resultFrameRef.current || activeSource?.locked) {
+    if (!resultPlacement || !resultFrameRef.current || activeSourceSettings.locked) {
       return;
     }
 
@@ -739,7 +801,7 @@ export default function LogoCutTool() {
   }
 
   function handleResultWheel(event) {
-    if (!sourceImage || activeSource?.locked) {
+    if (!sourceImage || activeSourceSettings.locked) {
       return;
     }
 
@@ -771,10 +833,17 @@ export default function LogoCutTool() {
 
     setCopiedSource({
       ...source,
-      cropFocus: { ...cropFocus },
-      logoScale,
-      sourceCrop: { ...sourceCrop },
-      splitPercent,
+      presetSettings: {
+        ...(source.presetSettings || {}),
+        [presetId]: {
+          cropFocus: { ...cropFocus },
+          layoutMode,
+          locked: false,
+          logoScale,
+          splitPercent,
+          sourceCrop: { ...sourceCrop },
+        },
+      },
     });
     setStatus(`Copied ${source.file.name}.`);
     setContextMenu(null);
@@ -828,10 +897,21 @@ export default function LogoCutTool() {
       return;
     }
 
-    const nextLocked = !source.locked;
+    const nextLocked = !activeSourceSettings.locked;
 
     setSources((current) => current.map((item) => (
-      item.id === activeSourceId ? { ...item, locked: nextLocked } : item
+      item.id === activeSourceId
+        ? {
+          ...item,
+          presetSettings: {
+            ...(item.presetSettings || {}),
+            [presetId]: {
+              ...getPresetSettings(item, presetId),
+              locked: nextLocked,
+            },
+          },
+        }
+        : item
     )));
     setStatus(`${nextLocked ? "Locked" : "Unlocked"} ${source.file.name}.`);
     setContextMenu(null);
@@ -1058,7 +1138,7 @@ export default function LogoCutTool() {
                   </button>
                   <button type="button" onClick={toggleActiveSourceLock}>
                     <Lock size={17} strokeWidth={2.2} />
-                    <span>{activeSource?.locked ? "Unlock" : "Lock"}</span>
+                    <span>{activeSourceSettings.locked ? "Unlock" : "Lock"}</span>
                   </button>
                 </div>
               ) : null}
