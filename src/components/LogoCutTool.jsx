@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Download, Image as ImageIcon, Scissors, Upload } from "lucide-react";
 import {
   dataUrlToImage,
@@ -34,26 +34,30 @@ function canvasToBlob(canvas) {
   });
 }
 
-function getCoverCrop(sourceWidth, sourceHeight, targetWidth, targetHeight) {
+function getCoverCrop(sourceWidth, sourceHeight, targetWidth, targetHeight, focusX = 50, focusY = 50) {
   const sourceRatio = sourceWidth / sourceHeight;
   const targetRatio = targetWidth / targetHeight;
 
   if (sourceRatio > targetRatio) {
     const width = Math.round(sourceHeight * targetRatio);
+    const maxX = sourceWidth - width;
+
     return {
       height: sourceHeight,
       width,
-      x: Math.round((sourceWidth - width) / 2),
+      x: Math.round(maxX * (focusX / 100)),
       y: 0,
     };
   }
 
   const height = Math.round(sourceWidth / targetRatio);
+  const maxY = sourceHeight - height;
+
   return {
     height,
     width: sourceWidth,
     x: 0,
-    y: Math.round((sourceHeight - height) / 2),
+    y: Math.round(maxY * (focusY / 100)),
   };
 }
 
@@ -93,7 +97,9 @@ export default function LogoCutTool() {
   const [presetId, setPresetId] = useState("site");
   const [sourceFile, setSourceFile] = useState(null);
   const [sourceImage, setSourceImage] = useState(null);
+  const [sourceUrl, setSourceUrl] = useState("");
   const [previewUrl, setPreviewUrl] = useState("");
+  const [cropFocus, setCropFocus] = useState({ x: 50, y: 50 });
   const [status, setStatus] = useState("Choose a logo image to start.");
   const activePreset = logoPresets[presetId];
   const sourceSize = useMemo(() => {
@@ -104,6 +110,66 @@ export default function LogoCutTool() {
       height: sourceImage.naturalHeight || sourceImage.height,
     };
   }, [sourceImage]);
+  const activeCrop = useMemo(() => {
+    if (!sourceSize) return null;
+
+    return getCoverCrop(
+      sourceSize.width,
+      sourceSize.height,
+      activePreset.width,
+      activePreset.height,
+      cropFocus.x,
+      cropFocus.y,
+    );
+  }, [activePreset.height, activePreset.width, cropFocus.x, cropFocus.y, sourceSize]);
+  const cropOverlayStyle = activeCrop && sourceSize
+    ? {
+      height: `${(activeCrop.height / sourceSize.height) * 100}%`,
+      left: `${(activeCrop.x / sourceSize.width) * 100}%`,
+      top: `${(activeCrop.y / sourceSize.height) * 100}%`,
+      width: `${(activeCrop.width / sourceSize.width) * 100}%`,
+    }
+    : null;
+
+  useEffect(() => () => {
+    if (sourceUrl) URL.revokeObjectURL(sourceUrl);
+  }, [sourceUrl]);
+
+  useEffect(() => {
+    if (!sourceImage) {
+      return;
+    }
+
+    let cancelled = false;
+
+    async function refreshPreview() {
+      try {
+        const blob = await buildLogoBlob(activePreset, sourceImage);
+
+        if (cancelled) {
+          return;
+        }
+
+        const nextUrl = URL.createObjectURL(blob);
+
+        setPreviewUrl((current) => {
+          if (current) URL.revokeObjectURL(current);
+          return nextUrl;
+        });
+        setStatus(`Ready: ${activePreset.label} ${activePreset.width} x ${activePreset.height}px.`);
+      } catch (error) {
+        if (!cancelled) {
+          setStatus(error?.message || "Could not prepare the logo preview.");
+        }
+      }
+    }
+
+    refreshPreview();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [activePreset, cropFocus.x, cropFocus.y, sourceImage]);
 
   async function buildLogoBlob(preset = activePreset, image = sourceImage) {
     if (!image) {
@@ -112,27 +178,10 @@ export default function LogoCutTool() {
 
     const sourceWidth = image.naturalWidth || image.width;
     const sourceHeight = image.naturalHeight || image.height;
-    const crop = getCoverCrop(sourceWidth, sourceHeight, preset.width, preset.height);
+    const crop = getCoverCrop(sourceWidth, sourceHeight, preset.width, preset.height, cropFocus.x, cropFocus.y);
     const canvas = drawLogoToCanvas(image, crop, preset.width, preset.height);
 
     return canvasToBlob(canvas);
-  }
-
-  async function updatePreview(nextImage, nextPreset = activePreset) {
-    const image = nextImage || sourceImage;
-
-    if (!image) {
-      return;
-    }
-
-    const blob = await buildLogoBlob(nextPreset, image);
-    const nextUrl = URL.createObjectURL(blob);
-
-    setPreviewUrl((current) => {
-      if (current) URL.revokeObjectURL(current);
-      return nextUrl;
-    });
-    setStatus(`Ready: ${nextPreset.label} ${nextPreset.width} x ${nextPreset.height}px.`);
   }
 
   async function handleFileChange(event) {
@@ -152,10 +201,15 @@ export default function LogoCutTool() {
     try {
       const dataUrl = await readFileAsDataUrl(file);
       const image = await dataUrlToImage(dataUrl);
+      const nextSourceUrl = URL.createObjectURL(file);
 
       setSourceFile(file);
       setSourceImage(image);
-      await updatePreview(image);
+      setSourceUrl((current) => {
+        if (current) URL.revokeObjectURL(current);
+        return nextSourceUrl;
+      });
+      setCropFocus({ x: 50, y: 50 });
     } catch (error) {
       setStatus(error?.message || "Could not open that logo.");
     }
@@ -165,12 +219,7 @@ export default function LogoCutTool() {
     const nextPreset = logoPresets[nextPresetId] || logoPresets.site;
 
     setPresetId(nextPresetId);
-
-    try {
-      await updatePreview(sourceImage, nextPreset);
-    } catch (error) {
-      setStatus(error?.message || "Could not prepare the logo preview.");
-    }
+    setStatus(`Selected ${nextPreset.label} ${nextPreset.width} x ${nextPreset.height}px.`);
   }
 
   async function handleDownload() {
@@ -217,12 +266,65 @@ export default function LogoCutTool() {
           ))}
         </div>
 
+        <div className="logo-cut-sliders" aria-label="Cut position">
+          <label>
+            <span>Move Cut Left / Right</span>
+            <input
+              type="range"
+              min="0"
+              max="100"
+              value={cropFocus.x}
+              onChange={(event) => setCropFocus((current) => ({ ...current, x: Number(event.target.value) }))}
+              disabled={!sourceImage || !activeCrop || activeCrop.width === sourceSize?.width}
+            />
+          </label>
+          <label>
+            <span>Move Cut Up / Down</span>
+            <input
+              type="range"
+              min="0"
+              max="100"
+              value={cropFocus.y}
+              onChange={(event) => setCropFocus((current) => ({ ...current, y: Number(event.target.value) }))}
+              disabled={!sourceImage || !activeCrop || activeCrop.height === sourceSize?.height}
+            />
+          </label>
+        </div>
+
         <button className="button primary" type="button" onClick={handleDownload} disabled={!sourceImage}>
           <Download size={17} strokeWidth={2.2} />
           <span>Download PNG</span>
         </button>
 
         <p className="logo-cut-status">{status}</p>
+      </div>
+
+      <div className="logo-preview-panel logo-cut-original-panel">
+        <div className="logo-preview-header">
+          <div>
+            <strong>Original</strong>
+            <span>{sourceFile?.name || "No image selected"}</span>
+          </div>
+          {sourceSize ? (
+            <small>
+              {sourceSize.width} x {sourceSize.height}px
+            </small>
+          ) : null}
+        </div>
+
+        <div className="logo-original-frame">
+          {sourceUrl ? (
+            <div className="logo-original-image-wrap">
+              <img src={sourceUrl} alt="Original logo" />
+              {cropOverlayStyle ? <span className="logo-crop-overlay" style={cropOverlayStyle} /> : null}
+            </div>
+          ) : (
+            <div className="logo-preview-empty">
+              <ImageIcon size={36} strokeWidth={1.8} />
+              <span>Original logo appears here</span>
+            </div>
+          )}
+        </div>
       </div>
 
       <div className="logo-preview-panel">
