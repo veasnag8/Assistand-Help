@@ -185,7 +185,16 @@ function BrandLogo() {
   );
 }
 
-function buildAccessInfo({ user, username }) {
+function escapeHtml(value) {
+  return String(value)
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#39;");
+}
+
+function buildAccessInfoMarkdown({ user, username }) {
   return `*System Access Information*
 =========================
 URL: https://acumatica.mam.com.kh:22888/MegaProduction/
@@ -196,15 +205,39 @@ Password: \`MAM@123456\`
 _Please change password after first login._`;
 }
 
+function buildAccessInfoHtml({ user, username }) {
+  const safeUser = escapeHtml(user);
+  const safeUsername = escapeHtml(username);
+
+  return `<div><strong>System Access Information</strong><br>
+=========================<br>
+URL: https://acumatica.mam.com.kh:22888/MegaProduction/<br>
+<strong>Name: ${safeUser}</strong><br>
+Username Login: <code>${safeUsername}</code><br>
+Password: <code>MAM@123456</code><br>
+<br>
+<em>Please change password after first login.</em></div>`;
+}
+
 function UserAccessModal({ onClose }) {
   const [user, setUser] = useState("");
   const [username, setUsername] = useState("");
   const [copyStatus, setCopyStatus] = useState("");
-  const result = buildAccessInfo({ user, username });
+  const markdownResult = buildAccessInfoMarkdown({ user, username });
+  const htmlResult = buildAccessInfoHtml({ user, username });
 
   async function copyResult() {
     try {
-      await navigator.clipboard.writeText(result);
+      if (window.ClipboardItem) {
+        await navigator.clipboard.write([
+          new ClipboardItem({
+            "text/html": new Blob([htmlResult], { type: "text/html" }),
+            "text/plain": new Blob([markdownResult], { type: "text/plain" }),
+          }),
+        ]);
+      } else {
+        await navigator.clipboard.writeText(markdownResult);
+      }
       setCopyStatus("Copied.");
     } catch {
       setCopyStatus("Could not copy.");
@@ -259,7 +292,19 @@ function UserAccessModal({ onClose }) {
           />
         </label>
 
-        <pre className="access-result">{result}</pre>
+        <div className="access-result">
+          <strong>System Access Information</strong>
+          <span>=========================</span>
+          <span>URL: https://acumatica.mam.com.kh:22888/MegaProduction/</span>
+          <strong>Name: {user}</strong>
+          <span>
+            Username Login: <code>{username}</code>
+          </span>
+          <span>
+            Password: <code>MAM@123456</code>
+          </span>
+          <em>Please change password after first login.</em>
+        </div>
 
         <footer className="access-modal-actions">
           <span>{copyStatus}</span>

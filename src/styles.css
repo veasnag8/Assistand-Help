@@ -322,6 +322,9 @@ img {
 
 .access-result {
   min-height: 168px;
+  display: grid;
+  align-content: start;
+  gap: 2px;
   overflow-x: auto;
   margin: 0;
   border: 1px solid rgba(33, 77, 112, 0.18);
@@ -332,7 +335,22 @@ img {
   font-family: "Cascadia Code", "Consolas", "SFMono-Regular", monospace;
   font-size: 0.86rem;
   line-height: 1.45;
-  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.access-result strong {
+  font-weight: 900;
+}
+
+.access-result code {
+  border-radius: 4px;
+  background: rgba(255, 255, 255, 0.13);
+  padding: 1px 4px;
+  font: inherit;
+}
+
+.access-result em {
+  margin-top: 18px;
 }
 
 .access-modal-actions {
