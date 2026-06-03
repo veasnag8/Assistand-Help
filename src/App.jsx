@@ -240,7 +240,7 @@ function UserAccessModal({ onClose }) {
               setUser(event.target.value);
               setCopyStatus("");
             }}
-            placeholder="Seang Sophal"
+            placeholder="Input Name"
             autoFocus
           />
         </label>
@@ -255,7 +255,7 @@ function UserAccessModal({ onClose }) {
               setUsername(event.target.value);
               setCopyStatus("");
             }}
-            placeholder="M00780"
+            placeholder="M-00XXX"
           />
         </label>
 
