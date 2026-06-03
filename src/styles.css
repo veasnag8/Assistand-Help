@@ -2192,6 +2192,11 @@ img {
   color: transparent;
 }
 
+.sna-gpt-tool.is-dark-mode .sna-chat-header .sna-verify-icon,
+.sna-gpt-tool.is-dark-mode .sna-message-top .sna-message-verify-icon {
+  color: #1d9bf0;
+}
+
 .sna-gpt-tool.is-dark-mode .sna-side-actions .button,
 .sna-gpt-tool.is-dark-mode .sna-sidebar-toggle,
 .sna-gpt-tool.is-dark-mode .sna-chat-back,
