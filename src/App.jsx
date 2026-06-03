@@ -189,16 +189,16 @@ function buildAccessInfo({ user, username }) {
   return `System Access Information
 =========================
 URL: https://acumatica.mam.com.kh:22888/MegaProduction/
-Name: ${user || "Seang Sophal"}
-Username Login: ${username || "M00780"}
+Name: ${user}
+Username Login: ${username}
 Password: MAM@123456
 
 Please change password after first login.`;
 }
 
 function UserAccessModal({ onClose }) {
-  const [user, setUser] = useState("Seang Sophal");
-  const [username, setUsername] = useState("M00780");
+  const [user, setUser] = useState("");
+  const [username, setUsername] = useState("");
   const [copyStatus, setCopyStatus] = useState("");
   const result = buildAccessInfo({ user, username });
 
