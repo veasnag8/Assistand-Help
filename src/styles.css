@@ -1056,7 +1056,7 @@ img {
 
 .logo-cut-tool {
   display: grid;
-  grid-template-columns: minmax(260px, 320px) minmax(0, 1fr) minmax(0, 1fr);
+  grid-template-columns: minmax(260px, 320px) minmax(0, 1fr);
   gap: 18px;
   align-items: start;
 }
@@ -1285,82 +1285,6 @@ img {
   padding: 24px;
 }
 
-.logo-original-frame {
-  min-height: 340px;
-  display: grid;
-  place-items: center;
-  overflow: hidden;
-  border: 1px solid rgba(9, 16, 71, 0.08);
-  border-radius: 16px;
-  background: #252731;
-  padding: 18px;
-}
-
-.logo-original-image-wrap {
-  position: relative;
-  display: inline-block;
-  line-height: 0;
-  max-width: 100%;
-  max-height: 460px;
-  cursor: grab;
-  touch-action: none;
-  user-select: none;
-}
-
-.logo-original-image-wrap:active {
-  cursor: grabbing;
-}
-
-.logo-original-image-wrap img {
-  max-width: 100%;
-  max-height: 460px;
-  object-fit: contain;
-  box-shadow: 0 14px 28px rgba(2, 6, 23, 0.18);
-}
-
-.logo-crop-overlay {
-  position: absolute;
-  display: grid;
-  place-items: center;
-  border: 2px solid #38bdf8;
-  background: rgba(56, 189, 248, 0.14);
-  color: #fff;
-  box-shadow:
-    0 0 0 9999px rgba(2, 6, 23, 0.48),
-    inset 0 0 0 1px rgba(255, 255, 255, 0.9);
-  pointer-events: none;
-}
-
-.logo-crop-overlay svg {
-  border-radius: 999px;
-  background: rgba(2, 6, 23, 0.58);
-  padding: 3px;
-}
-
-.logo-split-overlay {
-  position: absolute;
-  top: 0;
-  bottom: 0;
-  width: 0;
-  border-left: 2px solid #38bdf8;
-  box-shadow: 0 0 0 9999px rgba(2, 6, 23, 0.22);
-  pointer-events: none;
-}
-
-.logo-split-overlay span {
-  position: absolute;
-  top: 8px;
-  left: 8px;
-  border-radius: 999px;
-  background: rgba(2, 6, 23, 0.72);
-  color: #fff;
-  padding: 4px 8px;
-  font-size: 0.68rem;
-  font-weight: 900;
-  line-height: 1;
-  white-space: nowrap;
-}
-
 .logo-preview-frame img {
   width: auto;
   max-width: 100%;
@@ -1374,6 +1298,35 @@ img {
   width: 300px;
   height: 300px;
   object-fit: contain;
+}
+
+.logo-stack-editor {
+  position: relative;
+  overflow: hidden;
+  background: #fff;
+  box-shadow: 0 14px 28px rgba(2, 6, 23, 0.16);
+  cursor: ew-resize;
+  touch-action: none;
+  user-select: none;
+}
+
+.logo-stack-editor .logo-stacked-result {
+  display: block;
+}
+
+.logo-stack-split-handle {
+  position: absolute;
+  right: 10px;
+  bottom: 10px;
+  width: 30px;
+  height: 30px;
+  display: inline-grid;
+  place-items: center;
+  border-radius: 999px;
+  background: rgba(37, 99, 235, 0.92);
+  color: #fff;
+  box-shadow: 0 8px 18px rgba(37, 99, 235, 0.24);
+  pointer-events: none;
 }
 
 .logo-result-editor {

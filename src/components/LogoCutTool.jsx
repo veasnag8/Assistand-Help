@@ -179,7 +179,6 @@ export default function LogoCutTool() {
   const [logoScale, setLogoScale] = useState(100);
   const [splitPercent, setSplitPercent] = useState(38);
   const [status, setStatus] = useState("Choose a logo image to start.");
-  const originalWrapRef = useRef(null);
   const resultFrameRef = useRef(null);
   const dragRef = useRef(null);
   const sourcesRef = useRef([]);
@@ -206,17 +205,6 @@ export default function LogoCutTool() {
       cropFocus.y,
     );
   }, [activePreset.height, activePreset.width, cropFocus.x, cropFocus.y, logoScale, sourceSize]);
-  const cropOverlayStyle = activeCrop && sourceSize
-    ? {
-      height: `${(activeCrop.height / sourceSize.height) * 100}%`,
-      left: `${(activeCrop.x / sourceSize.width) * 100}%`,
-      top: `${(activeCrop.y / sourceSize.height) * 100}%`,
-      width: `${(activeCrop.width / sourceSize.width) * 100}%`,
-    }
-    : null;
-  const splitOverlayStyle = isStackMode
-    ? { left: `${splitPercent}%` }
-    : null;
   const resultPlacement = sourceSize
     ? getLogoPlacement(
       sourceSize.width,
@@ -422,43 +410,6 @@ export default function LogoCutTool() {
     }
   }
 
-  function moveCutToPointer(event) {
-    if (!sourceSize || !activeCrop || !originalWrapRef.current) {
-      return;
-    }
-
-    const rect = originalWrapRef.current.getBoundingClientRect();
-    const pointerX = ((event.clientX - rect.left) / rect.width) * sourceSize.width;
-    const pointerY = ((event.clientY - rect.top) / rect.height) * sourceSize.height;
-    const maxX = sourceSize.width - activeCrop.width;
-    const maxY = sourceSize.height - activeCrop.height;
-    const nextX = maxX > 0
-      ? clampNumber(((pointerX - activeCrop.width / 2) / maxX) * 100, 0, 100)
-      : 50;
-    const nextY = maxY > 0
-      ? clampNumber(((pointerY - activeCrop.height / 2) / maxY) * 100, 0, 100)
-      : 50;
-
-    updateActiveSourceTransform({ x: nextX, y: nextY }, logoScale);
-  }
-
-  function handleOriginalPointerDown(event) {
-    if (!sourceImage) {
-      return;
-    }
-
-    moveCutToPointer(event);
-    event.currentTarget.setPointerCapture?.(event.pointerId);
-  }
-
-  function handleOriginalPointerMove(event) {
-    if (event.buttons !== 1) {
-      return;
-    }
-
-    moveCutToPointer(event);
-  }
-
   function setFocusFromPlacement(nextX, nextY, nextScale = logoScale) {
     if (!sourceSize) {
       return;
@@ -486,11 +437,23 @@ export default function LogoCutTool() {
   }
 
   function handleResultPointerDown(event) {
-    if (!resultPlacement || !resultFrameRef.current) {
+    if (!resultFrameRef.current) {
       return;
     }
 
     event.preventDefault();
+
+    if (isStackMode) {
+      dragRef.current = { mode: "split" };
+      updateSplitFromPointer(event);
+      resultFrameRef.current.setPointerCapture?.(event.pointerId);
+      return;
+    }
+
+    if (!resultPlacement) {
+      return;
+    }
+
     dragRef.current = {
       mode: "move",
       pointerX: event.clientX,
@@ -520,7 +483,16 @@ export default function LogoCutTool() {
   function handleResultPointerMove(event) {
     const drag = dragRef.current;
 
-    if (!drag || !resultPlacement) {
+    if (!drag) {
+      return;
+    }
+
+    if (drag.mode === "split") {
+      updateSplitFromPointer(event);
+      return;
+    }
+
+    if (!resultPlacement) {
       return;
     }
 
@@ -552,6 +524,17 @@ export default function LogoCutTool() {
     const nextScale = clampNumber(logoScale + (event.deltaY > 0 ? -8 : 8), 50, 250);
 
     updateActiveSourceTransform(cropFocus, nextScale);
+  }
+
+  function updateSplitFromPointer(event) {
+    if (!resultFrameRef.current) {
+      return;
+    }
+
+    const rect = resultFrameRef.current.getBoundingClientRect();
+    const nextSplit = clampNumber(((event.clientX - rect.left) / rect.width) * 100, 15, 75);
+
+    updateActiveSourceSettings({ nextSplitPercent: Math.round(nextSplit) });
   }
 
   return (
@@ -679,48 +662,6 @@ export default function LogoCutTool() {
         <p className="logo-cut-status">{status}</p>
       </div>
 
-      <div className="logo-preview-panel logo-cut-original-panel">
-        <div className="logo-preview-header">
-          <div>
-            <strong>Original</strong>
-            <span>{sourceFile?.name || "No image selected"}</span>
-          </div>
-          {sourceSize ? (
-            <small>
-              {sourceSize.width} x {sourceSize.height}px
-            </small>
-          ) : null}
-        </div>
-
-        <div className="logo-original-frame">
-          {sourceUrl ? (
-            <div
-              className="logo-original-image-wrap"
-              ref={originalWrapRef}
-              onPointerDown={handleOriginalPointerDown}
-              onPointerMove={handleOriginalPointerMove}
-              role="presentation"
-            >
-              <img src={sourceUrl} alt="Original logo" />
-              {splitOverlayStyle ? (
-                <span className="logo-split-overlay" style={splitOverlayStyle}>
-                  <span>Text Split</span>
-                </span>
-              ) : cropOverlayStyle ? (
-                <span className="logo-crop-overlay" style={cropOverlayStyle}>
-                  <Move size={18} strokeWidth={2.4} />
-                </span>
-              ) : null}
-            </div>
-          ) : (
-            <div className="logo-preview-empty">
-              <ImageIcon size={36} strokeWidth={1.8} />
-              <span>Original logo appears here</span>
-            </div>
-          )}
-        </div>
-      </div>
-
       <div className="logo-preview-panel">
         <div className="logo-preview-header">
           <div>
@@ -741,7 +682,21 @@ export default function LogoCutTool() {
           style={{ "--logo-preview-ratio": `${activePreset.width} / ${activePreset.height}` }}
         >
           {isStackMode && previewUrl ? (
-            <img className="logo-stacked-result" src={previewUrl} alt={`${activePreset.label} text below preview`} />
+            <div
+              className="logo-stack-editor"
+              style={resultEditorStyle}
+              ref={resultFrameRef}
+              onPointerDown={handleResultPointerDown}
+              onPointerMove={handleResultPointerMove}
+              onPointerUp={handleResultPointerUp}
+              onPointerCancel={handleResultPointerUp}
+              role="presentation"
+            >
+              <img className="logo-stacked-result" src={previewUrl} alt={`${activePreset.label} text below preview`} />
+              <span className="logo-stack-split-handle">
+                <Move size={16} strokeWidth={2.4} />
+              </span>
+            </div>
           ) : sourceUrl && resultImageStyle ? (
             <div
               className="logo-result-editor"
