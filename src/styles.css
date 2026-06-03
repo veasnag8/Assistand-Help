@@ -1328,11 +1328,11 @@ img {
 }
 
 .logo-result-selection::before {
-  top: -5px;
+  top: 1px;
 }
 
 .logo-result-selection::after {
-  bottom: -5px;
+  bottom: 1px;
 }
 
 .logo-result-handle {
@@ -1364,11 +1364,11 @@ img {
 }
 
 .logo-result-crop-handle.is-top {
-  top: -5px;
+  top: 1px;
 }
 
 .logo-result-crop-handle.is-bottom {
-  bottom: -5px;
+  bottom: 1px;
 }
 
 .logo-result-crop-handle.is-left,
@@ -1381,34 +1381,34 @@ img {
 }
 
 .logo-result-crop-handle.is-left {
-  left: -5px;
+  left: 1px;
 }
 
 .logo-result-crop-handle.is-right {
-  right: -5px;
+  right: 1px;
 }
 
 .logo-result-handle.is-top-left {
-  top: -7px;
-  left: -7px;
+  top: 1px;
+  left: 1px;
   cursor: nwse-resize;
 }
 
 .logo-result-handle.is-top-right {
-  top: -7px;
-  right: -7px;
+  top: 1px;
+  right: 1px;
   cursor: nesw-resize;
 }
 
 .logo-result-handle.is-bottom-left {
-  bottom: -7px;
-  left: -7px;
+  bottom: 1px;
+  left: 1px;
   cursor: nesw-resize;
 }
 
 .logo-result-handle.is-bottom-right {
-  right: -7px;
-  bottom: -7px;
+  right: 1px;
+  bottom: 1px;
   cursor: nwse-resize;
 }
 
