@@ -115,6 +115,8 @@ export default function LogoCutTool() {
   const [logoScale, setLogoScale] = useState(100);
   const [status, setStatus] = useState("Choose a logo image to start.");
   const originalWrapRef = useRef(null);
+  const resultFrameRef = useRef(null);
+  const dragRef = useRef(null);
   const activePreset = logoPresets[presetId];
   const sourceSize = useMemo(() => {
     if (!sourceImage) return null;
@@ -143,6 +145,30 @@ export default function LogoCutTool() {
       left: `${(activeCrop.x / sourceSize.width) * 100}%`,
       top: `${(activeCrop.y / sourceSize.height) * 100}%`,
       width: `${(activeCrop.width / sourceSize.width) * 100}%`,
+    }
+    : null;
+  const resultPlacement = sourceSize
+    ? getLogoPlacement(
+      sourceSize.width,
+      sourceSize.height,
+      activePreset.width,
+      activePreset.height,
+      logoScale,
+      cropFocus.x,
+      cropFocus.y,
+    )
+    : null;
+  const resultScale = presetId === "site" ? 2.4 : 1;
+  const resultEditorStyle = {
+    height: `${activePreset.height * resultScale}px`,
+    width: `${activePreset.width * resultScale}px`,
+  };
+  const resultImageStyle = resultPlacement
+    ? {
+      height: `${resultPlacement.drawHeight * resultScale}px`,
+      left: `${resultPlacement.x * resultScale}px`,
+      top: `${resultPlacement.y * resultScale}px`,
+      width: `${resultPlacement.drawWidth * resultScale}px`,
     }
     : null;
 
@@ -295,6 +321,91 @@ export default function LogoCutTool() {
     moveCutToPointer(event);
   }
 
+  function setFocusFromPlacement(nextX, nextY, nextScale = logoScale) {
+    if (!sourceSize) {
+      return;
+    }
+
+    const placement = getLogoPlacement(
+      sourceSize.width,
+      sourceSize.height,
+      activePreset.width,
+      activePreset.height,
+      nextScale,
+      50,
+      50,
+    );
+    const maxX = activePreset.width - placement.drawWidth;
+    const maxY = activePreset.height - placement.drawHeight;
+    const nextFocusX = placement.drawWidth > activePreset.width
+      ? clampNumber((nextX / maxX) * 100, 0, 100)
+      : 50;
+    const nextFocusY = placement.drawHeight > activePreset.height
+      ? clampNumber((nextY / maxY) * 100, 0, 100)
+      : 50;
+
+    setLogoScale(nextScale);
+    setCropFocus({ x: nextFocusX, y: nextFocusY });
+  }
+
+  function handleResultPointerDown(event) {
+    if (!resultPlacement || !resultFrameRef.current) {
+      return;
+    }
+
+    event.preventDefault();
+    dragRef.current = {
+      mode: "move",
+      pointerX: event.clientX,
+      pointerY: event.clientY,
+      startX: resultPlacement.x,
+      startY: resultPlacement.y,
+    };
+    resultFrameRef.current.setPointerCapture?.(event.pointerId);
+  }
+
+  function handleResizePointerDown(event) {
+    if (!resultPlacement || !resultFrameRef.current) {
+      return;
+    }
+
+    event.preventDefault();
+    event.stopPropagation();
+    dragRef.current = {
+      mode: "resize",
+      pointerX: event.clientX,
+      startScale: logoScale,
+      startWidth: resultPlacement.drawWidth,
+    };
+    resultFrameRef.current.setPointerCapture?.(event.pointerId);
+  }
+
+  function handleResultPointerMove(event) {
+    const drag = dragRef.current;
+
+    if (!drag || !resultPlacement) {
+      return;
+    }
+
+    if (drag.mode === "resize") {
+      const deltaX = (event.clientX - drag.pointerX) / resultScale;
+      const nextWidth = Math.max(10, drag.startWidth + deltaX);
+      const nextScale = clampNumber((nextWidth / drag.startWidth) * drag.startScale, 50, 250);
+
+      setLogoScale(nextScale);
+      return;
+    }
+
+    const deltaX = (event.clientX - drag.pointerX) / resultScale;
+    const deltaY = (event.clientY - drag.pointerY) / resultScale;
+
+    setFocusFromPlacement(drag.startX + deltaX, drag.startY + deltaY);
+  }
+
+  function handleResultPointerUp() {
+    dragRef.current = null;
+  }
+
   return (
     <section className="logo-cut-tool">
       <div className="logo-cut-controls">
@@ -428,8 +539,25 @@ export default function LogoCutTool() {
           className={`logo-preview-frame logo-preview-${presetId}`}
           style={{ "--logo-preview-ratio": `${activePreset.width} / ${activePreset.height}` }}
         >
-          {previewUrl ? (
-            <img src={previewUrl} alt={`${activePreset.label} preview`} />
+          {sourceUrl && resultImageStyle ? (
+            <div
+              className="logo-result-editor"
+              style={resultEditorStyle}
+              ref={resultFrameRef}
+              onPointerDown={handleResultPointerDown}
+              onPointerMove={handleResultPointerMove}
+              onPointerUp={handleResultPointerUp}
+              onPointerCancel={handleResultPointerUp}
+              role="presentation"
+            >
+              <img className="logo-result-image" src={sourceUrl} alt={`${activePreset.label} editable result`} style={resultImageStyle} />
+              <span className="logo-result-selection" style={resultImageStyle}>
+                <span className="logo-result-handle is-top-left" />
+                <span className="logo-result-handle is-top-right" />
+                <span className="logo-result-handle is-bottom-left" />
+                <span className="logo-result-handle is-bottom-right" onPointerDown={handleResizePointerDown} />
+              </span>
+            </div>
           ) : (
             <div className="logo-preview-empty">
               <ImageIcon size={36} strokeWidth={1.8} />
