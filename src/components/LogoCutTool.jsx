@@ -1,5 +1,5 @@
-import { useEffect, useMemo, useState } from "react";
-import { Download, Image as ImageIcon, Scissors, Upload } from "lucide-react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { Download, Image as ImageIcon, Move, Scissors, Upload } from "lucide-react";
 import {
   dataUrlToImage,
   downloadBlob,
@@ -34,34 +34,48 @@ function canvasToBlob(canvas) {
   });
 }
 
-function getCoverCrop(sourceWidth, sourceHeight, targetWidth, targetHeight, focusX = 50, focusY = 50) {
-  const sourceRatio = sourceWidth / sourceHeight;
-  const targetRatio = targetWidth / targetHeight;
+function clampNumber(value, min, max) {
+  return Math.max(min, Math.min(max, Number(value)));
+}
 
-  if (sourceRatio > targetRatio) {
-    const width = Math.round(sourceHeight * targetRatio);
-    const maxX = sourceWidth - width;
-
-    return {
-      height: sourceHeight,
-      width,
-      x: Math.round(maxX * (focusX / 100)),
-      y: 0,
-    };
-  }
-
-  const height = Math.round(sourceWidth / targetRatio);
-  const maxY = sourceHeight - height;
+function getLogoPlacement(sourceWidth, sourceHeight, targetWidth, targetHeight, logoScale, focusX = 50, focusY = 50) {
+  const baseScale = Math.max(targetWidth / sourceWidth, targetHeight / sourceHeight);
+  const scale = baseScale * (logoScale / 100);
+  const drawWidth = sourceWidth * scale;
+  const drawHeight = sourceHeight * scale;
+  const x = drawWidth > targetWidth
+    ? (targetWidth - drawWidth) * (focusX / 100)
+    : (targetWidth - drawWidth) / 2;
+  const y = drawHeight > targetHeight
+    ? (targetHeight - drawHeight) * (focusY / 100)
+    : (targetHeight - drawHeight) / 2;
 
   return {
-    height,
-    width: sourceWidth,
-    x: 0,
-    y: Math.round(maxY * (focusY / 100)),
+    drawHeight,
+    drawWidth,
+    scale,
+    x,
+    y,
   };
 }
 
-function drawLogoToCanvas(image, crop, targetWidth, targetHeight) {
+function getVisibleSourceRect(sourceWidth, sourceHeight, targetWidth, targetHeight, logoScale, focusX, focusY) {
+  const placement = getLogoPlacement(sourceWidth, sourceHeight, targetWidth, targetHeight, logoScale, focusX, focusY);
+  const x1 = clampNumber(-placement.x / placement.scale, 0, sourceWidth);
+  const y1 = clampNumber(-placement.y / placement.scale, 0, sourceHeight);
+  const x2 = clampNumber((targetWidth - placement.x) / placement.scale, 0, sourceWidth);
+  const y2 = clampNumber((targetHeight - placement.y) / placement.scale, 0, sourceHeight);
+
+  return {
+    height: Math.max(1, y2 - y1),
+    placement,
+    width: Math.max(1, x2 - x1),
+    x: x1,
+    y: y1,
+  };
+}
+
+function drawLogoToCanvas(image, placement, targetWidth, targetHeight) {
   const canvas = document.createElement("canvas");
   const context = canvas.getContext("2d");
 
@@ -73,17 +87,15 @@ function drawLogoToCanvas(image, crop, targetWidth, targetHeight) {
   canvas.height = targetHeight;
   context.imageSmoothingEnabled = true;
   context.imageSmoothingQuality = "high";
+  context.fillStyle = "#ffffff";
+  context.fillRect(0, 0, canvas.width, canvas.height);
   context.clearRect(0, 0, canvas.width, canvas.height);
   context.drawImage(
     image,
-    crop.x,
-    crop.y,
-    crop.width,
-    crop.height,
-    0,
-    0,
-    targetWidth,
-    targetHeight,
+    placement.x,
+    placement.y,
+    placement.drawWidth,
+    placement.drawHeight,
   );
 
   return canvas;
@@ -100,7 +112,9 @@ export default function LogoCutTool() {
   const [sourceUrl, setSourceUrl] = useState("");
   const [previewUrl, setPreviewUrl] = useState("");
   const [cropFocus, setCropFocus] = useState({ x: 50, y: 50 });
+  const [logoScale, setLogoScale] = useState(100);
   const [status, setStatus] = useState("Choose a logo image to start.");
+  const originalWrapRef = useRef(null);
   const activePreset = logoPresets[presetId];
   const sourceSize = useMemo(() => {
     if (!sourceImage) return null;
@@ -113,15 +127,16 @@ export default function LogoCutTool() {
   const activeCrop = useMemo(() => {
     if (!sourceSize) return null;
 
-    return getCoverCrop(
+    return getVisibleSourceRect(
       sourceSize.width,
       sourceSize.height,
       activePreset.width,
       activePreset.height,
+      logoScale,
       cropFocus.x,
       cropFocus.y,
     );
-  }, [activePreset.height, activePreset.width, cropFocus.x, cropFocus.y, sourceSize]);
+  }, [activePreset.height, activePreset.width, cropFocus.x, cropFocus.y, logoScale, sourceSize]);
   const cropOverlayStyle = activeCrop && sourceSize
     ? {
       height: `${(activeCrop.height / sourceSize.height) * 100}%`,
@@ -169,7 +184,7 @@ export default function LogoCutTool() {
     return () => {
       cancelled = true;
     };
-  }, [activePreset, cropFocus.x, cropFocus.y, sourceImage]);
+  }, [activePreset, cropFocus.x, cropFocus.y, logoScale, sourceImage]);
 
   async function buildLogoBlob(preset = activePreset, image = sourceImage) {
     if (!image) {
@@ -178,8 +193,16 @@ export default function LogoCutTool() {
 
     const sourceWidth = image.naturalWidth || image.width;
     const sourceHeight = image.naturalHeight || image.height;
-    const crop = getCoverCrop(sourceWidth, sourceHeight, preset.width, preset.height, cropFocus.x, cropFocus.y);
-    const canvas = drawLogoToCanvas(image, crop, preset.width, preset.height);
+    const placement = getLogoPlacement(
+      sourceWidth,
+      sourceHeight,
+      preset.width,
+      preset.height,
+      logoScale,
+      cropFocus.x,
+      cropFocus.y,
+    );
+    const canvas = drawLogoToCanvas(image, placement, preset.width, preset.height);
 
     return canvasToBlob(canvas);
   }
@@ -210,6 +233,7 @@ export default function LogoCutTool() {
         return nextSourceUrl;
       });
       setCropFocus({ x: 50, y: 50 });
+      setLogoScale(100);
     } catch (error) {
       setStatus(error?.message || "Could not open that logo.");
     }
@@ -232,6 +256,43 @@ export default function LogoCutTool() {
     } catch (error) {
       setStatus(error?.message || "Could not download the logo.");
     }
+  }
+
+  function moveCutToPointer(event) {
+    if (!sourceSize || !activeCrop || !originalWrapRef.current) {
+      return;
+    }
+
+    const rect = originalWrapRef.current.getBoundingClientRect();
+    const pointerX = ((event.clientX - rect.left) / rect.width) * sourceSize.width;
+    const pointerY = ((event.clientY - rect.top) / rect.height) * sourceSize.height;
+    const maxX = sourceSize.width - activeCrop.width;
+    const maxY = sourceSize.height - activeCrop.height;
+    const nextX = maxX > 0
+      ? clampNumber(((pointerX - activeCrop.width / 2) / maxX) * 100, 0, 100)
+      : 50;
+    const nextY = maxY > 0
+      ? clampNumber(((pointerY - activeCrop.height / 2) / maxY) * 100, 0, 100)
+      : 50;
+
+    setCropFocus({ x: nextX, y: nextY });
+  }
+
+  function handleOriginalPointerDown(event) {
+    if (!sourceImage) {
+      return;
+    }
+
+    moveCutToPointer(event);
+    event.currentTarget.setPointerCapture?.(event.pointerId);
+  }
+
+  function handleOriginalPointerMove(event) {
+    if (event.buttons !== 1) {
+      return;
+    }
+
+    moveCutToPointer(event);
   }
 
   return (
@@ -268,6 +329,17 @@ export default function LogoCutTool() {
 
         <div className="logo-cut-sliders" aria-label="Cut position">
           <label>
+            <span>Logo Size: {logoScale}%</span>
+            <input
+              type="range"
+              min="50"
+              max="250"
+              value={logoScale}
+              onChange={(event) => setLogoScale(Number(event.target.value))}
+              disabled={!sourceImage}
+            />
+          </label>
+          <label>
             <span>Move Cut Left / Right</span>
             <input
               type="range"
@@ -275,7 +347,7 @@ export default function LogoCutTool() {
               max="100"
               value={cropFocus.x}
               onChange={(event) => setCropFocus((current) => ({ ...current, x: Number(event.target.value) }))}
-              disabled={!sourceImage || !activeCrop || activeCrop.width === sourceSize?.width}
+              disabled={!sourceImage || !activeCrop || activeCrop.width >= sourceSize?.width}
             />
           </label>
           <label>
@@ -286,7 +358,7 @@ export default function LogoCutTool() {
               max="100"
               value={cropFocus.y}
               onChange={(event) => setCropFocus((current) => ({ ...current, y: Number(event.target.value) }))}
-              disabled={!sourceImage || !activeCrop || activeCrop.height === sourceSize?.height}
+              disabled={!sourceImage || !activeCrop || activeCrop.height >= sourceSize?.height}
             />
           </label>
         </div>
@@ -314,9 +386,19 @@ export default function LogoCutTool() {
 
         <div className="logo-original-frame">
           {sourceUrl ? (
-            <div className="logo-original-image-wrap">
+            <div
+              className="logo-original-image-wrap"
+              ref={originalWrapRef}
+              onPointerDown={handleOriginalPointerDown}
+              onPointerMove={handleOriginalPointerMove}
+              role="presentation"
+            >
               <img src={sourceUrl} alt="Original logo" />
-              {cropOverlayStyle ? <span className="logo-crop-overlay" style={cropOverlayStyle} /> : null}
+              {cropOverlayStyle ? (
+                <span className="logo-crop-overlay" style={cropOverlayStyle}>
+                  <Move size={18} strokeWidth={2.4} />
+                </span>
+              ) : null}
             </div>
           ) : (
             <div className="logo-preview-empty">
