@@ -229,6 +229,9 @@ export default function LogoCutTool() {
   const [status, setStatus] = useState("Choose a logo image to start.");
   const resultFrameRef = useRef(null);
   const dragRef = useRef(null);
+  const activeSourceIdRef = useRef("");
+  const copiedSourceRef = useRef(null);
+  const sourceImageRef = useRef(null);
   const sourcesRef = useRef([]);
   const activePreset = useMemo(() => ({ ...logoPresets[presetId], id: presetId }), [presetId]);
   const isStackMode = presetId === "report" && layoutMode === "stack";
@@ -358,6 +361,12 @@ export default function LogoCutTool() {
     sourcesRef.current = sources;
   }, [sources]);
 
+  useEffect(() => {
+    activeSourceIdRef.current = activeSourceId;
+    copiedSourceRef.current = copiedSource;
+    sourceImageRef.current = sourceImage;
+  }, [activeSourceId, copiedSource, sourceImage]);
+
   useEffect(() => () => {
     sourcesRef.current.forEach((source) => URL.revokeObjectURL(source.url));
   }, []);
@@ -394,23 +403,24 @@ export default function LogoCutTool() {
 
   useEffect(() => {
     function handleLogoShortcut(event) {
-      if (!sourceImage || isEditableEventTarget(event.target)) {
+      if (!sourceImageRef.current || isEditableEventTarget(event.target) || (!event.ctrlKey && event.key !== "Delete")) {
         return;
       }
 
       const key = event.key.toLowerCase();
+      const code = event.code;
 
-      if (event.ctrlKey && key === "c") {
+      if (event.ctrlKey && (key === "c" || code === "KeyC")) {
         copyActiveSource(event);
         return;
       }
 
-      if (event.ctrlKey && key === "v") {
+      if (event.ctrlKey && (key === "v" || code === "KeyV")) {
         pasteCopiedSource(event);
         return;
       }
 
-      if (event.ctrlKey && key === "d") {
+      if (event.ctrlKey && (key === "d" || code === "KeyD")) {
         duplicateActiveSource(event);
         return;
       }
@@ -420,9 +430,9 @@ export default function LogoCutTool() {
       }
     }
 
-    window.addEventListener("keydown", handleLogoShortcut);
-    return () => window.removeEventListener("keydown", handleLogoShortcut);
-  }, [activeSourceId, copiedSource, cropFocus, layoutMode, logoScale, presetId, sourceCrop, sourceImage, sources, splitPercent]);
+    document.addEventListener("keydown", handleLogoShortcut, true);
+    return () => document.removeEventListener("keydown", handleLogoShortcut, true);
+  }, [cropFocus, layoutMode, logoScale, presetId, sourceCrop, splitPercent]);
 
   useEffect(() => {
     if (!sourceImage) {
@@ -536,6 +546,8 @@ export default function LogoCutTool() {
 
     const settings = getPresetSettings(source, targetPresetId);
 
+    activeSourceIdRef.current = source.id;
+    sourceImageRef.current = source.image;
     setActiveSourceId(source.id);
     setSourceFile(source.file);
     setSourceImage(source.image);
@@ -856,13 +868,13 @@ export default function LogoCutTool() {
     event?.preventDefault?.();
     event?.stopPropagation?.();
 
-    const source = sources.find((item) => item.id === activeSourceId);
+    const source = sourcesRef.current.find((item) => item.id === activeSourceIdRef.current);
 
     if (!source) {
       return;
     }
 
-    setCopiedSource({
+    const snapshot = {
       ...source,
       presetSettings: {
         ...(source.presetSettings || {}),
@@ -875,7 +887,10 @@ export default function LogoCutTool() {
           sourceCrop: { ...sourceCrop },
         }),
       },
-    });
+    };
+
+    copiedSourceRef.current = snapshot;
+    setCopiedSource(snapshot);
     setStatus(`Copied ${source.file.name}.`);
     setContextMenu(null);
   }
@@ -884,16 +899,18 @@ export default function LogoCutTool() {
     event?.preventDefault?.();
     event?.stopPropagation?.();
 
-    if (!copiedSource) {
+    const sourceToPaste = copiedSourceRef.current || copiedSource;
+
+    if (!sourceToPaste) {
       setStatus("Copy a logo first.");
       return;
     }
 
-    const duplicate = cloneSourceForCanvas(copiedSource, 34, 40, getPresetSettings(copiedSource, presetId));
+    const duplicate = cloneSourceForCanvas(sourceToPaste, 34, 40, getPresetSettings(sourceToPaste, presetId));
 
     setSources((current) => [...current, duplicate]);
     activateSource(duplicate);
-    setStatus(`Pasted ${copiedSource.file.name}.`);
+    setStatus(`Pasted ${sourceToPaste.file.name}.`);
     setContextMenu(null);
   }
 
@@ -901,7 +918,7 @@ export default function LogoCutTool() {
     event?.preventDefault?.();
     event?.stopPropagation?.();
 
-    const source = sources.find((item) => item.id === activeSourceId);
+    const source = sourcesRef.current.find((item) => item.id === activeSourceIdRef.current);
 
     if (!source) {
       return;
@@ -924,6 +941,7 @@ export default function LogoCutTool() {
     };
     const duplicate = cloneSourceForCanvas(sourceSnapshot, 34, 40, currentSettings);
 
+    copiedSourceRef.current = sourceSnapshot;
     setCopiedSource(sourceSnapshot);
     setSources((current) => [...current, duplicate]);
     activateSource(duplicate);
@@ -935,7 +953,7 @@ export default function LogoCutTool() {
     event?.preventDefault?.();
     event?.stopPropagation?.();
 
-    const source = sources.find((item) => item.id === activeSourceId);
+    const source = sourcesRef.current.find((item) => item.id === activeSourceIdRef.current);
 
     if (!source) {
       return;
@@ -965,14 +983,14 @@ export default function LogoCutTool() {
     event?.preventDefault?.();
     event?.stopPropagation?.();
 
-    const sourceIndex = sources.findIndex((item) => item.id === activeSourceId);
+    const sourceIndex = sourcesRef.current.findIndex((item) => item.id === activeSourceIdRef.current);
 
     if (sourceIndex < 0) {
       return;
     }
 
-    const source = sources[sourceIndex];
-    const nextSources = sources.filter((item) => item.id !== activeSourceId);
+    const source = sourcesRef.current[sourceIndex];
+    const nextSources = sourcesRef.current.filter((item) => item.id !== activeSourceIdRef.current);
     const nextActiveSource = nextSources[Math.max(0, sourceIndex - 1)] || nextSources[0] || null;
 
     URL.revokeObjectURL(source.url);
