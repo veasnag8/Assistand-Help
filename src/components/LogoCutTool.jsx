@@ -1,13 +1,9 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
-  Clipboard,
-  Copy,
   Download,
   Image as ImageIcon,
-  Lock,
   Move,
   Scissors,
-  Trash2,
   Upload,
 } from "lucide-react";
 import {
@@ -225,7 +221,6 @@ export default function LogoCutTool() {
   const [splitPercent, setSplitPercent] = useState(38);
   const [sourceCrop, setSourceCrop] = useState(defaultSourceCrop);
   const [copiedSource, setCopiedSource] = useState(null);
-  const [contextMenu, setContextMenu] = useState(null);
   const [status, setStatus] = useState("Choose a logo image to start.");
   const resultFrameRef = useRef(null);
   const dragRef = useRef(null);
@@ -391,15 +386,6 @@ export default function LogoCutTool() {
       window.removeEventListener("pointerup", handleWindowPointerUp);
     };
   });
-
-  useEffect(() => {
-    function closeContextMenu() {
-      setContextMenu(null);
-    }
-
-    window.addEventListener("click", closeContextMenu);
-    return () => window.removeEventListener("click", closeContextMenu);
-  }, []);
 
   useEffect(() => {
     function handleLogoShortcut(event) {
@@ -892,7 +878,6 @@ export default function LogoCutTool() {
     copiedSourceRef.current = snapshot;
     setCopiedSource(snapshot);
     setStatus(`Copied ${source.file.name}.`);
-    setContextMenu(null);
   }
 
   function pasteCopiedSource(event) {
@@ -911,7 +896,6 @@ export default function LogoCutTool() {
     setSources((current) => [...current, duplicate]);
     activateSource(duplicate);
     setStatus(`Pasted ${sourceToPaste.file.name}.`);
-    setContextMenu(null);
   }
 
   function duplicateActiveSource(event) {
@@ -946,7 +930,6 @@ export default function LogoCutTool() {
     setSources((current) => [...current, duplicate]);
     activateSource(duplicate);
     setStatus(`Duplicated ${source.file.name}.`);
-    setContextMenu(null);
   }
 
   function toggleActiveSourceLock(event) {
@@ -976,7 +959,6 @@ export default function LogoCutTool() {
         : item
     )));
     setStatus(`${nextLocked ? "Locked" : "Unlocked"} ${source.file.name}.`);
-    setContextMenu(null);
   }
 
   function deleteActiveSource(event) {
@@ -1011,20 +993,6 @@ export default function LogoCutTool() {
       setSourceCrop(defaultSettings.sourceCrop);
     }
     setStatus(`Deleted ${source.file.name}.`);
-    setContextMenu(null);
-  }
-
-  function openContextMenu(event) {
-    event.preventDefault();
-
-    if (!sourceImage) {
-      return;
-    }
-
-    setContextMenu({
-      x: event.clientX,
-      y: event.clientY,
-    });
   }
 
 
@@ -1131,7 +1099,7 @@ export default function LogoCutTool() {
               onPointerUp={handleResultPointerUp}
               onPointerCancel={handleResultPointerUp}
               onWheel={handleResultWheel}
-              onContextMenu={openContextMenu}
+              onContextMenu={(event) => event.preventDefault()}
               role="presentation"
             >
               {canvasSources.map((source) => {
@@ -1179,41 +1147,6 @@ export default function LogoCutTool() {
                   </span>
                 );
               })}
-              {contextMenu ? (
-                <div
-                  className="logo-context-menu"
-                  style={{
-                    left: `${contextMenu.x}px`,
-                    top: `${contextMenu.y}px`,
-                  }}
-                  onClick={(event) => event.stopPropagation()}
-                >
-                  <button type="button" onClick={copyActiveSource}>
-                    <Copy size={17} strokeWidth={2.2} />
-                    <span>Copy</span>
-                    <kbd>Ctrl+C</kbd>
-                  </button>
-                  <button type="button" onClick={pasteCopiedSource}>
-                    <Clipboard size={17} strokeWidth={2.2} />
-                    <span>Paste</span>
-                    <kbd>Ctrl+V</kbd>
-                  </button>
-                  <button className="is-emphasis" type="button" onClick={duplicateActiveSource}>
-                    <Copy size={17} strokeWidth={2.2} />
-                    <span>Duplicate</span>
-                    <kbd>Ctrl+D</kbd>
-                  </button>
-                  <button type="button" onClick={deleteActiveSource}>
-                    <Trash2 size={17} strokeWidth={2.2} />
-                    <span>Delete</span>
-                    <kbd>Delete</kbd>
-                  </button>
-                  <button type="button" onClick={toggleActiveSourceLock}>
-                    <Lock size={17} strokeWidth={2.2} />
-                    <span>{activeSourceSettings.locked ? "Unlock" : "Lock"}</span>
-                  </button>
-                </div>
-              ) : null}
             </div>
           ) : (
             <div className="logo-preview-empty">
