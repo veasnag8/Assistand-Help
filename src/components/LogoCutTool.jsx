@@ -221,6 +221,7 @@ export default function LogoCutTool() {
   const [splitPercent, setSplitPercent] = useState(38);
   const [sourceCrop, setSourceCrop] = useState(defaultSourceCrop);
   const [copiedSource, setCopiedSource] = useState(null);
+  const [measureTooltip, setMeasureTooltip] = useState(null);
   const [status, setStatus] = useState("Choose a logo image to start.");
   const resultFrameRef = useRef(null);
   const dragRef = useRef(null);
@@ -701,6 +702,21 @@ export default function LogoCutTool() {
     updateActiveSourceTransform({ x: nextFocusX, y: nextFocusY }, nextScale);
   }
 
+  function updateMeasureTooltip(event, width, height) {
+    if (!resultFrameRef.current) {
+      return;
+    }
+
+    const rect = resultFrameRef.current.getBoundingClientRect();
+
+    setMeasureTooltip({
+      height: Math.max(1, Math.round(height)),
+      left: event.clientX - rect.left + 14,
+      top: event.clientY - rect.top + 14,
+      width: Math.max(1, Math.round(width)),
+    });
+  }
+
   function handleResultPointerDown(event) {
     if (!resultFrameRef.current) {
       return;
@@ -749,6 +765,7 @@ export default function LogoCutTool() {
       startHeight: resultPlacement.drawHeight,
       startWidth: resultPlacement.drawWidth,
     };
+    updateMeasureTooltip(event, resultPlacement.drawWidth, resultPlacement.drawHeight);
     resultFrameRef.current.setPointerCapture?.(event.pointerId);
   }
 
@@ -766,6 +783,7 @@ export default function LogoCutTool() {
       pointerY: event.clientY,
       startCrop: sourceCrop,
     };
+    updateMeasureTooltip(event, resultPlacement.drawWidth, resultPlacement.drawHeight);
     resultFrameRef.current.setPointerCapture?.(event.pointerId);
   }
 
@@ -797,7 +815,17 @@ export default function LogoCutTool() {
         ? Math.max(10, drag.startHeight + deltaY * ySign) / drag.startHeight
         : 1;
       const nextScale = clampNumber(Math.max(widthScale, heightScale) * drag.startScale, minLogoScale, maxLogoScale);
+      const nextPlacement = getLogoPlacement(
+        croppedSourceSize.width,
+        croppedSourceSize.height,
+        activePreset.width,
+        activePreset.height,
+        nextScale,
+        cropFocus.x,
+        cropFocus.y,
+      );
 
+      updateMeasureTooltip(event, nextPlacement.drawWidth, nextPlacement.drawHeight);
       updateActiveSourceTransform(cropFocus, nextScale);
       return;
     }
@@ -814,6 +842,18 @@ export default function LogoCutTool() {
       if (drag.direction === "top") nextCrop.top = clampNumber(drag.startCrop.top + deltaPercentY, 0, 94 - drag.startCrop.bottom);
       if (drag.direction === "bottom") nextCrop.bottom = clampNumber(drag.startCrop.bottom - deltaPercentY, 0, 94 - drag.startCrop.top);
 
+      const nextCroppedSize = sourceSize ? getCroppedSourceSize(sourceSize.width, sourceSize.height, nextCrop) : croppedSourceSize;
+      const nextPlacement = getLogoPlacement(
+        nextCroppedSize.width,
+        nextCroppedSize.height,
+        activePreset.width,
+        activePreset.height,
+        logoScale,
+        cropFocus.x,
+        cropFocus.y,
+      );
+
+      updateMeasureTooltip(event, nextPlacement.drawWidth, nextPlacement.drawHeight);
       updateActiveSourceSettings({ nextSourceCrop: nextCrop });
       return;
     }
@@ -826,6 +866,7 @@ export default function LogoCutTool() {
 
   function handleResultPointerUp() {
     dragRef.current = null;
+    setMeasureTooltip(null);
   }
 
   function handleResultWheel(event) {
@@ -1147,6 +1188,17 @@ export default function LogoCutTool() {
                   </span>
                 );
               })}
+              {measureTooltip ? (
+                <span
+                  className="logo-measure-tooltip"
+                  style={{
+                    left: `${measureTooltip.left}px`,
+                    top: `${measureTooltip.top}px`,
+                  }}
+                >
+                  w: {measureTooltip.width} h: {measureTooltip.height}
+                </span>
+              ) : null}
             </div>
           ) : (
             <div className="logo-preview-empty">
