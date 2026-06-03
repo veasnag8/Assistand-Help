@@ -1182,18 +1182,22 @@ img {
 }
 
 .logo-preview-frame img {
-  width: min(100%, 520px);
+  width: auto;
+  max-width: 100%;
+  height: auto;
   max-height: 300px;
   aspect-ratio: var(--logo-preview-ratio);
   object-fit: contain;
 }
 
 .logo-preview-site img {
-  width: min(100%, 630px);
+  width: 210px;
+  height: 50px;
 }
 
 .logo-preview-report img {
-  width: min(100%, 300px);
+  width: 300px;
+  height: 300px;
 }
 
 .logo-preview-empty {

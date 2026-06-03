@@ -57,6 +57,34 @@ function getCoverCrop(sourceWidth, sourceHeight, targetWidth, targetHeight) {
   };
 }
 
+function drawLogoToCanvas(image, crop, targetWidth, targetHeight) {
+  const canvas = document.createElement("canvas");
+  const context = canvas.getContext("2d");
+
+  if (!context) {
+    throw new Error("Could not prepare the logo canvas.");
+  }
+
+  canvas.width = targetWidth;
+  canvas.height = targetHeight;
+  context.imageSmoothingEnabled = true;
+  context.imageSmoothingQuality = "high";
+  context.clearRect(0, 0, canvas.width, canvas.height);
+  context.drawImage(
+    image,
+    crop.x,
+    crop.y,
+    crop.width,
+    crop.height,
+    0,
+    0,
+    targetWidth,
+    targetHeight,
+  );
+
+  return canvas;
+}
+
 function isSupportedImage(file) {
   return file?.type?.startsWith("image/") || /\.(png|jpe?g|webp)$/i.test(file?.name || "");
 }
@@ -85,27 +113,7 @@ export default function LogoCutTool() {
     const sourceWidth = image.naturalWidth || image.width;
     const sourceHeight = image.naturalHeight || image.height;
     const crop = getCoverCrop(sourceWidth, sourceHeight, preset.width, preset.height);
-    const canvas = document.createElement("canvas");
-    const context = canvas.getContext("2d");
-
-    if (!context) {
-      throw new Error("Could not prepare the logo canvas.");
-    }
-
-    canvas.width = preset.width;
-    canvas.height = preset.height;
-    context.clearRect(0, 0, canvas.width, canvas.height);
-    context.drawImage(
-      image,
-      crop.x,
-      crop.y,
-      crop.width,
-      crop.height,
-      0,
-      0,
-      preset.width,
-      preset.height,
-    );
+    const canvas = drawLogoToCanvas(image, crop, preset.width, preset.height);
 
     return canvasToBlob(canvas);
   }
