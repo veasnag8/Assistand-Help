@@ -1291,12 +1291,17 @@ img {
   cursor: grabbing;
 }
 
-.logo-result-image,
+.logo-result-crop-layer,
 .logo-result-selection {
   position: absolute;
 }
 
+.logo-result-crop-layer {
+  overflow: hidden;
+}
+
 .logo-result-image {
+  position: absolute;
   max-width: none;
   max-height: none;
   object-fit: fill;
@@ -1338,6 +1343,49 @@ img {
   border-radius: 999px;
   background: #fff;
   pointer-events: auto;
+}
+
+.logo-result-crop-handle {
+  position: absolute;
+  z-index: 1;
+  border: 1px solid rgba(9, 16, 71, 0.18);
+  border-radius: 4px;
+  background: #fff;
+  pointer-events: auto;
+}
+
+.logo-result-crop-handle.is-top,
+.logo-result-crop-handle.is-bottom {
+  left: 50%;
+  width: 18px;
+  height: 7px;
+  transform: translateX(-50%);
+  cursor: ns-resize;
+}
+
+.logo-result-crop-handle.is-top {
+  top: -5px;
+}
+
+.logo-result-crop-handle.is-bottom {
+  bottom: -5px;
+}
+
+.logo-result-crop-handle.is-left,
+.logo-result-crop-handle.is-right {
+  top: 50%;
+  width: 7px;
+  height: 18px;
+  transform: translateY(-50%);
+  cursor: ew-resize;
+}
+
+.logo-result-crop-handle.is-left {
+  left: -5px;
+}
+
+.logo-result-crop-handle.is-right {
+  right: -5px;
 }
 
 .logo-result-handle.is-top-left {

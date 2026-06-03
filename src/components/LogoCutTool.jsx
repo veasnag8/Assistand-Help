@@ -22,6 +22,7 @@ const logoPresets = {
 };
 const minLogoScale = 20;
 const maxLogoScale = 900;
+const defaultSourceCrop = { bottom: 0, left: 0, right: 0, top: 0 };
 
 function canvasToBlob(canvas) {
   return new Promise((resolve, reject) => {
@@ -73,7 +74,14 @@ function getVisibleSourceRect(sourceWidth, sourceHeight, targetWidth, targetHeig
   };
 }
 
-function drawLogoToCanvas(image, placement, targetWidth, targetHeight) {
+function getCroppedSourceSize(sourceWidth, sourceHeight, sourceCrop = defaultSourceCrop) {
+  return {
+    height: sourceHeight * ((100 - sourceCrop.top - sourceCrop.bottom) / 100),
+    width: sourceWidth * ((100 - sourceCrop.left - sourceCrop.right) / 100),
+  };
+}
+
+function drawLogoToCanvas(image, placement, targetWidth, targetHeight, sourceCrop = defaultSourceCrop) {
   const canvas = document.createElement("canvas");
   const context = canvas.getContext("2d");
 
@@ -88,8 +96,18 @@ function drawLogoToCanvas(image, placement, targetWidth, targetHeight) {
   context.fillStyle = "#ffffff";
   context.fillRect(0, 0, canvas.width, canvas.height);
   context.clearRect(0, 0, canvas.width, canvas.height);
+  const sourceWidth = image.naturalWidth || image.width;
+  const sourceHeight = image.naturalHeight || image.height;
+  const sourceX = sourceWidth * (sourceCrop.left / 100);
+  const sourceY = sourceHeight * (sourceCrop.top / 100);
+  const croppedSource = getCroppedSourceSize(sourceWidth, sourceHeight, sourceCrop);
+
   context.drawImage(
     image,
+    sourceX,
+    sourceY,
+    croppedSource.width,
+    croppedSource.height,
     placement.x,
     placement.y,
     placement.drawWidth,
@@ -176,6 +194,7 @@ export default function LogoCutTool() {
   const [layoutMode, setLayoutMode] = useState("normal");
   const [logoScale, setLogoScale] = useState(100);
   const [splitPercent, setSplitPercent] = useState(38);
+  const [sourceCrop, setSourceCrop] = useState(defaultSourceCrop);
   const [status, setStatus] = useState("Choose a logo image to start.");
   const resultFrameRef = useRef(null);
   const dragRef = useRef(null);
@@ -190,10 +209,11 @@ export default function LogoCutTool() {
       height: sourceImage.naturalHeight || sourceImage.height,
     };
   }, [sourceImage]);
-  const resultPlacement = sourceSize
+  const croppedSourceSize = sourceSize ? getCroppedSourceSize(sourceSize.width, sourceSize.height, sourceCrop) : null;
+  const resultPlacement = croppedSourceSize
     ? getLogoPlacement(
-      sourceSize.width,
-      sourceSize.height,
+      croppedSourceSize.width,
+      croppedSourceSize.height,
       activePreset.width,
       activePreset.height,
       logoScale,
@@ -212,6 +232,14 @@ export default function LogoCutTool() {
       left: `${resultPlacement.x * resultScale}px`,
       top: `${resultPlacement.y * resultScale}px`,
       width: `${resultPlacement.drawWidth * resultScale}px`,
+    }
+    : null;
+  const croppedImageInnerStyle = sourceSize && croppedSourceSize
+    ? {
+      height: `${sourceSize.height * resultPlacement.scale * resultScale}px`,
+      left: `${-sourceSize.width * (sourceCrop.left / 100) * resultPlacement.scale * resultScale}px`,
+      top: `${-sourceSize.height * (sourceCrop.top / 100) * resultPlacement.scale * resultScale}px`,
+      width: `${sourceSize.width * resultPlacement.scale * resultScale}px`,
     }
     : null;
 
@@ -289,21 +317,22 @@ export default function LogoCutTool() {
 
     const sourceWidth = image.naturalWidth || image.width;
     const sourceHeight = image.naturalHeight || image.height;
+    const croppedSource = getCroppedSourceSize(sourceWidth, sourceHeight, sourceCrop);
 
     if (preset.id === "report" && layoutMode === "stack") {
       return canvasToBlob(drawStackedLogoToCanvas(image, splitPercent, preset.width, preset.height));
     }
 
     const placement = getLogoPlacement(
-      sourceWidth,
-      sourceHeight,
+      croppedSource.width,
+      croppedSource.height,
       preset.width,
       preset.height,
       logoScale,
       cropFocus.x,
       cropFocus.y,
     );
-    const canvas = drawLogoToCanvas(image, placement, preset.width, preset.height);
+    const canvas = drawLogoToCanvas(image, placement, preset.width, preset.height, sourceCrop);
 
     return canvasToBlob(canvas);
   }
@@ -321,6 +350,7 @@ export default function LogoCutTool() {
     setLayoutMode(source.layoutMode || "normal");
     setLogoScale(source.logoScale || 100);
     setSplitPercent(source.splitPercent || 38);
+    setSourceCrop(source.sourceCrop || defaultSourceCrop);
   }
 
   function updateActiveSourceSettings({
@@ -328,11 +358,13 @@ export default function LogoCutTool() {
     nextLayoutMode = layoutMode,
     nextLogoScale = logoScale,
     nextSplitPercent = splitPercent,
+    nextSourceCrop = sourceCrop,
   } = {}) {
     setCropFocus(nextCropFocus);
     setLayoutMode(nextLayoutMode);
     setLogoScale(nextLogoScale);
     setSplitPercent(nextSplitPercent);
+    setSourceCrop(nextSourceCrop);
     setSources((current) => current.map((source) => (
       source.id === activeSourceId
         ? {
@@ -341,6 +373,7 @@ export default function LogoCutTool() {
           layoutMode: nextLayoutMode,
           logoScale: nextLogoScale,
           splitPercent: nextSplitPercent,
+          sourceCrop: nextSourceCrop,
         }
         : source
     )));
@@ -381,6 +414,7 @@ export default function LogoCutTool() {
           layoutMode: "normal",
           logoScale: 100,
           splitPercent: 38,
+          sourceCrop: defaultSourceCrop,
           url: URL.createObjectURL(file),
         });
       }
@@ -418,8 +452,8 @@ export default function LogoCutTool() {
     }
 
     const placement = getLogoPlacement(
-      sourceSize.width,
-      sourceSize.height,
+      croppedSourceSize.width,
+      croppedSourceSize.height,
       activePreset.width,
       activePreset.height,
       nextScale,
@@ -485,6 +519,23 @@ export default function LogoCutTool() {
     resultFrameRef.current.setPointerCapture?.(event.pointerId);
   }
 
+  function handleCropPointerDown(event, direction) {
+    if (!resultPlacement || !resultFrameRef.current) {
+      return;
+    }
+
+    event.preventDefault();
+    event.stopPropagation();
+    dragRef.current = {
+      direction,
+      mode: "crop",
+      pointerX: event.clientX,
+      pointerY: event.clientY,
+      startCrop: sourceCrop,
+    };
+    resultFrameRef.current.setPointerCapture?.(event.pointerId);
+  }
+
   function handleResultPointerMove(event) {
     const drag = dragRef.current;
 
@@ -515,6 +566,22 @@ export default function LogoCutTool() {
       const nextScale = clampNumber(Math.max(widthScale, heightScale) * drag.startScale, minLogoScale, maxLogoScale);
 
       updateActiveSourceTransform(cropFocus, nextScale);
+      return;
+    }
+
+    if (drag.mode === "crop") {
+      const deltaSourceX = (event.clientX - drag.pointerX) / resultScale / resultPlacement.scale;
+      const deltaSourceY = (event.clientY - drag.pointerY) / resultScale / resultPlacement.scale;
+      const deltaPercentX = sourceSize ? (deltaSourceX / sourceSize.width) * 100 : 0;
+      const deltaPercentY = sourceSize ? (deltaSourceY / sourceSize.height) * 100 : 0;
+      const nextCrop = { ...drag.startCrop };
+
+      if (drag.direction === "left") nextCrop.left = clampNumber(drag.startCrop.left + deltaPercentX, 0, 94 - drag.startCrop.right);
+      if (drag.direction === "right") nextCrop.right = clampNumber(drag.startCrop.right - deltaPercentX, 0, 94 - drag.startCrop.left);
+      if (drag.direction === "top") nextCrop.top = clampNumber(drag.startCrop.top + deltaPercentY, 0, 94 - drag.startCrop.bottom);
+      if (drag.direction === "bottom") nextCrop.bottom = clampNumber(drag.startCrop.bottom - deltaPercentY, 0, 94 - drag.startCrop.top);
+
+      updateActiveSourceSettings({ nextSourceCrop: nextCrop });
       return;
     }
 
@@ -549,6 +616,31 @@ export default function LogoCutTool() {
 
     updateActiveSourceSettings({ nextSplitPercent: Math.round(nextSplit) });
   }
+
+  function duplicateActiveSource(event) {
+    event.preventDefault();
+
+    const source = sources.find((item) => item.id === activeSourceId);
+
+    if (!source) {
+      return;
+    }
+
+    const duplicate = {
+      ...source,
+      cropFocus: { ...cropFocus },
+      id: `${source.file.name}-copy-${globalThis.crypto?.randomUUID?.() || Date.now()}`,
+      logoScale,
+      sourceCrop: { ...sourceCrop },
+      splitPercent,
+      url: URL.createObjectURL(source.file),
+    };
+
+    setSources((current) => [...current, duplicate]);
+    activateSource(duplicate);
+    setStatus(`Duplicated ${source.file.name}.`);
+  }
+
 
   return (
     <section className="logo-cut-tool">
@@ -653,14 +745,21 @@ export default function LogoCutTool() {
               onPointerUp={handleResultPointerUp}
               onPointerCancel={handleResultPointerUp}
               onWheel={handleResultWheel}
+              onContextMenu={duplicateActiveSource}
               role="presentation"
             >
-              <img className="logo-result-image" src={sourceUrl} alt={`${activePreset.label} editable result`} style={resultImageStyle} />
+              <span className="logo-result-crop-layer" style={resultImageStyle}>
+                <img className="logo-result-image" src={sourceUrl} alt={`${activePreset.label} editable result`} style={croppedImageInnerStyle} />
+              </span>
               <span className="logo-result-selection" style={resultImageStyle}>
                 <span className="logo-result-handle is-top-left" onPointerDown={(event) => handleResizePointerDown(event, "top-left")} />
+                <span className="logo-result-crop-handle is-top" onPointerDown={(event) => handleCropPointerDown(event, "top")} />
                 <span className="logo-result-handle is-top-right" onPointerDown={(event) => handleResizePointerDown(event, "top-right")} />
+                <span className="logo-result-crop-handle is-right" onPointerDown={(event) => handleCropPointerDown(event, "right")} />
                 <span className="logo-result-handle is-bottom-left" onPointerDown={(event) => handleResizePointerDown(event, "bottom-left")} />
+                <span className="logo-result-crop-handle is-bottom" onPointerDown={(event) => handleCropPointerDown(event, "bottom")} />
                 <span className="logo-result-handle is-bottom-right" onPointerDown={(event) => handleResizePointerDown(event, "bottom-right")} />
+                <span className="logo-result-crop-handle is-left" onPointerDown={(event) => handleCropPointerDown(event, "left")} />
               </span>
             </div>
           ) : (
