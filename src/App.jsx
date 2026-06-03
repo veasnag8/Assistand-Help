@@ -185,23 +185,6 @@ function BrandLogo() {
   );
 }
 
-function parseAccessUserInput(value) {
-  const normalized = value.replace(/^users?\s*:\s*/i, "").trim();
-  const match = normalized.match(/^(\S+)(?:\s+(?:and|,|-)\s+|\s+)(.+)$/i);
-
-  if (!match) {
-    return {
-      username: normalized,
-      user: "",
-    };
-  }
-
-  return {
-    username: match[1].trim(),
-    user: match[2].trim(),
-  };
-}
-
 function buildAccessInfo({ user, username }) {
   return `System Access Information
 =========================
@@ -214,10 +197,10 @@ Please change password after first login.`;
 }
 
 function UserAccessModal({ onClose }) {
-  const [input, setInput] = useState("M00780 and Seang Sophal");
+  const [user, setUser] = useState("Seang Sophal");
+  const [username, setUsername] = useState("M00780");
   const [copyStatus, setCopyStatus] = useState("");
-  const parsedUser = parseAccessUserInput(input);
-  const result = buildAccessInfo(parsedUser);
+  const result = buildAccessInfo({ user, username });
 
   async function copyResult() {
     try {
@@ -247,18 +230,32 @@ function UserAccessModal({ onClose }) {
           </button>
         </header>
 
-        <label className="access-field" htmlFor="access-users-input">
-          <span>Users</span>
+        <label className="access-field" htmlFor="access-user-input">
+          <span>User</span>
           <input
-            id="access-users-input"
+            id="access-user-input"
             type="text"
-            value={input}
+            value={user}
             onChange={(event) => {
-              setInput(event.target.value);
+              setUser(event.target.value);
               setCopyStatus("");
             }}
-            placeholder="M00780 and Seang Sophal"
+            placeholder="Seang Sophal"
             autoFocus
+          />
+        </label>
+
+        <label className="access-field" htmlFor="access-username-input">
+          <span>Username</span>
+          <input
+            id="access-username-input"
+            type="text"
+            value={username}
+            onChange={(event) => {
+              setUsername(event.target.value);
+              setCopyStatus("");
+            }}
+            placeholder="M00780"
           />
         </label>
 
