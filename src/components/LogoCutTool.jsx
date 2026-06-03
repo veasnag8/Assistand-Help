@@ -717,6 +717,25 @@ export default function LogoCutTool() {
     });
   }
 
+  function getFocusFromPlacement(croppedSize, nextX, nextY, nextScale = logoScale) {
+    const placement = getLogoPlacement(
+      croppedSize.width,
+      croppedSize.height,
+      activePreset.width,
+      activePreset.height,
+      nextScale,
+      50,
+      50,
+    );
+    const maxX = activePreset.width - placement.drawWidth;
+    const maxY = activePreset.height - placement.drawHeight;
+
+    return {
+      x: maxX !== 0 ? clampNumber((nextX / maxX) * 100, 0, 100) : 50,
+      y: maxY !== 0 ? clampNumber((nextY / maxY) * 100, 0, 100) : 50,
+    };
+  }
+
   function handleResultPointerDown(event) {
     if (!resultFrameRef.current) {
       return;
@@ -764,6 +783,8 @@ export default function LogoCutTool() {
       startScale: logoScale,
       startHeight: resultPlacement.drawHeight,
       startWidth: resultPlacement.drawWidth,
+      startX: resultPlacement.x,
+      startY: resultPlacement.y,
     };
     updateMeasureTooltip(event, resultPlacement.drawWidth, resultPlacement.drawHeight);
     resultFrameRef.current.setPointerCapture?.(event.pointerId);
@@ -782,6 +803,10 @@ export default function LogoCutTool() {
       pointerX: event.clientX,
       pointerY: event.clientY,
       startCrop: sourceCrop,
+      startHeight: resultPlacement.drawHeight,
+      startWidth: resultPlacement.drawWidth,
+      startX: resultPlacement.x,
+      startY: resultPlacement.y,
     };
     updateMeasureTooltip(event, resultPlacement.drawWidth, resultPlacement.drawHeight);
     resultFrameRef.current.setPointerCapture?.(event.pointerId);
@@ -824,9 +849,12 @@ export default function LogoCutTool() {
         cropFocus.x,
         cropFocus.y,
       );
+      const nextX = xSign < 0 ? drag.startX + drag.startWidth - nextPlacement.drawWidth : drag.startX;
+      const nextY = ySign < 0 ? drag.startY + drag.startHeight - nextPlacement.drawHeight : drag.startY;
+      const nextFocus = getFocusFromPlacement(croppedSourceSize, nextX, nextY, nextScale);
 
       updateMeasureTooltip(event, nextPlacement.drawWidth, nextPlacement.drawHeight);
-      updateActiveSourceTransform(cropFocus, nextScale);
+      updateActiveSourceTransform(nextFocus, nextScale);
       return;
     }
 
@@ -852,9 +880,12 @@ export default function LogoCutTool() {
         cropFocus.x,
         cropFocus.y,
       );
+      const nextX = drag.direction === "left" ? drag.startX + drag.startWidth - nextPlacement.drawWidth : drag.startX;
+      const nextY = drag.direction === "top" ? drag.startY + drag.startHeight - nextPlacement.drawHeight : drag.startY;
+      const nextFocus = getFocusFromPlacement(nextCroppedSize, nextX, nextY, logoScale);
 
       updateMeasureTooltip(event, nextPlacement.drawWidth, nextPlacement.drawHeight);
-      updateActiveSourceSettings({ nextSourceCrop: nextCrop });
+      updateActiveSourceSettings({ nextCropFocus: nextFocus, nextSourceCrop: nextCrop });
       return;
     }
 
