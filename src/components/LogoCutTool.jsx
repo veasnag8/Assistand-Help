@@ -451,7 +451,7 @@ export default function LogoCutTool() {
     resultFrameRef.current.setPointerCapture?.(event.pointerId);
   }
 
-  function handleResizePointerDown(event) {
+  function handleResizePointerDown(event, direction = "bottom-right") {
     if (!resultPlacement || !resultFrameRef.current) {
       return;
     }
@@ -459,9 +459,12 @@ export default function LogoCutTool() {
     event.preventDefault();
     event.stopPropagation();
     dragRef.current = {
+      direction,
       mode: "resize",
       pointerX: event.clientX,
+      pointerY: event.clientY,
       startScale: logoScale,
+      startHeight: resultPlacement.drawHeight,
       startWidth: resultPlacement.drawWidth,
     };
     resultFrameRef.current.setPointerCapture?.(event.pointerId);
@@ -485,8 +488,16 @@ export default function LogoCutTool() {
 
     if (drag.mode === "resize") {
       const deltaX = (event.clientX - drag.pointerX) / resultScale;
-      const nextWidth = Math.max(10, drag.startWidth + deltaX);
-      const nextScale = clampNumber((nextWidth / drag.startWidth) * drag.startScale, 50, 250);
+      const deltaY = (event.clientY - drag.pointerY) / resultScale;
+      const xSign = drag.direction.includes("left") ? -1 : drag.direction.includes("right") ? 1 : 0;
+      const ySign = drag.direction.includes("top") ? -1 : drag.direction.includes("bottom") ? 1 : 0;
+      const widthScale = xSign
+        ? Math.max(10, drag.startWidth + deltaX * xSign) / drag.startWidth
+        : 1;
+      const heightScale = ySign
+        ? Math.max(10, drag.startHeight + deltaY * ySign) / drag.startHeight
+        : 1;
+      const nextScale = clampNumber(Math.max(widthScale, heightScale) * drag.startScale, 50, 250);
 
       updateActiveSourceTransform(cropFocus, nextScale);
       return;
@@ -631,10 +642,14 @@ export default function LogoCutTool() {
             >
               <img className="logo-result-image" src={sourceUrl} alt={`${activePreset.label} editable result`} style={resultImageStyle} />
               <span className="logo-result-selection" style={resultImageStyle}>
-                <span className="logo-result-handle is-top-left" />
-                <span className="logo-result-handle is-top-right" />
-                <span className="logo-result-handle is-bottom-left" />
-                <span className="logo-result-handle is-bottom-right" onPointerDown={handleResizePointerDown} />
+                <span className="logo-result-handle is-top-left" onPointerDown={(event) => handleResizePointerDown(event, "top-left")} />
+                <span className="logo-result-handle is-top" onPointerDown={(event) => handleResizePointerDown(event, "top")} />
+                <span className="logo-result-handle is-top-right" onPointerDown={(event) => handleResizePointerDown(event, "top-right")} />
+                <span className="logo-result-handle is-right" onPointerDown={(event) => handleResizePointerDown(event, "right")} />
+                <span className="logo-result-handle is-bottom-left" onPointerDown={(event) => handleResizePointerDown(event, "bottom-left")} />
+                <span className="logo-result-handle is-bottom" onPointerDown={(event) => handleResizePointerDown(event, "bottom")} />
+                <span className="logo-result-handle is-bottom-right" onPointerDown={(event) => handleResizePointerDown(event, "bottom-right")} />
+                <span className="logo-result-handle is-left" onPointerDown={(event) => handleResizePointerDown(event, "left")} />
               </span>
             </div>
           ) : (
