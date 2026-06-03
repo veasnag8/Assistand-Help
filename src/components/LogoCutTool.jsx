@@ -192,19 +192,6 @@ export default function LogoCutTool() {
       height: sourceImage.naturalHeight || sourceImage.height,
     };
   }, [sourceImage]);
-  const activeCrop = useMemo(() => {
-    if (!sourceSize) return null;
-
-    return getVisibleSourceRect(
-      sourceSize.width,
-      sourceSize.height,
-      activePreset.width,
-      activePreset.height,
-      logoScale,
-      cropFocus.x,
-      cropFocus.y,
-    );
-  }, [activePreset.height, activePreset.width, cropFocus.x, cropFocus.y, logoScale, sourceSize]);
   const resultPlacement = sourceSize
     ? getLogoPlacement(
       sourceSize.width,
@@ -585,73 +572,6 @@ export default function LogoCutTool() {
               </small>
             </button>
           ))}
-        </div>
-
-        <div className="logo-cut-sliders" aria-label="Cut position">
-          {presetId === "report" ? (
-            <div className="logo-layout-toggle" role="group" aria-label="Report logo layout">
-              <button
-                className={layoutMode === "normal" ? "is-active" : ""}
-                type="button"
-                onClick={() => updateActiveSourceSettings({ nextLayoutMode: "normal" })}
-              >
-                Normal Crop
-              </button>
-              <button
-                className={layoutMode === "stack" ? "is-active" : ""}
-                type="button"
-                onClick={() => updateActiveSourceSettings({ nextLayoutMode: "stack" })}
-              >
-                Text Below Logo
-              </button>
-            </div>
-          ) : null}
-          {isStackMode ? (
-            <label>
-              <span>Text Split: {splitPercent}%</span>
-              <input
-                type="range"
-                min="15"
-                max="75"
-                value={splitPercent}
-                onChange={(event) => updateActiveSourceSettings({ nextSplitPercent: Number(event.target.value) })}
-                disabled={!sourceImage}
-              />
-            </label>
-          ) : null}
-          <label>
-            <span>Logo Size: {logoScale}%</span>
-            <input
-              type="range"
-              min="50"
-              max="250"
-              value={logoScale}
-              onChange={(event) => updateActiveSourceTransform(cropFocus, Number(event.target.value))}
-              disabled={!sourceImage || isStackMode}
-            />
-          </label>
-          <label>
-            <span>Move Cut Left / Right</span>
-            <input
-              type="range"
-              min="0"
-              max="100"
-              value={cropFocus.x}
-              onChange={(event) => updateActiveSourceTransform({ ...cropFocus, x: Number(event.target.value) }, logoScale)}
-              disabled={isStackMode || !sourceImage || !activeCrop || activeCrop.width >= sourceSize?.width}
-            />
-          </label>
-          <label>
-            <span>Move Cut Up / Down</span>
-            <input
-              type="range"
-              min="0"
-              max="100"
-              value={cropFocus.y}
-              onChange={(event) => updateActiveSourceTransform({ ...cropFocus, y: Number(event.target.value) }, logoScale)}
-              disabled={isStackMode || !sourceImage || !activeCrop || activeCrop.height >= sourceSize?.height}
-            />
-          </label>
         </div>
 
         <button className="button primary" type="button" onClick={handleDownload} disabled={!sourceImage}>
