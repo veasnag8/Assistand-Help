@@ -1347,7 +1347,7 @@ img {
 
 .logo-result-crop-handle {
   position: absolute;
-  z-index: 1;
+  z-index: 3;
   border: 1px solid rgba(9, 16, 71, 0.18);
   border-radius: 4px;
   background: #fff;
@@ -1374,18 +1374,18 @@ img {
 .logo-result-crop-handle.is-left,
 .logo-result-crop-handle.is-right {
   top: 50%;
-  width: 7px;
-  height: 18px;
+  width: 10px;
+  height: 28px;
   transform: translateY(-50%);
   cursor: ew-resize;
 }
 
 .logo-result-crop-handle.is-left {
-  left: 1px;
+  left: 0;
 }
 
 .logo-result-crop-handle.is-right {
-  right: 1px;
+  right: 0;
 }
 
 .logo-result-handle.is-top-left {

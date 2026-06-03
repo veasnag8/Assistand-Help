@@ -803,6 +803,8 @@ export default function LogoCutTool() {
       pointerX: event.clientX,
       pointerY: event.clientY,
       startCrop: sourceCrop,
+      startCroppedHeight: croppedSourceSize.height,
+      startCroppedWidth: croppedSourceSize.width,
       startHeight: resultPlacement.drawHeight,
       startWidth: resultPlacement.drawWidth,
       startX: resultPlacement.x,
@@ -880,8 +882,14 @@ export default function LogoCutTool() {
         cropFocus.x,
         cropFocus.y,
       );
-      const nextX = drag.direction === "left" ? drag.startX + drag.startWidth - nextPlacement.drawWidth : drag.startX;
-      const nextY = drag.direction === "top" ? drag.startY + drag.startHeight - nextPlacement.drawHeight : drag.startY;
+      const cropDeltaWidth = nextCroppedSize.width - drag.startCroppedWidth;
+      const cropDeltaHeight = nextCroppedSize.height - drag.startCroppedHeight;
+      const nextX = drag.direction === "left"
+        ? drag.startX + cropDeltaWidth * resultPlacement.scale
+        : drag.startX;
+      const nextY = drag.direction === "top"
+        ? drag.startY + cropDeltaHeight * resultPlacement.scale
+        : drag.startY;
       const nextFocus = getFocusFromPlacement(nextCroppedSize, nextX, nextY, logoScale);
 
       updateMeasureTooltip(event, nextPlacement.drawWidth, nextPlacement.drawHeight);
