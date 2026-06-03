@@ -216,7 +216,7 @@ export default function LogoCutTool() {
       cropFocus.y,
     )
     : null;
-  const resultScale = presetId === "site" ? 2.4 : 1;
+  const resultScale = presetId === "site" ? 4 : 1.65;
   const resultEditorStyle = {
     height: `${activePreset.height * resultScale}px`,
     width: `${activePreset.width * resultScale}px`,
