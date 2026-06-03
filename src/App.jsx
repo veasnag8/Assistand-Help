@@ -189,8 +189,8 @@ function buildAccessInfo({ user, username }) {
   return `System Access Information
 =========================
 URL: https://acumatica.mam.com.kh:22888/MegaProduction/
-User: ${user || "Seang Sophal"}
-Username: ${username || "M00780"}
+Name: ${user || "Seang Sophal"}
+Username Login: ${username || "M00780"}
 Password: MAM@123456
 
 Please change password after first login.`;
@@ -231,7 +231,7 @@ function UserAccessModal({ onClose }) {
         </header>
 
         <label className="access-field" htmlFor="access-user-input">
-          <span>User</span>
+          <span>Name</span>
           <input
             id="access-user-input"
             type="text"
@@ -246,7 +246,7 @@ function UserAccessModal({ onClose }) {
         </label>
 
         <label className="access-field" htmlFor="access-username-input">
-          <span>Username</span>
+          <span>Username Login</span>
           <input
             id="access-username-input"
             type="text"
