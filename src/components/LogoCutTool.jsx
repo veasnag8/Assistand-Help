@@ -45,12 +45,8 @@ function getLogoPlacement(sourceWidth, sourceHeight, targetWidth, targetHeight, 
   const scale = baseScale * (logoScale / 100);
   const drawWidth = sourceWidth * scale;
   const drawHeight = sourceHeight * scale;
-  const x = drawWidth > targetWidth
-    ? (targetWidth - drawWidth) * (focusX / 100)
-    : (targetWidth - drawWidth) / 2;
-  const y = drawHeight > targetHeight
-    ? (targetHeight - drawHeight) * (focusY / 100)
-    : (targetHeight - drawHeight) / 2;
+  const x = (targetWidth - drawWidth) * (focusX / 100);
+  const y = (targetHeight - drawHeight) * (focusY / 100);
 
   return {
     drawHeight,
@@ -432,10 +428,10 @@ export default function LogoCutTool() {
     );
     const maxX = activePreset.width - placement.drawWidth;
     const maxY = activePreset.height - placement.drawHeight;
-    const nextFocusX = placement.drawWidth > activePreset.width
+    const nextFocusX = maxX !== 0
       ? clampNumber((nextX / maxX) * 100, 0, 100)
       : 50;
-    const nextFocusY = placement.drawHeight > activePreset.height
+    const nextFocusY = maxY !== 0
       ? clampNumber((nextY / maxY) * 100, 0, 100)
       : 50;
 
