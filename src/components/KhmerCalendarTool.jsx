@@ -1,5 +1,5 @@
-import { useMemo, useState } from "react";
-import { ChevronLeft, ChevronRight, Printer } from "lucide-react";
+import { useEffect, useMemo, useState } from "react";
+import { ChevronLeft, ChevronRight, Printer, Trash2, X } from "lucide-react";
 
 const khmerWeekdays = ["អាទិត្យ", "ចន្ទ", "អង្គារ", "ពុធ", "ព្រហ", "សុក្រ", "សៅរ៍"];
 const khmerMonths = [
@@ -31,6 +31,7 @@ const lunarMonths = [
   "កត្តិក",
 ];
 const khmerDigits = ["០", "១", "២", "៣", "៤", "៥", "៦", "៧", "៨", "៩"];
+const personalNotesStorageKey = "khmer-calendar-personal-notes-v1";
 const defaultEvents = [
   { color: "red", date: "2026-01-01", id: "kh-holiday-2026-01-01", title: "ទិវាចូលឆ្នាំសកល" },
   { color: "red", date: "2026-01-07", id: "kh-holiday-2026-01-07", title: "ទិវាជ័យជម្នះលើរបបប្រល័យពូជសាសន៍" },
@@ -167,9 +168,22 @@ function formatKhmerToday(date) {
   return `ថ្ងៃនេះ ${khmerWeekdays[date.getDay()]} ទី${toKhmerNumber(date.getDate())} ${khmerMonths[date.getMonth()]} ${toKhmerNumber(date.getFullYear())}`;
 }
 
+function loadPersonalNotes() {
+  try {
+    const parsed = JSON.parse(window.localStorage.getItem(personalNotesStorageKey) || "{}");
+
+    return parsed && typeof parsed === "object" && !Array.isArray(parsed) ? parsed : {};
+  } catch {
+    return {};
+  }
+}
+
 export default function KhmerCalendarTool() {
   const today = new Date();
   const [viewDate, setViewDate] = useState(() => new Date(today.getFullYear(), today.getMonth(), 1));
+  const [personalNotes, setPersonalNotes] = useState(loadPersonalNotes);
+  const [activeNoteDate, setActiveNoteDate] = useState("");
+  const [noteDraft, setNoteDraft] = useState("");
   const events = defaultEvents;
   const year = viewDate.getFullYear();
   const month = viewDate.getMonth();
@@ -186,6 +200,47 @@ export default function KhmerCalendarTool() {
 
   function moveMonth(amount) {
     setViewDate((current) => new Date(current.getFullYear(), current.getMonth() + amount, 1));
+  }
+
+  useEffect(() => {
+    window.localStorage.setItem(personalNotesStorageKey, JSON.stringify(personalNotes));
+  }, [personalNotes]);
+
+  function openNote(cell) {
+    setActiveNoteDate(cell.key);
+    setNoteDraft(personalNotes[cell.key] || "");
+  }
+
+  function closeNote() {
+    setActiveNoteDate("");
+    setNoteDraft("");
+  }
+
+  function saveNote(event) {
+    event.preventDefault();
+    const note = noteDraft.trim();
+
+    setPersonalNotes((current) => {
+      const next = { ...current };
+
+      if (note) {
+        next[activeNoteDate] = note;
+      } else {
+        delete next[activeNoteDate];
+      }
+
+      return next;
+    });
+    closeNote();
+  }
+
+  function deleteNote() {
+    setPersonalNotes((current) => {
+      const next = { ...current };
+      delete next[activeNoteDate];
+      return next;
+    });
+    closeNote();
   }
 
   return (
@@ -226,11 +281,15 @@ export default function KhmerCalendarTool() {
               const isToday = cell.key === toDateKey(today);
               const isWeekend = cell.weekday === 0;
               const hasHoliday = dayEvents.length > 0;
+              const personalNote = personalNotes[cell.key] || "";
 
               return (
-                <div
+                <button
+                  type="button"
                   className={`khmer-calendar-cell${cell.outside ? " is-outside" : ""}${isToday ? " is-today" : ""}${isWeekend ? " is-weekend" : ""}${hasHoliday ? " has-holiday" : ""}`}
                   key={cell.key}
+                  onClick={() => openNote(cell)}
+                  aria-label={`Add personal note for ${cell.key}`}
                 >
                   <div className="khmer-calendar-day">
                     <strong>{cell.day}</strong>
@@ -243,13 +302,53 @@ export default function KhmerCalendarTool() {
                       </span>
                     ))}
                   </div>
-                </div>
+                  {personalNote ? <span className="khmer-calendar-note">{personalNote}</span> : null}
+                </button>
               );
             })}
           </div>
         </div>
 
       </div>
+      {activeNoteDate ? (
+        <div className="calendar-note-backdrop" role="presentation" onMouseDown={closeNote}>
+          <section
+            className="calendar-note-modal"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="calendar-note-title"
+            onMouseDown={(event) => event.stopPropagation()}
+          >
+            <header className="calendar-note-header">
+              <div>
+                <p className="eyebrow">Personal Note</p>
+                <h2 id="calendar-note-title">{activeNoteDate}</h2>
+              </div>
+              <button type="button" onClick={closeNote} aria-label="Close note">
+                <X size={18} strokeWidth={2.4} />
+              </button>
+            </header>
+            <form className="calendar-note-form" onSubmit={saveNote}>
+              <textarea
+                value={noteDraft}
+                onChange={(event) => setNoteDraft(event.target.value)}
+                placeholder="Write your note"
+                rows={5}
+                autoFocus
+              />
+              <div className="calendar-note-actions">
+                <button className="button ghost" type="button" onClick={deleteNote} disabled={!personalNotes[activeNoteDate]}>
+                  <Trash2 size={15} strokeWidth={2.2} />
+                  <span>Delete</span>
+                </button>
+                <button className="button" type="submit">
+                  <span>Save Note</span>
+                </button>
+              </div>
+            </form>
+          </section>
+        </div>
+      ) : null}
     </section>
   );
 }
