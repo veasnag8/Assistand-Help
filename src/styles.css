@@ -2956,29 +2956,6 @@ button.khmer-calendar-cell:hover {
   pointer-events: auto;
 }
 
-.sna-quick-actions {
-  display: flex;
-  justify-content: center;
-  gap: 8px;
-}
-
-.sna-quick-actions button {
-  min-height: 30px;
-  border: 1px solid rgba(249, 115, 22, 0.28);
-  border-radius: 999px;
-  background: rgba(255, 255, 255, 0.94);
-  color: #194a5f;
-  padding: 0 14px;
-  font-size: 0.78rem;
-  font-weight: 900;
-  box-shadow: 0 10px 24px rgba(39, 45, 88, 0.1);
-}
-
-.sna-quick-actions button:hover {
-  background: #fff7ed;
-  color: #9a3412;
-}
-
 .sna-composer-row {
   min-width: 0;
   display: grid;
