@@ -720,6 +720,7 @@ img {
   font-family: "Noto Sans Khmer", "Manrope", sans-serif;
   font-size: clamp(0.98rem, 1.6vw, 1.22rem);
   font-weight: 900;
+  border-bottom: 1px solid rgba(9, 16, 71, 0.08);
 }
 
 .khmer-calendar-cell {
@@ -727,8 +728,9 @@ img {
   display: grid;
   align-content: start;
   gap: 8px;
-  border-top: 1px solid rgba(9, 16, 71, 0.12);
-  border-left: 1px solid rgba(9, 16, 71, 0.12);
+  border: 0;
+  border-top: 1px solid rgba(9, 16, 71, 0.08);
+  border-left: 1px solid rgba(9, 16, 71, 0.08);
   background: #fff;
   color: inherit;
   padding: 7px 6px;
