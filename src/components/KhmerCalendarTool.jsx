@@ -59,20 +59,6 @@ const khmerSakYears = [
   "នព្វស័ក",
   "សំរឹទ្ធិស័ក",
 ];
-const khmerLunarMonthRanges = [
-  "បុស្ស - មាឃ",
-  "មាឃ - ផល្គុន",
-  "ផល្គុន - ចេត្រ",
-  "ចេត្រ - ពិសាខ",
-  "ពិសាខ - ជេស្ឋ",
-  "ជេស្ឋ - បឋមាសាឍ",
-  "បឋមាសាឍ - ទុតិយាសាឍ",
-  "ទុតិយាសាឍ - ស្រាពណ៍",
-  "ស្រាពណ៍ - ភទ្របទ",
-  "ភទ្របទ - អស្សុជ",
-  "អស្សុជ - កត្តិក",
-  "កត្តិក - មិគសិរ",
-];
 const khmerDigits = ["០", "១", "២", "៣", "៤", "៥", "៦", "៧", "៨", "៩"];
 const personalNotesStorageKey = "khmer-calendar-personal-notes-v1";
 const defaultEvents = [
@@ -265,13 +251,6 @@ function formatKhmerToday(date) {
   };
 }
 
-function formatKhmerEraDate(date) {
-  const buddhistYear = date.getFullYear() + 544;
-  const zodiacYear = khmerZodiacYears[(date.getFullYear() - 2026 + 6) % khmerZodiacYears.length];
-
-  return `${khmerLunarMonthRanges[date.getMonth()]} ឆ្នាំ${zodiacYear} ព.ស. ${toKhmerNumber(buddhistYear)}`;
-}
-
 function loadPersonalNotes() {
   try {
     const parsed = JSON.parse(window.localStorage.getItem(personalNotesStorageKey) || "{}");
@@ -291,7 +270,6 @@ export default function KhmerCalendarTool() {
   const events = defaultEvents;
   const year = viewDate.getFullYear();
   const month = viewDate.getMonth();
-  const viewEraDate = new Date(year, month, 1);
   const todayLabel = formatKhmerToday(today);
   const cells = useMemo(() => getCalendarCells(year, month), [year, month]);
   const eventsByDate = useMemo(() => {
@@ -358,9 +336,6 @@ export default function KhmerCalendarTool() {
             {todayLabel.lunar}
           </h1>
           <p className="khmer-calendar-solar-date">{todayLabel.solar}</p>
-          <div className="khmer-calendar-date-systems">
-            <span>{formatKhmerEraDate(viewEraDate)}</span>
-          </div>
         </div>
         <div className="khmer-calendar-view-title" aria-live="polite">
           {khmerMonths[month]} {toKhmerNumber(year)}
