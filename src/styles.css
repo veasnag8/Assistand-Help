@@ -190,21 +190,6 @@ img {
   font-weight: 700;
 }
 
-.dot-grid {
-  display: grid;
-  grid-template-columns: repeat(5, 6px);
-  gap: 7px;
-  justify-content: end;
-  padding-top: 24px;
-}
-
-.dot-grid span {
-  width: 6px;
-  height: 6px;
-  border-radius: 999px;
-  background: #b8a5f3;
-}
-
 .dashboard-icon-actions {
   position: absolute;
   top: 26px;
@@ -4389,10 +4374,6 @@ button.khmer-calendar-cell:hover {
 
   .brand-lockup {
     justify-items: center;
-  }
-
-  .dot-grid {
-    display: none;
   }
 
   .category-grid {

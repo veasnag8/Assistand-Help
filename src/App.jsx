@@ -535,12 +535,6 @@ function Dashboard({ onOpen }) {
           <p>Main Categories</p>
         </div>
 
-        <div className="dot-grid" aria-hidden="true">
-          {Array.from({ length: 25 }).map((_, index) => (
-            <span key={index} />
-          ))}
-        </div>
-
         <div className="dashboard-icon-actions">
           <button
             className="dashboard-icon-button calendar-shortcut-button"
