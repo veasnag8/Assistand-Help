@@ -367,6 +367,57 @@ img {
   font-weight: 800;
 }
 
+.password-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  display: grid;
+  place-items: center;
+  background: rgba(7, 13, 73, 0.34);
+  padding: 20px;
+}
+
+.password-modal {
+  width: min(100%, 380px);
+  display: grid;
+  gap: 16px;
+  border: 1px solid rgba(9, 16, 71, 0.1);
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.98);
+  box-shadow: 0 28px 70px rgba(9, 16, 71, 0.22);
+  padding: 18px;
+}
+
+.password-modal-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.password-modal-header h2,
+.password-modal-header p {
+  margin: 0;
+}
+
+.password-modal-header h2 {
+  color: #070d49;
+  font-size: 1.28rem;
+  line-height: 1.15;
+}
+
+.password-modal-form {
+  display: grid;
+  gap: 12px;
+}
+
+.password-modal-error {
+  min-height: 18px;
+  color: #e11d48;
+  font-size: 0.78rem;
+  font-weight: 850;
+}
+
 .category-grid {
   display: grid;
   grid-template-columns: repeat(4, minmax(160px, 1fr));
@@ -566,6 +617,204 @@ img {
 .tone-yellow {
   --tone: #f4b400;
   --tone-soft: #fff6dd;
+}
+
+.tool-view--khmer-calendar {
+  gap: 10px;
+}
+
+.khmer-calendar-tool {
+  display: grid;
+  gap: 12px;
+  font-family: "Manrope", "Noto Sans Khmer", "Segoe UI", sans-serif;
+}
+
+.khmer-calendar-toolbar {
+  min-height: 62px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  border: 1px solid rgba(9, 16, 71, 0.08);
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.86);
+  padding: 10px 12px;
+  box-shadow: 0 14px 28px rgba(39, 45, 88, 0.08);
+}
+
+.khmer-calendar-toolbar h1,
+.khmer-calendar-toolbar p {
+  margin: 0;
+}
+
+.khmer-calendar-toolbar h1 {
+  color: #064e3b;
+  font-size: clamp(0.95rem, 1.5vw, 1.2rem);
+  line-height: 1.05;
+}
+
+.khmer-calendar-actions {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+}
+
+.khmer-calendar-actions button {
+  min-width: 36px;
+  min-height: 36px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  border: 1px solid rgba(9, 16, 71, 0.1);
+  border-radius: 10px;
+  background: #fff;
+  color: #064e3b;
+  padding: 0 10px;
+  font-weight: 850;
+}
+
+.khmer-calendar-actions button:hover {
+  background: #dcfce7;
+  color: #166534;
+}
+
+.khmer-calendar-workspace {
+  display: block;
+}
+
+.khmer-calendar-sheet {
+  min-width: 0;
+  border: 1px solid rgba(9, 16, 71, 0.1);
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.9);
+  box-shadow: 0 18px 38px rgba(39, 45, 88, 0.1);
+  overflow: hidden;
+}
+
+.khmer-calendar-grid {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+}
+
+.khmer-calendar-weekdays div {
+  min-height: 38px;
+  display: grid;
+  place-items: center;
+  background: #facc15;
+  color: #422006;
+  font-family: "Noto Sans Khmer", "Manrope", sans-serif;
+  font-size: clamp(0.98rem, 1.6vw, 1.22rem);
+  font-weight: 900;
+}
+
+.khmer-calendar-cell {
+  min-height: 90px;
+  display: grid;
+  align-content: start;
+  gap: 8px;
+  border-top: 1px solid rgba(9, 16, 71, 0.12);
+  border-left: 1px solid rgba(9, 16, 71, 0.12);
+  background: #fff;
+  padding: 7px 6px;
+}
+
+.khmer-calendar-cell:nth-child(7n + 1) {
+  border-left: 0;
+}
+
+.khmer-calendar-cell.is-weekend {
+  background: #facc15;
+  color: #422006;
+}
+
+.khmer-calendar-cell.is-outside {
+  background: rgba(248, 250, 252, 0.62);
+  color: rgba(9, 16, 71, 0.18);
+}
+
+.khmer-calendar-cell.is-outside.is-weekend {
+  background: rgba(250, 204, 21, 0.42);
+  color: rgba(66, 32, 6, 0.42);
+}
+
+.khmer-calendar-cell.is-today {
+  outline: 3px solid rgba(37, 99, 235, 0.35);
+  outline-offset: -3px;
+}
+
+.khmer-calendar-day {
+  display: grid;
+  justify-items: center;
+  gap: 1px;
+  text-align: center;
+}
+
+.khmer-calendar-day strong {
+  color: #111827;
+  font-size: clamp(1rem, 1.8vw, 1.35rem);
+  line-height: 1;
+}
+
+.khmer-calendar-cell.is-weekend .khmer-calendar-day strong,
+.khmer-calendar-cell.is-weekend .khmer-calendar-day span {
+  color: #422006;
+}
+
+.khmer-calendar-cell.has-holiday:not(.is-weekend) .khmer-calendar-day strong,
+.khmer-calendar-cell.has-holiday:not(.is-weekend) .khmer-calendar-day span {
+  color: #ef1919;
+}
+
+.khmer-calendar-cell.is-outside .khmer-calendar-day strong,
+.khmer-calendar-cell.is-outside .khmer-calendar-day span {
+  color: inherit;
+}
+
+.khmer-calendar-day span {
+  color: #343434;
+  font-family: "Noto Sans Khmer", "Manrope", sans-serif;
+  font-size: 0.78rem;
+  line-height: 1.25;
+}
+
+.khmer-calendar-event-list {
+  display: grid;
+  gap: 3px;
+}
+
+.khmer-calendar-event {
+  min-width: 0;
+  overflow: hidden;
+  border-radius: 3px;
+  padding: 2px 3px;
+  color: #1d4ed8;
+  font-family: "Noto Sans Khmer", "Manrope", sans-serif;
+  font-size: clamp(0.66rem, 1.05vw, 0.82rem);
+  font-weight: 800;
+  line-height: 1.25;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.khmer-calendar-event.is-purple {
+  background: rgba(99, 102, 241, 0.14);
+  color: #372bd7;
+}
+
+.khmer-calendar-event.is-green {
+  background: rgba(22, 163, 74, 0.18);
+  color: #047857;
+}
+
+.khmer-calendar-event.is-red {
+  background: transparent;
+  color: #ef1919;
+}
+
+.khmer-calendar-event.is-blue {
+  background: rgba(37, 99, 235, 0.12);
+  color: #1d4ed8;
 }
 
 .dashboard-footer {
@@ -4025,6 +4274,10 @@ img {
     grid-template-columns: 1fr;
   }
 
+  .khmer-calendar-workspace {
+    grid-template-columns: 1fr;
+  }
+
   .sna-gpt-tool {
     grid-template-columns: minmax(72px, 210px) minmax(0, 1fr);
     grid-template-rows: minmax(0, 1fr);
@@ -4147,6 +4400,23 @@ img {
   .scan-text-original-frame,
   .scan-text-output {
     min-height: 260px;
+  }
+
+  .khmer-calendar-toolbar {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .khmer-calendar-actions {
+    flex-wrap: wrap;
+  }
+
+  .khmer-calendar-sheet {
+    overflow-x: auto;
+  }
+
+  .khmer-calendar-grid {
+    min-width: 720px;
   }
 
   .sna-gpt-tool {
@@ -4323,5 +4593,38 @@ img {
 
   .button-row {
     flex-direction: column;
+  }
+}
+
+@media print {
+  body {
+    background: #fff;
+  }
+
+  .ambient,
+  .tool-header,
+  .khmer-calendar-toolbar {
+    display: none !important;
+  }
+
+  .app-layout,
+  .app-layout.is-tool-view {
+    max-width: none;
+    padding: 0;
+  }
+
+  .khmer-calendar-tool,
+  .khmer-calendar-workspace {
+    display: block;
+  }
+
+  .khmer-calendar-sheet {
+    border-radius: 0;
+    box-shadow: none;
+  }
+
+  .khmer-calendar-cell {
+    min-height: 92px;
+    break-inside: avoid;
   }
 }

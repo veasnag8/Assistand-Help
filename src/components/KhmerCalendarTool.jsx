@@ -1,0 +1,255 @@
+import { useMemo, useState } from "react";
+import { ChevronLeft, ChevronRight, Printer } from "lucide-react";
+
+const khmerWeekdays = ["អាទិត្យ", "ចន្ទ", "អង្គារ", "ពុធ", "ព្រហ", "សុក្រ", "សៅរ៍"];
+const khmerMonths = [
+  "មករា",
+  "កុម្ភៈ",
+  "មីនា",
+  "មេសា",
+  "ឧសភា",
+  "មិថុនា",
+  "កក្កដា",
+  "សីហា",
+  "កញ្ញា",
+  "តុលា",
+  "វិច្ឆិកា",
+  "ធ្នូ",
+];
+const lunarMonths = [
+  "មិគសិរ",
+  "បុស្ស",
+  "មាឃ",
+  "ផល្គុន",
+  "ចេត្រ",
+  "ពិសាខ",
+  "ជេស្ឋ",
+  "អាសាឍ",
+  "ស្រាពណ៍",
+  "ភទ្របទ",
+  "អស្សុជ",
+  "កត្តិក",
+];
+const khmerDigits = ["០", "១", "២", "៣", "៤", "៥", "៦", "៧", "៨", "៩"];
+const defaultEvents = [
+  { color: "red", date: "2026-01-01", id: "kh-holiday-2026-01-01", title: "ទិវាចូលឆ្នាំសកល" },
+  { color: "red", date: "2026-01-07", id: "kh-holiday-2026-01-07", title: "ទិវាជ័យជម្នះលើរបបប្រល័យពូជសាសន៍" },
+  { color: "red", date: "2026-03-08", id: "kh-holiday-2026-03-08", title: "ទិវានារីអន្តរជាតិ" },
+  { color: "red", date: "2026-04-14", id: "kh-holiday-2026-04-14", title: "ចូលឆ្នាំខ្មែរ ថ្ងៃទី១" },
+  { color: "red", date: "2026-04-15", id: "kh-holiday-2026-04-15", title: "ចូលឆ្នាំខ្មែរ ថ្ងៃទី២" },
+  { color: "red", date: "2026-04-16", id: "kh-holiday-2026-04-16", title: "ចូលឆ្នាំខ្មែរ ថ្ងៃទី៣" },
+  { color: "red", date: "2026-05-01", id: "kh-holiday-2026-05-01", title: "ទិវាពលកម្មអន្តរជាតិ និងវិសាខបូជា" },
+  { color: "red", date: "2026-05-05", id: "kh-holiday-2026-05-05", title: "ព្រះរាជពិធីច្រត់ព្រះនង្គ័ល" },
+  { color: "red", date: "2026-05-14", id: "kh-holiday-2026-05-14", title: "ព្រះរាជពិធីបុណ្យចម្រើនព្រះជន្មព្រះមហាក្សត្រ" },
+  { color: "red", date: "2026-06-18", id: "kh-holiday-2026-06-18", title: "ព្រះរាជពិធីបុណ្យចម្រើនព្រះជន្មព្រះមហាក្សត្រី" },
+  { color: "red", date: "2026-09-24", id: "kh-holiday-2026-09-24", title: "ទិវារដ្ឋធម្មនុញ្ញ" },
+  { color: "red", date: "2026-10-10", id: "kh-holiday-2026-10-10", title: "បុណ្យភ្ជុំបិណ្ឌ ថ្ងៃទី១" },
+  { color: "red", date: "2026-10-11", id: "kh-holiday-2026-10-11", title: "បុណ្យភ្ជុំបិណ្ឌ ថ្ងៃទី២" },
+  { color: "red", date: "2026-10-12", id: "kh-holiday-2026-10-12", title: "បុណ្យភ្ជុំបិណ្ឌ ថ្ងៃទី៣" },
+  { color: "red", date: "2026-10-15", id: "kh-holiday-2026-10-15", title: "ទិវាប្រារព្ធព្រះបរមរតនកោដ្ឋ" },
+  { color: "red", date: "2026-10-29", id: "kh-holiday-2026-10-29", title: "ព្រះរាជពិធីគ្រងរាជ្យ" },
+  { color: "red", date: "2026-11-09", id: "kh-holiday-2026-11-09", title: "ទិវាឯករាជ្យជាតិ" },
+  { color: "red", date: "2026-11-23", id: "kh-holiday-2026-11-23", title: "បុណ្យអុំទូក ថ្ងៃទី១" },
+  { color: "red", date: "2026-11-24", id: "kh-holiday-2026-11-24", title: "បុណ្យអុំទូក ថ្ងៃទី២" },
+  { color: "red", date: "2026-11-25", id: "kh-holiday-2026-11-25", title: "បុណ្យអុំទូក ថ្ងៃទី៣" },
+  { color: "red", date: "2026-12-29", id: "kh-holiday-2026-12-29", title: "ទិវាសន្តិភាពនៅកម្ពុជា" },
+  { color: "red", date: "2027-01-01", id: "kh-holiday-2027-01-01", title: "ទិវាចូលឆ្នាំសកល" },
+  { color: "red", date: "2027-01-07", id: "kh-holiday-2027-01-07", title: "ទិវាជ័យជម្នះលើរបបប្រល័យពូជសាសន៍" },
+  { color: "red", date: "2027-03-08", id: "kh-holiday-2027-03-08", title: "ទិវានារីអន្តរជាតិ" },
+  { color: "red", date: "2027-04-14", id: "kh-holiday-2027-04-14", title: "ចូលឆ្នាំខ្មែរ ថ្ងៃទី១" },
+  { color: "red", date: "2027-04-15", id: "kh-holiday-2027-04-15", title: "ចូលឆ្នាំខ្មែរ ថ្ងៃទី២" },
+  { color: "red", date: "2027-04-16", id: "kh-holiday-2027-04-16", title: "ចូលឆ្នាំខ្មែរ ថ្ងៃទី៣" },
+  { color: "red", date: "2027-05-01", id: "kh-holiday-2027-05-01", title: "ទិវាពលកម្មអន្តរជាតិ" },
+  { color: "red", date: "2027-05-14", id: "kh-holiday-2027-05-14", title: "ព្រះរាជពិធីបុណ្យចម្រើនព្រះជន្មព្រះមហាក្សត្រ" },
+  { color: "red", date: "2027-06-18", id: "kh-holiday-2027-06-18", title: "ព្រះរាជពិធីបុណ្យចម្រើនព្រះជន្មព្រះមហាក្សត្រី" },
+  { color: "red", date: "2027-09-24", id: "kh-holiday-2027-09-24", title: "ទិវារដ្ឋធម្មនុញ្ញ" },
+  { color: "red", date: "2027-10-15", id: "kh-holiday-2027-10-15", title: "ទិវាប្រារព្ធព្រះបរមរតនកោដ្ឋ" },
+  { color: "red", date: "2027-10-29", id: "kh-holiday-2027-10-29", title: "ព្រះរាជពិធីគ្រងរាជ្យ" },
+  { color: "red", date: "2027-11-09", id: "kh-holiday-2027-11-09", title: "ទិវាឯករាជ្យជាតិ" },
+  { color: "red", date: "2027-12-29", id: "kh-holiday-2027-12-29", title: "ទិវាសន្តិភាពនៅកម្ពុជា" },
+  { color: "red", date: "2028-01-01", id: "kh-holiday-2028-01-01", title: "ទិវាចូលឆ្នាំសកល" },
+  { color: "red", date: "2028-01-07", id: "kh-holiday-2028-01-07", title: "ទិវាជ័យជម្នះលើរបបប្រល័យពូជសាសន៍" },
+  { color: "red", date: "2028-03-08", id: "kh-holiday-2028-03-08", title: "ទិវានារីអន្តរជាតិ" },
+  { color: "red", date: "2028-04-14", id: "kh-holiday-2028-04-14", title: "ចូលឆ្នាំខ្មែរ ថ្ងៃទី១" },
+  { color: "red", date: "2028-04-15", id: "kh-holiday-2028-04-15", title: "ចូលឆ្នាំខ្មែរ ថ្ងៃទី២" },
+  { color: "red", date: "2028-04-16", id: "kh-holiday-2028-04-16", title: "ចូលឆ្នាំខ្មែរ ថ្ងៃទី៣" },
+  { color: "red", date: "2028-05-01", id: "kh-holiday-2028-05-01", title: "ទិវាពលកម្មអន្តរជាតិ" },
+  { color: "red", date: "2028-05-14", id: "kh-holiday-2028-05-14", title: "ព្រះរាជពិធីបុណ្យចម្រើនព្រះជន្មព្រះមហាក្សត្រ" },
+  { color: "red", date: "2028-06-18", id: "kh-holiday-2028-06-18", title: "ព្រះរាជពិធីបុណ្យចម្រើនព្រះជន្មព្រះមហាក្សត្រី" },
+  { color: "red", date: "2028-09-24", id: "kh-holiday-2028-09-24", title: "ទិវារដ្ឋធម្មនុញ្ញ" },
+  { color: "red", date: "2028-10-15", id: "kh-holiday-2028-10-15", title: "ទិវាប្រារព្ធព្រះបរមរតនកោដ្ឋ" },
+  { color: "red", date: "2028-10-29", id: "kh-holiday-2028-10-29", title: "ព្រះរាជពិធីគ្រងរាជ្យ" },
+  { color: "red", date: "2028-11-09", id: "kh-holiday-2028-11-09", title: "ទិវាឯករាជ្យជាតិ" },
+  { color: "red", date: "2028-12-29", id: "kh-holiday-2028-12-29", title: "ទិវាសន្តិភាពនៅកម្ពុជា" },
+  { color: "red", date: "2029-01-01", id: "kh-holiday-2029-01-01", title: "ទិវាចូលឆ្នាំសកល" },
+  { color: "red", date: "2029-01-07", id: "kh-holiday-2029-01-07", title: "ទិវាជ័យជម្នះលើរបបប្រល័យពូជសាសន៍" },
+  { color: "red", date: "2029-03-08", id: "kh-holiday-2029-03-08", title: "ទិវានារីអន្តរជាតិ" },
+  { color: "red", date: "2029-04-14", id: "kh-holiday-2029-04-14", title: "ចូលឆ្នាំខ្មែរ ថ្ងៃទី១" },
+  { color: "red", date: "2029-04-15", id: "kh-holiday-2029-04-15", title: "ចូលឆ្នាំខ្មែរ ថ្ងៃទី២" },
+  { color: "red", date: "2029-04-16", id: "kh-holiday-2029-04-16", title: "ចូលឆ្នាំខ្មែរ ថ្ងៃទី៣" },
+  { color: "red", date: "2029-05-01", id: "kh-holiday-2029-05-01", title: "ទិវាពលកម្មអន្តរជាតិ" },
+  { color: "red", date: "2029-05-14", id: "kh-holiday-2029-05-14", title: "ព្រះរាជពិធីបុណ្យចម្រើនព្រះជន្មព្រះមហាក្សត្រ" },
+  { color: "red", date: "2029-06-18", id: "kh-holiday-2029-06-18", title: "ព្រះរាជពិធីបុណ្យចម្រើនព្រះជន្មព្រះមហាក្សត្រី" },
+  { color: "red", date: "2029-09-24", id: "kh-holiday-2029-09-24", title: "ទិវារដ្ឋធម្មនុញ្ញ" },
+  { color: "red", date: "2029-10-15", id: "kh-holiday-2029-10-15", title: "ទិវាប្រារព្ធព្រះបរមរតនកោដ្ឋ" },
+  { color: "red", date: "2029-10-29", id: "kh-holiday-2029-10-29", title: "ព្រះរាជពិធីគ្រងរាជ្យ" },
+  { color: "red", date: "2029-11-09", id: "kh-holiday-2029-11-09", title: "ទិវាឯករាជ្យជាតិ" },
+  { color: "red", date: "2029-12-29", id: "kh-holiday-2029-12-29", title: "ទិវាសន្តិភាពនៅកម្ពុជា" },
+];
+
+function toKhmerNumber(value) {
+  return String(value).replace(/\d/g, (digit) => khmerDigits[Number(digit)]);
+}
+
+function toDateKey(date) {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+
+  return `${year}-${month}-${day}`;
+}
+
+function getDaysInMonth(year, month) {
+  return new Date(year, month + 1, 0).getDate();
+}
+
+function getCalendarCells(year, month) {
+  const daysInMonth = getDaysInMonth(year, month);
+  const firstDay = new Date(year, month, 1).getDay();
+  const previousMonth = month === 0 ? 11 : month - 1;
+  const previousYear = month === 0 ? year - 1 : year;
+  const previousMonthDays = getDaysInMonth(previousYear, previousMonth);
+  const cells = [];
+
+  for (let index = 0; index < 42; index += 1) {
+    const dayOffset = index - firstDay + 1;
+    let cellYear = year;
+    let cellMonth = month;
+    let day = dayOffset;
+    let outside = false;
+
+    if (dayOffset < 1) {
+      cellYear = previousYear;
+      cellMonth = previousMonth;
+      day = previousMonthDays + dayOffset;
+      outside = true;
+    } else if (dayOffset > daysInMonth) {
+      cellMonth = month === 11 ? 0 : month + 1;
+      cellYear = month === 11 ? year + 1 : year;
+      day = dayOffset - daysInMonth;
+      outside = true;
+    }
+
+    const date = new Date(cellYear, cellMonth, day);
+
+    cells.push({
+      date,
+      day,
+      key: toDateKey(date),
+      outside,
+      weekday: date.getDay(),
+    });
+  }
+
+  return cells;
+}
+
+function getLunarLabel(date) {
+  const dayIndex = Math.max(0, Math.floor(date.getTime() / 86400000));
+  const day = (dayIndex % 15) + 1;
+  const phase = dayIndex % 30 < 15 ? "កើត" : "រោច";
+  const month = lunarMonths[(date.getMonth() + Math.floor(date.getDate() / 16)) % lunarMonths.length];
+
+  return `${toKhmerNumber(day)} ${phase}${day === 1 ? ` ${month}` : ""}`;
+}
+
+function formatKhmerToday(date) {
+  return `ថ្ងៃនេះ ${khmerWeekdays[date.getDay()]} ទី${toKhmerNumber(date.getDate())} ${khmerMonths[date.getMonth()]} ${toKhmerNumber(date.getFullYear())}`;
+}
+
+export default function KhmerCalendarTool() {
+  const today = new Date();
+  const [viewDate, setViewDate] = useState(() => new Date(today.getFullYear(), today.getMonth(), 1));
+  const events = defaultEvents;
+  const year = viewDate.getFullYear();
+  const month = viewDate.getMonth();
+  const cells = useMemo(() => getCalendarCells(year, month), [year, month]);
+  const eventsByDate = useMemo(() => {
+    const grouped = new Map();
+
+    for (const event of events) {
+      grouped.set(event.date, [...(grouped.get(event.date) || []), event]);
+    }
+
+    return grouped;
+  }, [events]);
+
+  function moveMonth(amount) {
+    setViewDate((current) => new Date(current.getFullYear(), current.getMonth() + amount, 1));
+  }
+
+  return (
+    <section className="khmer-calendar-tool" aria-labelledby="khmer-calendar-title">
+      <div className="khmer-calendar-toolbar">
+        <div>
+          <p className="eyebrow">Khmer Calendar</p>
+          <h1 id="khmer-calendar-title">
+            {formatKhmerToday(today)}
+          </h1>
+        </div>
+        <div className="khmer-calendar-actions">
+          <button type="button" onClick={() => moveMonth(-1)} aria-label="Previous month">
+            <ChevronLeft size={18} strokeWidth={2.3} />
+          </button>
+          <button type="button" onClick={() => setViewDate(new Date(today.getFullYear(), today.getMonth(), 1))}>
+            Today
+          </button>
+          <button type="button" onClick={() => moveMonth(1)} aria-label="Next month">
+            <ChevronRight size={18} strokeWidth={2.3} />
+          </button>
+          <button type="button" onClick={() => window.print()} aria-label="Print calendar">
+            <Printer size={17} strokeWidth={2.2} />
+          </button>
+        </div>
+      </div>
+
+      <div className="khmer-calendar-workspace">
+        <div className="khmer-calendar-sheet">
+          <div className="khmer-calendar-grid khmer-calendar-weekdays">
+            {khmerWeekdays.map((weekday) => (
+              <div key={weekday}>{weekday}</div>
+            ))}
+          </div>
+          <div className="khmer-calendar-grid">
+            {cells.map((cell) => {
+              const dayEvents = eventsByDate.get(cell.key) || [];
+              const isToday = cell.key === toDateKey(today);
+              const isWeekend = cell.weekday === 0;
+              const hasHoliday = dayEvents.length > 0;
+
+              return (
+                <div
+                  className={`khmer-calendar-cell${cell.outside ? " is-outside" : ""}${isToday ? " is-today" : ""}${isWeekend ? " is-weekend" : ""}${hasHoliday ? " has-holiday" : ""}`}
+                  key={cell.key}
+                >
+                  <div className="khmer-calendar-day">
+                    <strong>{cell.day}</strong>
+                    <span>{getLunarLabel(cell.date)}</span>
+                  </div>
+                  <div className="khmer-calendar-event-list">
+                    {dayEvents.map((event) => (
+                      <span className={`khmer-calendar-event is-${event.color}`} key={event.id}>
+                        {event.title}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+
+      </div>
+    </section>
+  );
+}

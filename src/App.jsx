@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import {
   ArrowLeft,
   BotMessageSquare,
+  CalendarDays,
   CheckSquare,
   ChevronRight,
   Copy,
@@ -19,6 +20,7 @@ import {
   X,
 } from "lucide-react";
 import CommentTool from "./components/CommentTool";
+import KhmerCalendarTool from "./components/KhmerCalendarTool";
 import ImageTools from "./components/ImageTools";
 import LogoCutTool from "./components/LogoCutTool";
 import PdfTools from "./components/PdfTools";
@@ -28,6 +30,9 @@ import SnaGptTool from "./components/SnaGptTool";
 import VideoDownloadTool from "./components/VideoDownloadTool";
 import mamLogo from "./image/mam-logo.png";
 import snaGptLogo from "./image/sna-gpt.png";
+
+const protectedActionPassword = "MAM@2026";
+const protectedPasswordMessage = "Password is not correct.";
 
 const categories = [
   {
@@ -65,6 +70,7 @@ const categories = [
     icon: FileSpreadsheet,
     tone: "excel",
     enabled: true,
+    protected: true,
     externalUrl:
       "https://megaassetmanagement-my.sharepoint.com/:x:/g/personal/phal_bunnavath_mam_com_kh/IQAW0G_7jYZLS7khZPkBFvzRAQVNj0cc1j7RS94carTvRBg?rtime=LkB8YN-23kg",
   },
@@ -112,6 +118,15 @@ const categories = [
     description: "Resize, compress, remove background, convert, crop, and enhance photos.",
     icon: FileImage,
     tone: "cyan",
+    enabled: true,
+  },
+  {
+    id: "khmer-calendar",
+    title: "Khmer Calendar",
+    tabTitle: "Khmer Calendar",
+    description: "Create and print a Khmer monthly calendar.",
+    icon: CalendarDays,
+    tone: "yellow",
     enabled: true,
   },
   {
@@ -340,7 +355,65 @@ function UserAccessModal({ onClose }) {
   );
 }
 
-function CategoryCard({ category, onOpen }) {
+function PasswordModal({ error, onClose, onSubmit }) {
+  const [password, setPassword] = useState("");
+
+  useEffect(() => {
+    function handleEscape(event) {
+      if (event.key === "Escape") {
+        onClose();
+      }
+    }
+
+    window.addEventListener("keydown", handleEscape);
+    return () => window.removeEventListener("keydown", handleEscape);
+  }, [onClose]);
+
+  function handleSubmit(event) {
+    event.preventDefault();
+    onSubmit(password);
+  }
+
+  return (
+    <div className="password-modal-backdrop" role="presentation" onMouseDown={onClose}>
+      <section
+        className="password-modal"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="password-modal-title"
+        onMouseDown={(event) => event.stopPropagation()}
+      >
+        <header className="password-modal-header">
+          <div>
+            <p className="eyebrow">Protected</p>
+            <h2 id="password-modal-title">Enter Password</h2>
+          </div>
+          <button className="access-icon-button" type="button" onClick={onClose} aria-label="Close">
+            <X size={18} strokeWidth={2.4} />
+          </button>
+        </header>
+        <form className="password-modal-form" onSubmit={handleSubmit}>
+          <label className="access-field" htmlFor="protected-password-input">
+            <span>Password</span>
+            <input
+              id="protected-password-input"
+              type="password"
+              value={password}
+              onChange={(event) => setPassword(event.target.value)}
+              autoFocus
+            />
+          </label>
+          <span className="password-modal-error">{error}</span>
+          <button className="button primary" type="submit">
+            <span>Unlock</span>
+          </button>
+        </form>
+      </section>
+    </div>
+  );
+}
+
+function CategoryCard({ category, onOpen, onProtectedOpen }) {
   const Icon = category.icon;
   const isExternal = Boolean(category.externalUrl);
   const statusText =
@@ -376,6 +449,12 @@ function CategoryCard({ category, onOpen }) {
         target="_blank"
         rel="noopener noreferrer"
         aria-label={`${statusText} ${category.title}`}
+        onClick={(event) => {
+          if (category.protected) {
+            event.preventDefault();
+            onProtectedOpen(category.externalUrl);
+          }
+        }}
       >
         {content}
       </a>
@@ -401,6 +480,36 @@ function CategoryCard({ category, onOpen }) {
 
 function Dashboard({ onOpen }) {
   const [accessModalOpen, setAccessModalOpen] = useState(false);
+  const [passwordModal, setPasswordModal] = useState(null);
+  const [passwordError, setPasswordError] = useState("");
+
+  function requestPassword(action) {
+    setPasswordError("");
+    setPasswordModal(action);
+  }
+
+  function closePasswordModal() {
+    setPasswordError("");
+    setPasswordModal(null);
+  }
+
+  function handlePasswordSubmit(password) {
+    if (password !== protectedActionPassword) {
+      setPasswordError(protectedPasswordMessage);
+      return;
+    }
+
+    const action = passwordModal;
+    closePasswordModal();
+
+    if (action?.type === "access") {
+      setAccessModalOpen(true);
+    }
+
+    if (action?.type === "external" && action.url) {
+      window.open(action.url, "_blank", "noopener,noreferrer");
+    }
+  }
 
   return (
     <section className="dashboard" aria-labelledby="dashboard-title">
@@ -421,7 +530,7 @@ function Dashboard({ onOpen }) {
         <button
           className="access-generator-button"
           type="button"
-          onClick={() => setAccessModalOpen(true)}
+          onClick={() => requestPassword({ type: "access" })}
           aria-label="Generate user access information"
           title="Generate user access information"
         >
@@ -430,10 +539,22 @@ function Dashboard({ onOpen }) {
       </header>
 
       {accessModalOpen ? <UserAccessModal onClose={() => setAccessModalOpen(false)} /> : null}
+      {passwordModal ? (
+        <PasswordModal
+          error={passwordError}
+          onClose={closePasswordModal}
+          onSubmit={handlePasswordSubmit}
+        />
+      ) : null}
 
       <div className="category-grid">
         {categories.map((category) => (
-          <CategoryCard key={category.id} category={category} onOpen={onOpen} />
+          <CategoryCard
+            key={category.id}
+            category={category}
+            onOpen={onOpen}
+            onProtectedOpen={(url) => requestPassword({ type: "external", url })}
+          />
         ))}
       </div>
 
@@ -506,7 +627,8 @@ function ToolView({ activeId, onBack }) {
       {activeId === "sna-gpt" ? <SnaGptTool onBack={onBack} /> : null}
       {activeId === "comment" ? <CommentTool /> : null}
       {activeId === "video-download" ? <VideoDownloadTool /> : null}
-      {activeId !== "timer" && activeId !== "qr" && activeId !== "pdf" && activeId !== "image" && activeId !== "logo-cut" && activeId !== "scan-text" && activeId !== "sna-gpt" && activeId !== "comment" && activeId !== "video-download" ? (
+      {activeId === "khmer-calendar" ? <KhmerCalendarTool /> : null}
+      {activeId !== "timer" && activeId !== "qr" && activeId !== "pdf" && activeId !== "image" && activeId !== "logo-cut" && activeId !== "scan-text" && activeId !== "sna-gpt" && activeId !== "comment" && activeId !== "video-download" && activeId !== "khmer-calendar" ? (
         <PlaceholderTool category={category} />
       ) : null}
     </section>
