@@ -7,7 +7,14 @@ const defaultFallbackModels = ["gemini-2.5-flash-lite"];
 const publicModelName = "SNA Version 26.5 Pro";
 const fallbackPublicModelName = "SNA Version 26.5 Free";
 const maxMessages = 24;
-const maxMessageLength = 8000;
+const maxMessageLength = Math.max(
+  8000,
+  Number(process.env.SNA_GPT_MAX_INPUT_CHARS || 5_000_000),
+);
+const maxOutputTokens = Math.max(
+  2048,
+  Number(process.env.SNA_GPT_MAX_OUTPUT_TOKENS || 90_000),
+);
 const maxAttachments = 6;
 const maxAttachmentBase64Length = 6_000_000;
 const maxAttachmentTextLength = 260000;
@@ -572,7 +579,7 @@ async function generateContent({ apiKey, contents, model, responseMode }) {
     body: JSON.stringify({
       contents,
       generationConfig: {
-        maxOutputTokens: 2048,
+        maxOutputTokens,
         temperature: 0.7,
         topP: 0.95,
       },

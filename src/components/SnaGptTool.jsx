@@ -55,6 +55,7 @@ const dailyMessageLimit = Math.max(
 const maxAttachments = 6;
 const maxBinaryFileBytes = 4 * 1024 * 1024;
 const maxTextFileBytes = 1.2 * 1024 * 1024;
+const maxPromptLength = 5_000_000;
 const maxTextAttachmentLength = 260000;
 const supportedAttachmentTypes =
   "image/*,application/pdf,.pdf,.docx,.txt,.csv,.md,.json,.html,.xml,.log";
@@ -1685,7 +1686,7 @@ export default function SnaGptTool({ onBack }) {
               <textarea
                 ref={textareaRef}
                 aria-label="Message SNA GPT"
-                maxLength={6000}
+                maxLength={maxPromptLength}
                 onChange={(event) => setDraft(event.target.value)}
                 onKeyDown={handleKeyDown}
                 placeholder="Message SNA GPT"
