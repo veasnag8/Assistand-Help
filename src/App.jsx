@@ -16,7 +16,7 @@ import {
   QrCode,
   ScanText as ScanTextIcon,
   Scissors,
-  UserRound,
+  Sparkles,
   X,
 } from "lucide-react";
 import CommentTool from "./components/CommentTool";
@@ -558,7 +558,7 @@ function Dashboard({ onOpen }) {
             aria-label="Generate user access information"
             title="Generate user access information"
           >
-            <UserRound size={22} strokeWidth={2.2} />
+            <Sparkles size={22} strokeWidth={2.2} />
           </button>
         </div>
       </header>

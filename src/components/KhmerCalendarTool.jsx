@@ -47,6 +47,18 @@ const khmerZodiacYears = [
   "ច",
   "កុរ",
 ];
+const khmerSakYears = [
+  "ឯកស័ក",
+  "ទោស័ក",
+  "ត្រីស័ក",
+  "ចត្វាស័ក",
+  "បញ្ចស័ក",
+  "ឆស័ក",
+  "សប្តស័ក",
+  "អដ្ឋស័ក",
+  "នព្វស័ក",
+  "សំរឹទ្ធិស័ក",
+];
 const khmerLunarMonthRanges = [
   "បុស្ស - មាឃ",
   "មាឃ - ផល្គុន",
@@ -207,6 +219,24 @@ function getLunarLabel(date) {
   return `${toKhmerNumber(day)} ${phase}${day === 1 ? ` ${month}` : ""}`;
 }
 
+function getKhmerLunarDateParts(date) {
+  const lunarDate = lunar(date);
+  const day = lunarDate.period[0];
+  const phase = lunarDate.period[1] === "K" ? "កើត" : "រោច";
+  const month = khmercalMonthNames[lunarDate.month.name] || lunarDate.month.name;
+  const zodiacYear = khmerZodiacYears[(date.getFullYear() - 2026 + 6) % khmerZodiacYears.length];
+  const sakYear = khmerSakYears[lunarDate.sequence] || "";
+
+  return {
+    buddhistYear: lunarDate.years.BE,
+    day,
+    month,
+    phase,
+    sakYear,
+    zodiacYear,
+  };
+}
+
 function getSilDayEvent(date) {
   const lunarDay = lunar(date).period[0];
 
@@ -225,7 +255,14 @@ function getSilDayEvent(date) {
 }
 
 function formatKhmerToday(date) {
-  return `ថ្ងៃនេះ ${khmerWeekdays[date.getDay()]} ទី${toKhmerNumber(date.getDate())} ${khmerMonths[date.getMonth()]} ${toKhmerNumber(date.getFullYear())}`;
+  const lunarDate = getKhmerLunarDateParts(date);
+  const lunarText = `${toKhmerNumber(lunarDate.day)}${lunarDate.phase} ខែ${lunarDate.month}`;
+  const solarText = `ត្រូវនឹងថ្ងៃទី${toKhmerNumber(date.getDate())} ខែ${khmerMonths[date.getMonth()]} ឆ្នាំ${toKhmerNumber(date.getFullYear())}`;
+
+  return {
+    lunar: `ថ្ងៃ${khmerWeekdays[date.getDay()]} ${lunarText} ឆ្នាំ${lunarDate.zodiacYear} ${lunarDate.sakYear}`,
+    solar: `${solarText} ពុទ្ធសករាជ ${toKhmerNumber(lunarDate.buddhistYear)}`,
+  };
 }
 
 function formatKhmerEraDate(date) {
@@ -255,6 +292,7 @@ export default function KhmerCalendarTool() {
   const year = viewDate.getFullYear();
   const month = viewDate.getMonth();
   const viewEraDate = new Date(year, month, 1);
+  const todayLabel = formatKhmerToday(today);
   const cells = useMemo(() => getCalendarCells(year, month), [year, month]);
   const eventsByDate = useMemo(() => {
     const grouped = new Map();
@@ -317,8 +355,9 @@ export default function KhmerCalendarTool() {
         <div>
           <p className="eyebrow">Khmer Calendar</p>
           <h1 id="khmer-calendar-title">
-            {formatKhmerToday(today)}
+            {todayLabel.lunar}
           </h1>
+          <p className="khmer-calendar-solar-date">{todayLabel.solar}</p>
           <div className="khmer-calendar-date-systems">
             <span>{formatKhmerEraDate(viewEraDate)}</span>
           </div>

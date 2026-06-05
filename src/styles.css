@@ -646,9 +646,9 @@ img {
 .khmer-calendar-toolbar {
   min-height: 62px;
   display: grid;
-  grid-template-columns: minmax(260px, 1fr) auto minmax(220px, 1fr);
+  grid-template-columns: minmax(360px, 1.25fr) minmax(150px, auto) minmax(220px, 0.85fr);
   align-items: center;
-  gap: 12px;
+  gap: 18px;
   border: 1px solid rgba(9, 16, 71, 0.08);
   border-radius: 16px;
   background: rgba(255, 255, 255, 0.86);
@@ -663,15 +663,26 @@ img {
 
 .khmer-calendar-toolbar h1 {
   color: #064e3b;
-  font-size: clamp(0.95rem, 1.5vw, 1.2rem);
-  line-height: 1.05;
+  max-width: 520px;
+  font-size: clamp(0.92rem, 1.35vw, 1.08rem);
+  line-height: 1.25;
+  text-wrap: balance;
+}
+
+.khmer-calendar-solar-date {
+  margin-top: 2px;
+  color: #334155;
+  font-family: "Noto Sans Khmer", "Manrope", sans-serif;
+  font-size: 0.78rem;
+  font-weight: 850;
+  line-height: 1.3;
 }
 
 .khmer-calendar-date-systems {
   display: flex;
   flex-wrap: wrap;
   gap: 6px 12px;
-  margin-top: 5px;
+  margin-top: 3px;
   color: #475569;
   font-family: "Noto Sans Khmer", "Manrope", sans-serif;
   font-size: 0.76rem;
@@ -682,7 +693,7 @@ img {
 .khmer-calendar-view-title {
   min-width: 180px;
   color: #064e3b;
-  font-family: "Noto Sans Khmer", "Manrope", sans-serif;
+  font-family: "Khmer OS Muol Light", "Noto Sans Khmer", "Manrope", sans-serif;
   font-size: clamp(1.15rem, 2.1vw, 1.8rem);
   font-weight: 950;
   line-height: 1.1;
@@ -695,6 +706,7 @@ img {
   align-items: center;
   justify-content: flex-end;
   gap: 7px;
+  min-width: 0;
 }
 
 .khmer-calendar-actions button {
@@ -741,7 +753,7 @@ img {
   place-items: center;
   background: #facc15;
   color: #422006;
-  font-family: "Noto Sans Khmer", "Manrope", sans-serif;
+  font-family: "Khmer OS Muol Light", "Noto Sans Khmer", "Manrope", sans-serif;
   font-size: clamp(0.98rem, 1.6vw, 1.22rem);
   font-weight: 900;
   border-bottom: 1px solid rgba(9, 16, 71, 0.08);
@@ -4545,8 +4557,18 @@ button.khmer-calendar-cell:hover {
   }
 
   .khmer-calendar-toolbar {
+    grid-template-columns: 1fr;
     align-items: stretch;
-    flex-direction: column;
+  }
+
+  .khmer-calendar-toolbar h1 {
+    max-width: none;
+  }
+
+  .khmer-calendar-view-title,
+  .khmer-calendar-actions {
+    justify-content: flex-start;
+    text-align: left;
   }
 
   .khmer-calendar-actions {
