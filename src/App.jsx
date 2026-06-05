@@ -33,6 +33,7 @@ import snaGptLogo from "./image/sna-gpt.png";
 
 const protectedActionPassword = "MAM@2026";
 const protectedPasswordMessage = "Password is not correct.";
+const protectedPasswordMaxAttempts = 3;
 
 const categories = [
   {
@@ -482,20 +483,33 @@ function Dashboard({ onOpen }) {
   const [accessModalOpen, setAccessModalOpen] = useState(false);
   const [passwordModal, setPasswordModal] = useState(null);
   const [passwordError, setPasswordError] = useState("");
+  const [passwordAttempts, setPasswordAttempts] = useState(0);
 
   function requestPassword(action) {
     setPasswordError("");
+    setPasswordAttempts(0);
     setPasswordModal(action);
   }
 
   function closePasswordModal() {
     setPasswordError("");
+    setPasswordAttempts(0);
     setPasswordModal(null);
   }
 
   function handlePasswordSubmit(password) {
     if (password !== protectedActionPassword) {
-      setPasswordError(protectedPasswordMessage);
+      const nextAttempts = passwordAttempts + 1;
+
+      if (nextAttempts >= protectedPasswordMaxAttempts) {
+        setPasswordError("");
+        setPasswordAttempts(0);
+        setPasswordModal(null);
+        return;
+      }
+
+      setPasswordAttempts(nextAttempts);
+      setPasswordError(`${protectedPasswordMessage} ${protectedPasswordMaxAttempts - nextAttempts} tries left.`);
       return;
     }
 
@@ -527,15 +541,26 @@ function Dashboard({ onOpen }) {
           ))}
         </div>
 
-        <button
-          className="access-generator-button"
-          type="button"
-          onClick={() => requestPassword({ type: "access" })}
-          aria-label="Generate user access information"
-          title="Generate user access information"
-        >
-          <UserRound size={22} strokeWidth={2.2} />
-        </button>
+        <div className="dashboard-icon-actions">
+          <button
+            className="dashboard-icon-button calendar-shortcut-button"
+            type="button"
+            onClick={() => onOpen("khmer-calendar")}
+            aria-label="Open Khmer Calendar"
+            title="Khmer Calendar"
+          >
+            <CalendarDays size={22} strokeWidth={2.2} />
+          </button>
+          <button
+            className="dashboard-icon-button access-generator-button"
+            type="button"
+            onClick={() => setAccessModalOpen(true)}
+            aria-label="Generate user access information"
+            title="Generate user access information"
+          >
+            <UserRound size={22} strokeWidth={2.2} />
+          </button>
+        </div>
       </header>
 
       {accessModalOpen ? <UserAccessModal onClose={() => setAccessModalOpen(false)} /> : null}
@@ -548,7 +573,7 @@ function Dashboard({ onOpen }) {
       ) : null}
 
       <div className="category-grid">
-        {categories.map((category) => (
+        {categories.filter((category) => category.id !== "khmer-calendar").map((category) => (
           <CategoryCard
             key={category.id}
             category={category}
