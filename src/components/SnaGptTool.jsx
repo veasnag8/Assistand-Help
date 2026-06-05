@@ -1200,6 +1200,8 @@ export default function SnaGptTool({ onBack }) {
     () => [...messages].reverse().find((message) => message.role === "assistant"),
     [messages],
   );
+  const latestMessage = messages[messages.length - 1];
+  const canContinue = latestMessage?.role === "assistant" && !busy;
   const activeResponseMode = responseModes.find((mode) => mode.id === responseMode) || responseModes[1];
 
   useEffect(() => {
@@ -1464,6 +1466,10 @@ export default function SnaGptTool({ onBack }) {
     submitMessage();
   }
 
+  function handleContinue() {
+    submitMessage("continue");
+  }
+
   function handleKeyDown(event) {
     if (event.key === "Enter" && !event.shiftKey) {
       event.preventDefault();
@@ -1669,6 +1675,13 @@ export default function SnaGptTool({ onBack }) {
             </div>
           ) : null}
           <div className="sna-composer-main">
+            {canContinue ? (
+              <div className="sna-quick-actions" aria-label="Quick actions">
+                <button type="button" onClick={handleContinue}>
+                  Continue
+                </button>
+              </div>
+            ) : null}
             {attachments.length ? (
               <AttachmentList attachments={attachments} onRemove={removeAttachment} />
             ) : null}
