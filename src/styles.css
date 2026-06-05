@@ -645,9 +645,9 @@ img {
 
 .khmer-calendar-toolbar {
   min-height: 62px;
-  display: flex;
+  display: grid;
+  grid-template-columns: minmax(260px, 1fr) auto minmax(220px, 1fr);
   align-items: center;
-  justify-content: space-between;
   gap: 12px;
   border: 1px solid rgba(9, 16, 71, 0.08);
   border-radius: 16px;
@@ -667,9 +667,33 @@ img {
   line-height: 1.05;
 }
 
+.khmer-calendar-date-systems {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 12px;
+  margin-top: 5px;
+  color: #475569;
+  font-family: "Noto Sans Khmer", "Manrope", sans-serif;
+  font-size: 0.76rem;
+  font-weight: 850;
+  line-height: 1.35;
+}
+
+.khmer-calendar-view-title {
+  min-width: 180px;
+  color: #064e3b;
+  font-family: "Noto Sans Khmer", "Manrope", sans-serif;
+  font-size: clamp(1.15rem, 2.1vw, 1.8rem);
+  font-weight: 950;
+  line-height: 1.1;
+  text-align: center;
+  white-space: nowrap;
+}
+
 .khmer-calendar-actions {
   display: flex;
   align-items: center;
+  justify-content: flex-end;
   gap: 7px;
 }
 
@@ -787,8 +811,8 @@ button.khmer-calendar-cell:hover {
   color: #422006;
 }
 
-.khmer-calendar-cell.has-holiday:not(.is-weekend) .khmer-calendar-day strong,
-.khmer-calendar-cell.has-holiday:not(.is-weekend) .khmer-calendar-day span {
+.khmer-calendar-cell.has-holiday .khmer-calendar-day strong,
+.khmer-calendar-cell.has-holiday .khmer-calendar-day span {
   color: #ef1919;
 }
 

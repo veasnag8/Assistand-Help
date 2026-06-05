@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { ChevronLeft, ChevronRight, Printer, Trash2, X } from "lucide-react";
+import { lunar } from "khmercal";
 
 const khmerWeekdays = ["អាទិត្យ", "ចន្ទ", "អង្គារ", "ពុធ", "ព្រហ", "សុក្រ", "សៅរ៍"];
 const khmerMonths = [
@@ -16,25 +17,58 @@ const khmerMonths = [
   "វិច្ឆិកា",
   "ធ្នូ",
 ];
-const lunarMonths = [
-  "មិគសិរ",
-  "បុស្ស",
-  "មាឃ",
-  "ផល្គុន",
-  "ចេត្រ",
-  "ពិសាខ",
-  "ជេស្ឋ",
-  "អាសាឍ",
-  "ស្រាពណ៍",
-  "ភទ្របទ",
-  "អស្សុជ",
-  "កត្តិក",
+const khmercalMonthNames = {
+  "MĬKÔSĔR": "មិគសិរ",
+  "BŎSS": "បុស្ស",
+  "MÉAKH": "មាឃ",
+  "PHÂLKŬN": "ផល្គុន",
+  "CHÉTR": "ចេត្រ",
+  "VĬSAKH": "ពិសាខ",
+  "CHÉSTH": "ជេស្ឋ",
+  "ASATH": "អាសាឍ",
+  "BÂTHÂMSATH": "បឋមាសាឍ",
+  "TŬTĔYÉASATH": "ទុតិយាសាឍ",
+  "SRAPÔNÂ": "ស្រាពណ៍",
+  "PHÔTRÔBÂT": "ភទ្របទ",
+  "ÂSSŎCH": "អស្សុជ",
+  "KÂTDĔK": "កត្តិក",
+};
+const khmerZodiacYears = [
+  "ជូត",
+  "ឆ្លូវ",
+  "ខាល",
+  "ថោះ",
+  "រោង",
+  "ម្សាញ់",
+  "មមី",
+  "មមែ",
+  "វក",
+  "រកា",
+  "ច",
+  "កុរ",
+];
+const khmerLunarMonthRanges = [
+  "បុស្ស - មាឃ",
+  "មាឃ - ផល្គុន",
+  "ផល្គុន - ចេត្រ",
+  "ចេត្រ - ពិសាខ",
+  "ពិសាខ - ជេស្ឋ",
+  "ជេស្ឋ - បឋមាសាឍ",
+  "បឋមាសាឍ - ទុតិយាសាឍ",
+  "ទុតិយាសាឍ - ស្រាពណ៍",
+  "ស្រាពណ៍ - ភទ្របទ",
+  "ភទ្របទ - អស្សុជ",
+  "អស្សុជ - កត្តិក",
+  "កត្តិក - មិគសិរ",
 ];
 const khmerDigits = ["០", "១", "២", "៣", "៤", "៥", "៦", "៧", "៨", "៩"];
 const personalNotesStorageKey = "khmer-calendar-personal-notes-v1";
 const defaultEvents = [
   { color: "red", date: "2026-01-01", id: "kh-holiday-2026-01-01", title: "ទិវាចូលឆ្នាំសកល" },
   { color: "red", date: "2026-01-07", id: "kh-holiday-2026-01-07", title: "ទិវាជ័យជម្នះលើរបបប្រល័យពូជសាសន៍" },
+  { color: "red", date: "2026-02-16", id: "cn-new-year-eve-2026-02-16", title: "សែនចូលឆ្នាំចិន" },
+  { color: "red", date: "2026-02-17", id: "cn-new-year-2026-02-17", title: "ចូលឆ្នាំចិន" },
+  { color: "red", date: "2026-02-18", id: "cn-new-year-day-2-2026-02-18", title: "ចូលឆ្នាំចិន ថ្ងៃទី២" },
   { color: "red", date: "2026-03-08", id: "kh-holiday-2026-03-08", title: "ទិវានារីអន្តរជាតិ" },
   { color: "red", date: "2026-04-14", id: "kh-holiday-2026-04-14", title: "ចូលឆ្នាំខ្មែរ ថ្ងៃទី១" },
   { color: "red", date: "2026-04-15", id: "kh-holiday-2026-04-15", title: "ចូលឆ្នាំខ្មែរ ថ្ងៃទី២" },
@@ -56,6 +90,9 @@ const defaultEvents = [
   { color: "red", date: "2026-12-29", id: "kh-holiday-2026-12-29", title: "ទិវាសន្តិភាពនៅកម្ពុជា" },
   { color: "red", date: "2027-01-01", id: "kh-holiday-2027-01-01", title: "ទិវាចូលឆ្នាំសកល" },
   { color: "red", date: "2027-01-07", id: "kh-holiday-2027-01-07", title: "ទិវាជ័យជម្នះលើរបបប្រល័យពូជសាសន៍" },
+  { color: "red", date: "2027-02-05", id: "cn-new-year-eve-2027-02-05", title: "សែនចូលឆ្នាំចិន" },
+  { color: "red", date: "2027-02-06", id: "cn-new-year-2027-02-06", title: "ចូលឆ្នាំចិន" },
+  { color: "red", date: "2027-02-07", id: "cn-new-year-day-2-2027-02-07", title: "ចូលឆ្នាំចិន ថ្ងៃទី២" },
   { color: "red", date: "2027-03-08", id: "kh-holiday-2027-03-08", title: "ទិវានារីអន្តរជាតិ" },
   { color: "red", date: "2027-04-14", id: "kh-holiday-2027-04-14", title: "ចូលឆ្នាំខ្មែរ ថ្ងៃទី១" },
   { color: "red", date: "2027-04-15", id: "kh-holiday-2027-04-15", title: "ចូលឆ្នាំខ្មែរ ថ្ងៃទី២" },
@@ -70,6 +107,9 @@ const defaultEvents = [
   { color: "red", date: "2027-12-29", id: "kh-holiday-2027-12-29", title: "ទិវាសន្តិភាពនៅកម្ពុជា" },
   { color: "red", date: "2028-01-01", id: "kh-holiday-2028-01-01", title: "ទិវាចូលឆ្នាំសកល" },
   { color: "red", date: "2028-01-07", id: "kh-holiday-2028-01-07", title: "ទិវាជ័យជម្នះលើរបបប្រល័យពូជសាសន៍" },
+  { color: "red", date: "2028-01-25", id: "cn-new-year-eve-2028-01-25", title: "សែនចូលឆ្នាំចិន" },
+  { color: "red", date: "2028-01-26", id: "cn-new-year-2028-01-26", title: "ចូលឆ្នាំចិន" },
+  { color: "red", date: "2028-01-27", id: "cn-new-year-day-2-2028-01-27", title: "ចូលឆ្នាំចិន ថ្ងៃទី២" },
   { color: "red", date: "2028-03-08", id: "kh-holiday-2028-03-08", title: "ទិវានារីអន្តរជាតិ" },
   { color: "red", date: "2028-04-14", id: "kh-holiday-2028-04-14", title: "ចូលឆ្នាំខ្មែរ ថ្ងៃទី១" },
   { color: "red", date: "2028-04-15", id: "kh-holiday-2028-04-15", title: "ចូលឆ្នាំខ្មែរ ថ្ងៃទី២" },
@@ -84,6 +124,9 @@ const defaultEvents = [
   { color: "red", date: "2028-12-29", id: "kh-holiday-2028-12-29", title: "ទិវាសន្តិភាពនៅកម្ពុជា" },
   { color: "red", date: "2029-01-01", id: "kh-holiday-2029-01-01", title: "ទិវាចូលឆ្នាំសកល" },
   { color: "red", date: "2029-01-07", id: "kh-holiday-2029-01-07", title: "ទិវាជ័យជម្នះលើរបបប្រល័យពូជសាសន៍" },
+  { color: "red", date: "2029-02-12", id: "cn-new-year-eve-2029-02-12", title: "សែនចូលឆ្នាំចិន" },
+  { color: "red", date: "2029-02-13", id: "cn-new-year-2029-02-13", title: "ចូលឆ្នាំចិន" },
+  { color: "red", date: "2029-02-14", id: "cn-new-year-day-2-2029-02-14", title: "ចូលឆ្នាំចិន ថ្ងៃទី២" },
   { color: "red", date: "2029-03-08", id: "kh-holiday-2029-03-08", title: "ទិវានារីអន្តរជាតិ" },
   { color: "red", date: "2029-04-14", id: "kh-holiday-2029-04-14", title: "ចូលឆ្នាំខ្មែរ ថ្ងៃទី១" },
   { color: "red", date: "2029-04-15", id: "kh-holiday-2029-04-15", title: "ចូលឆ្នាំខ្មែរ ថ្ងៃទី២" },
@@ -156,16 +199,40 @@ function getCalendarCells(year, month) {
 }
 
 function getLunarLabel(date) {
-  const dayIndex = Math.max(0, Math.floor(date.getTime() / 86400000));
-  const day = (dayIndex % 15) + 1;
-  const phase = dayIndex % 30 < 15 ? "កើត" : "រោច";
-  const month = lunarMonths[(date.getMonth() + Math.floor(date.getDate() / 16)) % lunarMonths.length];
+  const lunarDate = lunar(date);
+  const day = lunarDate.period[0];
+  const phase = lunarDate.period[1] === "K" ? "កើត" : "រោច";
+  const month = khmercalMonthNames[lunarDate.month.name] || lunarDate.month.name;
 
   return `${toKhmerNumber(day)} ${phase}${day === 1 ? ` ${month}` : ""}`;
 }
 
+function getSilDayEvent(date) {
+  const lunarDay = lunar(date).period[0];
+
+  if (lunarDay !== 8 && lunarDay !== 15) {
+    return null;
+  }
+
+  const dateKey = toDateKey(date);
+
+  return {
+    color: "blue",
+    date: dateKey,
+    id: `sil-day-${dateKey}`,
+    title: "ថ្ងៃសីល",
+  };
+}
+
 function formatKhmerToday(date) {
   return `ថ្ងៃនេះ ${khmerWeekdays[date.getDay()]} ទី${toKhmerNumber(date.getDate())} ${khmerMonths[date.getMonth()]} ${toKhmerNumber(date.getFullYear())}`;
+}
+
+function formatKhmerEraDate(date) {
+  const buddhistYear = date.getFullYear() + 544;
+  const zodiacYear = khmerZodiacYears[(date.getFullYear() - 2026 + 6) % khmerZodiacYears.length];
+
+  return `${khmerLunarMonthRanges[date.getMonth()]} ឆ្នាំ${zodiacYear} ព.ស. ${toKhmerNumber(buddhistYear)}`;
 }
 
 function loadPersonalNotes() {
@@ -187,6 +254,7 @@ export default function KhmerCalendarTool() {
   const events = defaultEvents;
   const year = viewDate.getFullYear();
   const month = viewDate.getMonth();
+  const viewEraDate = new Date(year, month, 1);
   const cells = useMemo(() => getCalendarCells(year, month), [year, month]);
   const eventsByDate = useMemo(() => {
     const grouped = new Map();
@@ -251,6 +319,12 @@ export default function KhmerCalendarTool() {
           <h1 id="khmer-calendar-title">
             {formatKhmerToday(today)}
           </h1>
+          <div className="khmer-calendar-date-systems">
+            <span>{formatKhmerEraDate(viewEraDate)}</span>
+          </div>
+        </div>
+        <div className="khmer-calendar-view-title" aria-live="polite">
+          {khmerMonths[month]} {toKhmerNumber(year)}
         </div>
         <div className="khmer-calendar-actions">
           <button type="button" onClick={() => moveMonth(-1)} aria-label="Previous month">
@@ -277,10 +351,12 @@ export default function KhmerCalendarTool() {
           </div>
           <div className="khmer-calendar-grid">
             {cells.map((cell) => {
-              const dayEvents = eventsByDate.get(cell.key) || [];
+              const fixedEvents = eventsByDate.get(cell.key) || [];
+              const silDayEvent = getSilDayEvent(cell.date);
+              const dayEvents = cell.outside ? [] : [...fixedEvents, ...(silDayEvent ? [silDayEvent] : [])];
               const isToday = cell.key === toDateKey(today);
               const isWeekend = cell.weekday === 0;
-              const hasHoliday = dayEvents.length > 0;
+              const hasHoliday = !cell.outside && fixedEvents.length > 0;
               const personalNote = personalNotes[cell.key] || "";
 
               return (
