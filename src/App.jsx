@@ -17,8 +17,10 @@ import {
   ScanText as ScanTextIcon,
   Scissors,
   Sparkles,
+  Workflow,
   X,
 } from "lucide-react";
+import AcumaticaFlowTool from "./components/AcumaticaFlowTool";
 import CommentTool from "./components/CommentTool";
 import KhmerCalendarTool from "./components/KhmerCalendarTool";
 import ImageTools from "./components/ImageTools";
@@ -28,22 +30,35 @@ import QrStudio from "./components/QrStudio";
 import ScanTextTool from "./components/ScanTextTool";
 import SnaGptTool from "./components/SnaGptTool";
 import VideoDownloadTool from "./components/VideoDownloadTool";
+import acumaticaLogo from "./image/acumatica-logo-transparent.png";
 import mamLogo from "./image/mam-logo.png";
 import snaGptLogo from "./image/sna-gpt.png";
 
 const protectedActionPassword = "MAM@2026";
 const protectedPasswordMessage = "Password is not correct.";
 const protectedPasswordMaxAttempts = 3;
-
 const categories = [
   {
-    id: "timer",
-    title: "Set Timer",
-    tabTitle: "Timer",
-    description: "Set classroom timer for activities.",
-    icon: Clock3,
-    tone: "purple",
+    id: "acumatica-flow",
+    title: "Acumatica Flow",
+    tabTitle: "Acumatica Flow",
+    description: "View process flow and team access rights in Acumatica. Last update: 06/05/22.",
+    icon: Workflow,
+    logo: acumaticaLogo,
+    tone: "slate",
     enabled: true,
+  },
+  {
+    id: "master-list-boq",
+    title: "Master List BOQ",
+    tabTitle: "Master List BOQ",
+    description: "Open the shared BOQ master list workbook.",
+    icon: FileSpreadsheet,
+    tone: "excel",
+    enabled: true,
+    protected: true,
+    externalUrl:
+      "https://megaassetmanagement-my.sharepoint.com/:x:/g/personal/phal_bunnavath_mam_com_kh/IQAW0G_7jYZLS7khZPkBFvzRAQVNj0cc1j7RS94carTvRBg?rtime=LkB8YN-23kg",
   },
   {
     id: "qr",
@@ -64,16 +79,13 @@ const categories = [
     enabled: true,
   },
   {
-    id: "master-list-boq",
-    title: "Master List BOQ",
-    tabTitle: "Master List BOQ",
-    description: "Open the shared BOQ master list workbook.",
-    icon: FileSpreadsheet,
-    tone: "excel",
+    id: "timer",
+    title: "Set Timer",
+    tabTitle: "Timer",
+    description: "Set classroom timer for activities.",
+    icon: Clock3,
+    tone: "purple",
     enabled: true,
-    protected: true,
-    externalUrl:
-      "https://megaassetmanagement-my.sharepoint.com/:x:/g/personal/phal_bunnavath_mam_com_kh/IQAW0G_7jYZLS7khZPkBFvzRAQVNj0cc1j7RS94carTvRBg?rtime=LkB8YN-23kg",
   },
   {
     id: "scan-text",
@@ -153,6 +165,7 @@ const toneColors = {
   teal: "#0f766e",
   indigo: "#2563eb",
   yellow: "#f4b400",
+  slate: "#475569",
 };
 
 function getCategoryById(id) {
@@ -647,7 +660,8 @@ function ToolView({ activeId, onBack }) {
       {activeId === "comment" ? <CommentTool /> : null}
       {activeId === "video-download" ? <VideoDownloadTool /> : null}
       {activeId === "khmer-calendar" ? <KhmerCalendarTool /> : null}
-      {activeId !== "timer" && activeId !== "qr" && activeId !== "pdf" && activeId !== "image" && activeId !== "logo-cut" && activeId !== "scan-text" && activeId !== "sna-gpt" && activeId !== "comment" && activeId !== "video-download" && activeId !== "khmer-calendar" ? (
+      {activeId === "acumatica-flow" ? <AcumaticaFlowTool /> : null}
+      {activeId !== "timer" && activeId !== "qr" && activeId !== "pdf" && activeId !== "image" && activeId !== "logo-cut" && activeId !== "scan-text" && activeId !== "sna-gpt" && activeId !== "comment" && activeId !== "video-download" && activeId !== "khmer-calendar" && activeId !== "acumatica-flow" ? (
         <PlaceholderTool category={category} />
       ) : null}
     </section>

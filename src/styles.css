@@ -618,6 +618,179 @@ img {
   --tone-soft: #fff6dd;
 }
 
+.tone-slate {
+  --tone: #475569;
+  --tone-soft: #eef2f7;
+}
+
+.tool-view--acumatica-flow {
+  gap: 10px;
+}
+
+.app-layout.is-acumatica-flow-view {
+  max-width: 1380px;
+}
+
+.acumatica-flow-tool {
+  display: grid;
+  gap: 14px;
+}
+
+.acumatica-flow-tabs {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+  gap: 8px;
+  overflow: visible;
+  border: 1px solid rgba(9, 16, 71, 0.08);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.86);
+  box-shadow: 0 12px 26px rgba(39, 45, 88, 0.08);
+  padding: 10px;
+}
+
+.acumatica-flow-tabs button {
+  min-height: 40px;
+  border: 1px solid rgba(9, 16, 71, 0.1);
+  border-radius: 6px;
+  background: #fff;
+  color: #091047;
+  width: 100%;
+  padding: 0 14px;
+  font-size: 0.76rem;
+  font-weight: 850;
+  line-height: 1.25;
+  white-space: normal;
+  text-align: center;
+}
+
+.acumatica-flow-tabs button.is-active {
+  border-color: #1d4ed8;
+  background: #1d4ed8;
+  color: #fff;
+}
+
+.acumatica-flow-table-wrap {
+  overflow: auto;
+  max-height: calc(100vh - 220px);
+  min-height: 520px;
+  border: 1px solid rgba(9, 16, 71, 0.1);
+  border-radius: 8px;
+  background: #fff;
+  box-shadow: 0 14px 28px rgba(39, 45, 88, 0.08);
+}
+
+.acumatica-flow-table {
+  width: 100%;
+  min-width: 860px;
+  border-spacing: 0;
+  border-collapse: collapse;
+  font-size: 0.78rem;
+}
+
+.acumatica-flow-table th,
+.acumatica-flow-table td {
+  border: 0;
+  border-bottom: 1px solid rgba(15, 23, 42, 0.1);
+  padding: 7px 8px;
+  text-align: left;
+  vertical-align: top;
+}
+
+.acumatica-flow-table th {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  background: #0f172a;
+  color: #fff;
+  text-align: left;
+  font-size: 0.72rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.acumatica-flow-table td:nth-child(1) {
+  width: 42px;
+  text-align: center;
+  font-weight: 900;
+}
+
+.acumatica-flow-table td:nth-child(2) {
+  width: 150px;
+  background: #f8fafc;
+  font-weight: 900;
+}
+
+.acumatica-flow-table td:nth-child(5),
+.acumatica-flow-table td:nth-child(6) {
+  color: #0047ff;
+  font-weight: 750;
+}
+
+.acumatica-flow-table tr.team-tone-admin td {
+  background: rgba(22, 163, 74, 0.07);
+}
+
+.acumatica-flow-table tr.team-tone-pd td {
+  background: rgba(37, 99, 235, 0.07);
+}
+
+.acumatica-flow-table tr.team-tone-fd td {
+  background: rgba(239, 68, 68, 0.07);
+}
+
+.acumatica-flow-table tr.team-tone-wh td {
+  background: rgba(245, 158, 11, 0.1);
+}
+
+.acumatica-flow-table tr.team-tone-other td {
+  background: rgba(100, 116, 139, 0.06);
+}
+
+.acumatica-flow-table tr.team-tone-admin td:nth-child(5),
+.acumatica-flow-table tr.team-tone-admin td:nth-child(6) {
+  color: #047857;
+}
+
+.acumatica-flow-table tr.team-tone-pd td:nth-child(5),
+.acumatica-flow-table tr.team-tone-pd td:nth-child(6) {
+  color: #1d4ed8;
+}
+
+.acumatica-flow-table tr.team-tone-fd td:nth-child(5),
+.acumatica-flow-table tr.team-tone-fd td:nth-child(6) {
+  color: #dc2626;
+}
+
+.acumatica-flow-table tr.team-tone-wh td:nth-child(5),
+.acumatica-flow-table tr.team-tone-wh td:nth-child(6) {
+  color: #b45309;
+}
+
+.acumatica-flow-table tr.team-tone-admin td:nth-child(2) {
+  background: rgba(22, 163, 74, 0.16);
+  color: #065f46;
+}
+
+.acumatica-flow-table tr.team-tone-pd td:nth-child(2) {
+  background: rgba(37, 99, 235, 0.16);
+  color: #1e40af;
+}
+
+.acumatica-flow-table tr.team-tone-fd td:nth-child(2) {
+  background: rgba(239, 68, 68, 0.16);
+  color: #b91c1c;
+}
+
+.acumatica-flow-table tr.team-tone-wh td:nth-child(2) {
+  background: rgba(245, 158, 11, 0.2);
+  color: #92400e;
+}
+
+.acumatica-flow-table tr.team-tone-other td:nth-child(2) {
+  background: rgba(100, 116, 139, 0.14);
+  color: #334155;
+}
+
 .tool-view--khmer-calendar {
   gap: 10px;
 }
@@ -4519,6 +4692,10 @@ button.khmer-calendar-cell:hover {
 
   .khmer-calendar-actions {
     flex-wrap: wrap;
+  }
+
+  .acumatica-flow-tabs {
+    grid-template-columns: 1fr;
   }
 
   .khmer-calendar-sheet {
