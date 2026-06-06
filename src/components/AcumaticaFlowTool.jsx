@@ -101,18 +101,18 @@ V. Petty Cash
 		- Select account suspend	Save	Admin (Site)	
 2	Allocated Expense	- Change COA (Expense)	Save	F.D (VCL)	
 		- Remove Hold by Senior	Remove Hold	F.D Senior	
-		- Release by Finance Manager or Supervisor	Release	F.D (VCL)	Finance Manager: for Adjustment; Supervisor: for Non-Adjustment
-3	Fund Transfer	- Input Fund Transfer	Save/Unhold	F.D (VCL)	
+		- Release by Finance Manager or Supervisor	Release	F.D (VCL)	
+3	Fund Transfer	- Input Fund Transfer	Save	F.D (VCL)	
 		- Select Source Account: Bank Current / Saving	Save	F.D (VCL)	
 		- Select Destination Account: Petty at Bank	Save	F.D (VCL)	
 		- Remove Hold by Senior	Remove Hold	F.D Senior	
-		- Release by Finance Manager or Supervisor	Release	F.D (VCL)	Finance Manager: for Adjustment; Supervisor: for Non-Adjustment
-4	Cash Purchase	- Input Cash Purchase	Save/Unhold	F.D (VCL)	
+		- Release by Finance Manager or Supervisor	Release	F.D (VCL)	
+4	Cash Purchase	- Input Cash Purchase	Save	F.D (VCL)	
 		- Payment Method: Cash	Save	F.D (VCL)	
 		- Select Header Cash Account: Petty at Bank	Save	F.D (VCL)	
 		- Select Detail Account: Petty Cash	Save	F.D (VCL)	
 		- Remove Hold by Senior	Remove Hold	F.D Senior	
-		- Release by Finance Manager or Supervisor	Release	F.D (VCL)	Finance Manager: for Adjustment; Supervisor: for Non-Adjustment`;
+		- Release by Finance Manager or Supervisor	Release	F.D (VCL)	`;
 
 function parseAccessRightText(text) {
   const sections = [];
@@ -207,13 +207,22 @@ export default function AcumaticaFlowTool() {
   const [activeSectionId, setActiveSectionId] = useState(sections[0]?.id || "");
   const activeSection = sections.find((section) => section.id === activeSectionId) || sections[0];
   const filteredProcesses = activeSection.processes;
+  const isPettyCash = activeSection.title.includes("Petty Cash");
 
   return (
     <section className="acumatica-flow-tool" aria-labelledby="acumatica-flow-title">
       <h1 className="sr-only" id="acumatica-flow-title">Acumatica Process Flow</h1>
-      <div className="acumatica-flow-update">
-        <span>Last update</span>
-        <strong>{getSectionUpdatedDate(activeSection.title)}</strong>
+      <div className="acumatica-flow-meta-row">
+        <div className="acumatica-flow-update">
+          <span>Last update</span>
+          <strong>{getSectionUpdatedDate(activeSection.title)}</strong>
+        </div>
+        {isPettyCash ? (
+          <div className="acumatica-flow-remark-note">
+            <span>Finance Manager: for Adjustment.</span>
+            <span>Supervisor: for Non-Adjustment</span>
+          </div>
+        ) : null}
       </div>
 
       <div className="acumatica-flow-tabs" role="tablist" aria-label="Process groups">
@@ -239,7 +248,7 @@ export default function AcumaticaFlowTool() {
               <th>Description</th>
               <th>Action</th>
               <th>Team</th>
-              <th>User</th>
+              <th>Remark</th>
             </tr>
           </thead>
           <tbody>

@@ -636,7 +636,15 @@ img {
   gap: 14px;
 }
 
+.acumatica-flow-meta-row {
+  display: grid;
+  grid-template-columns: minmax(220px, 1fr) auto minmax(220px, 1fr);
+  align-items: center;
+  gap: 12px;
+}
+
 .acumatica-flow-update {
+  grid-column: 2;
   justify-self: center;
   min-width: 230px;
   display: inline-flex;
@@ -655,6 +663,27 @@ img {
 
 .acumatica-flow-update strong {
   color: #1d4ed8;
+}
+
+.acumatica-flow-remark-note {
+  grid-column: 3;
+  justify-self: end;
+  display: grid;
+  gap: 3px;
+  border: 1px solid rgba(239, 68, 68, 0.16);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.88);
+  color: #b91c1c;
+  box-shadow: 0 10px 22px rgba(39, 45, 88, 0.08);
+  padding: 8px 12px;
+  font-size: 0.78rem;
+  font-weight: 850;
+  line-height: 1.25;
+}
+
+.acumatica-flow-remark-note span::before {
+  content: ".";
+  margin-right: 2px;
 }
 
 .acumatica-flow-tabs {
@@ -4719,6 +4748,16 @@ button.khmer-calendar-cell:hover {
 
   .khmer-calendar-actions {
     flex-wrap: wrap;
+  }
+
+  .acumatica-flow-meta-row {
+    grid-template-columns: 1fr;
+  }
+
+  .acumatica-flow-update,
+  .acumatica-flow-remark-note {
+    grid-column: auto;
+    justify-self: stretch;
   }
 
   .acumatica-flow-tabs {
