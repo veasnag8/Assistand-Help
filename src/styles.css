@@ -636,6 +636,27 @@ img {
   gap: 14px;
 }
 
+.acumatica-flow-update {
+  justify-self: center;
+  min-width: 230px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  border: 1px solid rgba(37, 99, 235, 0.14);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.9);
+  color: #475569;
+  box-shadow: 0 10px 22px rgba(39, 45, 88, 0.08);
+  padding: 8px 14px;
+  font-size: 0.82rem;
+  font-weight: 850;
+}
+
+.acumatica-flow-update strong {
+  color: #1d4ed8;
+}
+
 .acumatica-flow-tabs {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
@@ -715,13 +736,19 @@ img {
 }
 
 .acumatica-flow-table td:nth-child(2) {
+  width: 130px;
+  color: #b91c1c;
+  font-weight: 950;
+}
+
+.acumatica-flow-table td:nth-child(3) {
   width: 150px;
   background: #f8fafc;
   font-weight: 900;
 }
 
-.acumatica-flow-table td:nth-child(5),
-.acumatica-flow-table td:nth-child(6) {
+.acumatica-flow-table td:nth-child(6),
+.acumatica-flow-table td:nth-child(7) {
   color: #0047ff;
   font-weight: 750;
 }
@@ -746,47 +773,47 @@ img {
   background: rgba(100, 116, 139, 0.06);
 }
 
-.acumatica-flow-table tr.team-tone-admin td:nth-child(5),
-.acumatica-flow-table tr.team-tone-admin td:nth-child(6) {
+.acumatica-flow-table tr.team-tone-admin td:nth-child(6),
+.acumatica-flow-table tr.team-tone-admin td:nth-child(7) {
   color: #047857;
 }
 
-.acumatica-flow-table tr.team-tone-pd td:nth-child(5),
-.acumatica-flow-table tr.team-tone-pd td:nth-child(6) {
+.acumatica-flow-table tr.team-tone-pd td:nth-child(6),
+.acumatica-flow-table tr.team-tone-pd td:nth-child(7) {
   color: #1d4ed8;
 }
 
-.acumatica-flow-table tr.team-tone-fd td:nth-child(5),
-.acumatica-flow-table tr.team-tone-fd td:nth-child(6) {
+.acumatica-flow-table tr.team-tone-fd td:nth-child(6),
+.acumatica-flow-table tr.team-tone-fd td:nth-child(7) {
   color: #dc2626;
 }
 
-.acumatica-flow-table tr.team-tone-wh td:nth-child(5),
-.acumatica-flow-table tr.team-tone-wh td:nth-child(6) {
+.acumatica-flow-table tr.team-tone-wh td:nth-child(6),
+.acumatica-flow-table tr.team-tone-wh td:nth-child(7) {
   color: #b45309;
 }
 
-.acumatica-flow-table tr.team-tone-admin td:nth-child(2) {
+.acumatica-flow-table tr.team-tone-admin td:nth-child(3) {
   background: rgba(22, 163, 74, 0.16);
   color: #065f46;
 }
 
-.acumatica-flow-table tr.team-tone-pd td:nth-child(2) {
+.acumatica-flow-table tr.team-tone-pd td:nth-child(3) {
   background: rgba(37, 99, 235, 0.16);
   color: #1e40af;
 }
 
-.acumatica-flow-table tr.team-tone-fd td:nth-child(2) {
+.acumatica-flow-table tr.team-tone-fd td:nth-child(3) {
   background: rgba(239, 68, 68, 0.16);
   color: #b91c1c;
 }
 
-.acumatica-flow-table tr.team-tone-wh td:nth-child(2) {
+.acumatica-flow-table tr.team-tone-wh td:nth-child(3) {
   background: rgba(245, 158, 11, 0.2);
   color: #92400e;
 }
 
-.acumatica-flow-table tr.team-tone-other td:nth-child(2) {
+.acumatica-flow-table tr.team-tone-other td:nth-child(3) {
   background: rgba(100, 116, 139, 0.14);
   color: #334155;
 }

@@ -97,9 +97,22 @@ IV. Request IT Equipment/Software  (Process by IT Team)
 		- Check/Review	Unhold	F.D (VCL)	
 		- Verify and agree	Release	F.D (VCL)	
 V. Petty Cash					
-1	Enter Transaction	- Create QuickCheck	Save/Unhold	Admin (Site)	
-		- Check/Review	Hold/Unhold	Admin (Mega)	
-		- Approval of request	Approve	Head of Admin	Yang Sopheap`;
+1	Petty Cash	- Input Petty Cash (Cash Purchase)	Save	Admin (Site)	
+		- Select account suspend	Save	Admin (Site)	
+2	Allocated Expense	- Change COA (Expense)	Save	F.D (VCL)	
+		- Remove Hold by Senior	Remove Hold	F.D Senior	
+		- Release by Finance Manager or Supervisor	Release	F.D (VCL)	Finance Manager: for Adjustment; Supervisor: for Non-Adjustment
+3	Fund Transfer	- Input Fund Transfer	Save/Unhold	F.D (VCL)	
+		- Select Source Account: Bank Current / Saving	Save	F.D (VCL)	
+		- Select Destination Account: Petty at Bank	Save	F.D (VCL)	
+		- Remove Hold by Senior	Remove Hold	F.D Senior	
+		- Release by Finance Manager or Supervisor	Release	F.D (VCL)	Finance Manager: for Adjustment; Supervisor: for Non-Adjustment
+4	Cash Purchase	- Input Cash Purchase	Save/Unhold	F.D (VCL)	
+		- Payment Method: Cash	Save	F.D (VCL)	
+		- Select Header Cash Account: Petty at Bank	Save	F.D (VCL)	
+		- Select Detail Account: Petty Cash	Save	F.D (VCL)	
+		- Remove Hold by Senior	Remove Hold	F.D Senior	
+		- Release by Finance Manager or Supervisor	Release	F.D (VCL)	Finance Manager: for Adjustment; Supervisor: for Non-Adjustment`;
 
 function parseAccessRightText(text) {
   const sections = [];
@@ -153,6 +166,14 @@ function getSectionLabel(title) {
   return title.replace(/^[IVX]+\.\s*/, "");
 }
 
+function getSectionUpdatedDate(title) {
+  if (title.includes("Petty Cash")) {
+    return "22/05/2026";
+  }
+
+  return "06/05/22";
+}
+
 function getTeamTone(team) {
   if (team.startsWith("Admin") || team === "Head of Admin") {
     return "admin";
@@ -173,6 +194,14 @@ function getTeamTone(team) {
   return "other";
 }
 
+function getProcessStage(sectionTitle, processNo) {
+  if (!sectionTitle.includes("Petty Cash")) {
+    return "";
+  }
+
+  return processNo === "1" || processNo === "2" ? "ដំណាក់កាលទី1" : "ដំណាក់កាលទី2";
+}
+
 export default function AcumaticaFlowTool() {
   const sections = useMemo(() => parseAccessRightText(accessRightText), []);
   const [activeSectionId, setActiveSectionId] = useState(sections[0]?.id || "");
@@ -182,6 +211,10 @@ export default function AcumaticaFlowTool() {
   return (
     <section className="acumatica-flow-tool" aria-labelledby="acumatica-flow-title">
       <h1 className="sr-only" id="acumatica-flow-title">Acumatica Process Flow</h1>
+      <div className="acumatica-flow-update">
+        <span>Last update</span>
+        <strong>{getSectionUpdatedDate(activeSection.title)}</strong>
+      </div>
 
       <div className="acumatica-flow-tabs" role="tablist" aria-label="Process groups">
         {sections.map((section) => (
@@ -201,6 +234,7 @@ export default function AcumaticaFlowTool() {
           <thead>
             <tr>
               <th>No.</th>
+              <th>Stage</th>
               <th>Module/Screen</th>
               <th>Description</th>
               <th>Action</th>
@@ -216,6 +250,7 @@ export default function AcumaticaFlowTool() {
                   key={`${process.no}-${process.module}-${step.description}-${index}`}
                 >
                   <td>{index === 0 ? process.no : ""}</td>
+                  <td>{index === 0 ? getProcessStage(activeSection.title, process.no) : ""}</td>
                   <td>{index === 0 ? process.module : ""}</td>
                   <td>{step.description}</td>
                   <td>{step.action}</td>

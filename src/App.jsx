@@ -42,7 +42,7 @@ const categories = [
     id: "acumatica-flow",
     title: "Acumatica Flow",
     tabTitle: "Acumatica Flow",
-    description: "View process flow and team access rights in Acumatica. Last update: 06/05/22.",
+    description: "View process flow and team access rights in Acumatica. Petty Cash updated: 22/05/2026.",
     icon: Workflow,
     logo: acumaticaLogo,
     tone: "slate",
