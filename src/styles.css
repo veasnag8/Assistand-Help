@@ -519,20 +519,24 @@ img {
 .category-copy {
   position: relative;
   z-index: 1;
+  width: 100%;
   display: grid;
   gap: 9px;
-  max-width: 190px;
+  max-width: 210px;
 }
 
 .category-copy strong {
-  font-size: 1.13rem;
+  font-size: 1.08rem;
   line-height: 1.12;
+  overflow-wrap: anywhere;
+  text-wrap: balance;
 }
 
 .category-copy span {
   color: #5e688d;
   font-size: 0.9rem;
   line-height: 1.45;
+  overflow-wrap: anywhere;
 }
 
 .feature-status {

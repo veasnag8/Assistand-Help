@@ -61,6 +61,18 @@ const categories = [
       "https://megaassetmanagement-my.sharepoint.com/:x:/g/personal/phal_bunnavath_mam_com_kh/IQAW0G_7jYZLS7khZPkBFvzRAQVNj0cc1j7RS94carTvRBg?rtime=LkB8YN-23kg",
   },
   {
+    id: "master-list-all-projects",
+    title: "Master List All Project",
+    tabTitle: "Master List All Project",
+    description: "Includes FD, WH, Customer, and Vendor Investment.",
+    icon: FileSpreadsheet,
+    tone: "excel",
+    enabled: true,
+    protected: true,
+    externalUrl:
+      "https://megaassetmanagement-my.sharepoint.com/:x:/g/personal/mak_heangda_mam_com_kh/IQBrW5Pxxn1MTbmEFnd2iVmZAVw9BcT_Ti0Bl0h7tx89b_4?e=you4hD",
+  },
+  {
     id: "qr",
     title: "Prepare QR",
     tabTitle: "QR Code",
