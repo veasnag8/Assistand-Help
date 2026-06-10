@@ -46,6 +46,7 @@ const categories = [
     icon: FileSpreadsheet,
     tone: "excel",
     enabled: true,
+    protected: true,
     externalUrl:
       "https://megaassetmanagement-my.sharepoint.com/:x:/g/personal/phal_bunnavath_mam_com_kh/IQAfMdcUw23KQJOmCvL4NkKxAQO__7lpCDyTfYD0xUIz_Es?e=HRXg4L",
   },
