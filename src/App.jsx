@@ -82,17 +82,6 @@ const categories = [
     enabled: true,
   },
   {
-    id: "sql-script-update",
-    title: "SQL Script Update",
-    tabTitle: "SQL Script Update",
-    description: "Open the shared SQL script update workbook.",
-    icon: FileSpreadsheet,
-    tone: "excel",
-    enabled: true,
-    externalUrl:
-      "https://megaassetmanagement-my.sharepoint.com/:x:/g/personal/phal_bunnavath_mam_com_kh/IQAfMdcUw23KQJOmCvL4NkKxAQO__7lpCDyTfYD0xUIz_Es?e=HRXg4L",
-  },
-  {
     id: "pdf",
     title: "PDF Tools",
     tabTitle: "PDF",
