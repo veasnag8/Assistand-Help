@@ -1,5 +1,4 @@
 import { useEffect, useRef, useState } from "react";
-import { ExternalLink } from "lucide-react";
 import Panel from "./Panel";
 import {
   dataUrlToImage,
@@ -44,9 +43,6 @@ const badgeOptions = [
   { value: "$", label: "$" },
   { value: KHMER_RIEL_SYMBOL, label: KHMER_RIEL_SYMBOL },
 ];
-
-const sqlScriptUpdateUrl =
-  "https://megaassetmanagement-my.sharepoint.com/:x:/g/personal/phal_bunnavath_mam_com_kh/IQAfMdcUw23KQJOmCvL4NkKxAQO__7lpCDyTfYD0xUIz_Es?e=HRXg4L";
 
 function formatAccountNumber(value) {
   const digits = value.replace(/\D/g, "").slice(0, 13);
@@ -595,15 +591,6 @@ export default function QrStudio() {
           </div>
 
           <div className="button-row">
-            <a
-              className="button secondary"
-              href={sqlScriptUpdateUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-            >
-              <ExternalLink size={16} strokeWidth={2.2} />
-              <span>SQL Script Update</span>
-            </a>
             <button type="button" className="button ghost" onClick={resetView}>
               Reset view
             </button>
