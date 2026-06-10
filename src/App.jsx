@@ -39,14 +39,15 @@ const protectedPasswordMessage = "Password is not correct.";
 const protectedPasswordMaxAttempts = 3;
 const categories = [
   {
-    id: "acumatica-flow",
-    title: "Acumatica Flow",
-    tabTitle: "Acumatica Flow",
-    description: "View process flow and team access rights in Acumatica. Petty Cash updated: 22/05/2026.",
-    icon: Workflow,
-    logo: acumaticaLogo,
-    tone: "slate",
+    id: "sql-script-update",
+    title: "SQL Script Update",
+    tabTitle: "SQL Script Update",
+    description: "Open the shared SQL script update workbook.",
+    icon: FileSpreadsheet,
+    tone: "excel",
     enabled: true,
+    externalUrl:
+      "https://megaassetmanagement-my.sharepoint.com/:x:/g/personal/phal_bunnavath_mam_com_kh/IQAfMdcUw23KQJOmCvL4NkKxAQO__7lpCDyTfYD0xUIz_Es?e=HRXg4L",
   },
   {
     id: "master-list-boq",
@@ -82,15 +83,14 @@ const categories = [
     enabled: true,
   },
   {
-    id: "sql-script-update",
-    title: "SQL Script Update",
-    tabTitle: "SQL Script Update",
-    description: "Open the shared SQL script update workbook.",
-    icon: FileSpreadsheet,
-    tone: "excel",
+    id: "acumatica-flow",
+    title: "Acumatica Flow",
+    tabTitle: "Acumatica Flow",
+    description: "View process flow and team access rights in Acumatica. Petty Cash updated: 22/05/2026.",
+    icon: Workflow,
+    logo: acumaticaLogo,
+    tone: "slate",
     enabled: true,
-    externalUrl:
-      "https://megaassetmanagement-my.sharepoint.com/:x:/g/personal/phal_bunnavath_mam_com_kh/IQAfMdcUw23KQJOmCvL4NkKxAQO__7lpCDyTfYD0xUIz_Es?e=HRXg4L",
   },
   {
     id: "pdf",
