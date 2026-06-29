@@ -21,3 +21,9 @@ services:
         value: "true"
       - key: RENDER_WAKE_PING_INTERVAL_MS
         value: "600000"
+      - key: YTDLP_JS_RUNTIMES
+        value: deno
+      - key: YTDLP_REMOTE_COMPONENTS
+        value: ejs:github
+      - key: YTDLP_COOKIES_BASE64
+        sync: false

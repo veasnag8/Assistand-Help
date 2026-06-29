@@ -297,7 +297,7 @@ function getYtDlpAuthArgs() {
 function getYtDlpJavaScriptArgs(platform) {
   const configuredRuntimes = cleanText(process.env.YTDLP_JS_RUNTIMES, 1000);
   const configuredRemoteComponents = cleanText(process.env.YTDLP_REMOTE_COMPONENTS, 1000);
-  const runtimes = configuredRuntimes || (platform === "YouTube" ? "node" : "");
+  const runtimes = configuredRuntimes || (platform === "YouTube" ? "deno" : "");
   const remoteComponents = configuredRemoteComponents || (platform === "YouTube" ? "ejs:github" : "");
   const args = [];
 
@@ -1004,7 +1004,7 @@ async function routeRequest(request, response) {
   if (request.method === "GET" && requestUrl.pathname === "/health") {
     sendJson(response, 200, {
       cookies: getYtDlpCookieStatus(),
-      jsRuntimes: cleanText(process.env.YTDLP_JS_RUNTIMES, 1000) || "node",
+      jsRuntimes: cleanText(process.env.YTDLP_JS_RUNTIMES, 1000) || "deno",
       ok: true,
       remoteComponents: cleanText(process.env.YTDLP_REMOTE_COMPONENTS, 1000) || "ejs:github",
       service: "AISupport local video downloader",
