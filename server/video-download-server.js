@@ -61,6 +61,7 @@ const videoQualities = new Set(["max", "1080", "720", "480", "360", "240", "144"
 const audioBitrates = new Set(["320", "256", "128", "96", "64", "8"]);
 const downloads = new Map();
 const jobs = new Map();
+const telegramDownloadChoices = new Map();
 const telegramBotToken = cleanText(process.env.TELEGRAM_BOT_TOKEN, 300);
 const telegramPollingEnabled = cleanText(process.env.TELEGRAM_BOT_ENABLED, 20).toLowerCase() !== "false";
 const telegramApiBaseUrl = telegramBotToken
@@ -531,6 +532,32 @@ function parseTelegramDownloadRequest(text) {
   };
 }
 
+function getTelegramChoiceId() {
+  return randomUUID().replace(/-/g, "").slice(0, 16);
+}
+
+function saveTelegramDownloadChoice(chatId, url) {
+  const choiceId = getTelegramChoiceId();
+
+  telegramDownloadChoices.set(choiceId, {
+    chatId,
+    createdAt: Date.now(),
+    url,
+  });
+
+  return choiceId;
+}
+
+function cleanupTelegramDownloadChoices() {
+  const now = Date.now();
+
+  for (const [choiceId, choice] of telegramDownloadChoices) {
+    if (now - choice.createdAt > downloadTtlMs) {
+      telegramDownloadChoices.delete(choiceId);
+    }
+  }
+}
+
 async function callTelegram(method, payload) {
   if (!telegramApiBaseUrl) {
     return null;
@@ -561,35 +588,7 @@ async function sendTelegramMessage(chatId, text, extra = {}) {
   });
 }
 
-async function answerTelegramCommand(message) {
-  const chatId = message?.chat?.id;
-  const text = cleanText(message?.text || message?.caption, 2000);
-
-  if (!chatId || !text) {
-    return;
-  }
-
-  if (/^\/(start|help)\b/i.test(text)) {
-    await sendTelegramMessage(
-      chatId,
-      [
-        "Video downloader is ready.",
-        "",
-        "Send a Facebook, YouTube, or TikTok link to prepare an MP4.",
-        "Use /mp3 plus the link for audio, or /mp4 plus the link for video.",
-        "Only send media you own or have permission to download.",
-      ].join("\n"),
-    );
-    return;
-  }
-
-  const payload = parseTelegramDownloadRequest(text);
-
-  if (!payload) {
-    await sendTelegramMessage(chatId, "Send a Facebook, YouTube, or TikTok URL. Example: /mp4 https://...");
-    return;
-  }
-
+async function prepareTelegramDownload(chatId, payload) {
   let progressMessage = null;
 
   try {
@@ -661,6 +660,91 @@ async function answerTelegramCommand(message) {
   }
 }
 
+async function answerTelegramCommand(message) {
+  const chatId = message?.chat?.id;
+  const text = cleanText(message?.text || message?.caption, 2000);
+
+  if (!chatId || !text) {
+    return;
+  }
+
+  if (/^\/(start|help)\b/i.test(text)) {
+    await sendTelegramMessage(
+      chatId,
+      [
+        "Welcom to Assinstand Help",
+        "Send a url Facebook, youtube,tiktok",
+      ].join("\n"),
+    );
+    return;
+  }
+
+  const payload = parseTelegramDownloadRequest(text);
+
+  if (!payload) {
+    await sendTelegramMessage(chatId, "Send a url Facebook, youtube,tiktok");
+    return;
+  }
+
+  const choiceId = saveTelegramDownloadChoice(chatId, payload.url);
+
+  await sendTelegramMessage(chatId, "Choose download format:", {
+    reply_markup: {
+      inline_keyboard: [
+        [
+          { callback_data: `dl:${choiceId}:mp4`, text: "MP4" },
+          { callback_data: `dl:${choiceId}:mp3`, text: "MP3" },
+        ],
+      ],
+    },
+  });
+}
+
+async function answerTelegramCallbackQuery(callbackQuery) {
+  const data = cleanText(callbackQuery?.data, 100);
+  const chatId = callbackQuery?.message?.chat?.id;
+  const callbackQueryId = callbackQuery?.id;
+  const [, choiceId, format] = data.match(/^dl:([a-f0-9]{16}):(mp4|mp3)$/i) || [];
+
+  if (!callbackQueryId || !chatId || !choiceId || !format) {
+    return;
+  }
+
+  const choice = telegramDownloadChoices.get(choiceId);
+
+  if (!choice || choice.chatId !== chatId) {
+    await callTelegram("answerCallbackQuery", {
+      callback_query_id: callbackQueryId,
+      show_alert: true,
+      text: "This download choice expired. Send the link again.",
+    }).catch(() => {});
+    return;
+  }
+
+  telegramDownloadChoices.delete(choiceId);
+
+  await callTelegram("answerCallbackQuery", {
+    callback_query_id: callbackQueryId,
+    text: `Preparing ${format.toUpperCase()}...`,
+  }).catch(() => {});
+
+  if (callbackQuery.message?.message_id) {
+    await callTelegram("editMessageReplyMarkup", {
+      chat_id: chatId,
+      message_id: callbackQuery.message.message_id,
+      reply_markup: { inline_keyboard: [] },
+    }).catch(() => {});
+  }
+
+  await prepareTelegramDownload(chatId, {
+    bitrate: "128",
+    format,
+    hasPermission: true,
+    quality: "720",
+    url: choice.url,
+  });
+}
+
 async function pollTelegramUpdates() {
   if (!telegramBotToken || !telegramPollingEnabled) {
     return;
@@ -670,7 +754,7 @@ async function pollTelegramUpdates() {
     try {
       const response = await fetch(`${telegramApiBaseUrl}/getUpdates`, {
         body: JSON.stringify({
-          allowed_updates: ["message"],
+          allowed_updates: ["message", "callback_query"],
           offset: telegramUpdateOffset || undefined,
           timeout: 25,
         }),
@@ -687,7 +771,11 @@ async function pollTelegramUpdates() {
 
       for (const update of payload.result || []) {
         telegramUpdateOffset = update.update_id + 1;
-        answerTelegramCommand(update.message).catch((error) => {
+        const handler = update.callback_query
+          ? answerTelegramCallbackQuery(update.callback_query)
+          : answerTelegramCommand(update.message);
+
+        handler.catch((error) => {
           console.error("Telegram message failed:", error?.message || error);
         });
       }
@@ -869,6 +957,8 @@ async function handleFileDownload(request, response, downloadId) {
 
 async function cleanupOldDownloads() {
   const now = Date.now();
+
+  cleanupTelegramDownloadChoices();
 
   for (const [jobId, job] of jobs) {
     if (now - job.createdAt > downloadTtlMs) {
