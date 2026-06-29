@@ -61,6 +61,17 @@ const videoQualities = new Set(["max", "1080", "720", "480", "360", "240", "144"
 const audioBitrates = new Set(["320", "256", "128", "96", "64", "8"]);
 const downloads = new Map();
 const jobs = new Map();
+const telegramBotToken = cleanText(process.env.TELEGRAM_BOT_TOKEN, 300);
+const telegramPollingEnabled = cleanText(process.env.TELEGRAM_BOT_ENABLED, 20).toLowerCase() !== "false";
+const telegramApiBaseUrl = telegramBotToken
+  ? `https://api.telegram.org/bot${telegramBotToken}`
+  : "";
+const wakePingEnabled = cleanText(process.env.RENDER_WAKE_PING_ENABLED, 20).toLowerCase() !== "false";
+const wakePingIntervalMs = Math.max(
+  60 * 1000,
+  Number(process.env.RENDER_WAKE_PING_INTERVAL_MS || 10 * 60 * 1000),
+);
+let telegramUpdateOffset = Number(process.env.TELEGRAM_UPDATE_OFFSET || 0);
 
 const corsHeaders = {
   "Access-Control-Allow-Headers": "Content-Type",
@@ -495,6 +506,198 @@ function validateDownloadPayload(payload) {
   };
 }
 
+function getResultItems(result) {
+  return Array.isArray(result?.items) ? result.items : [];
+}
+
+function parseTelegramDownloadRequest(text) {
+  const message = cleanText(text, 2000);
+  const urlMatch = message.match(/https?:\/\/\S+/i);
+
+  if (!urlMatch) {
+    return null;
+  }
+
+  const command = (message.match(/^\/([a-z0-9_]+)/i)?.[1] || "").toLowerCase();
+  const wantsAudio = command === "mp3" || /\bmp3\b/i.test(message);
+  const wantsVideo = command === "mp4" || /\bmp4\b/i.test(message);
+
+  return {
+    bitrate: "128",
+    format: wantsAudio && !wantsVideo ? "mp3" : "mp4",
+    hasPermission: true,
+    quality: "720",
+    url: urlMatch[0].replace(/[)\].,]+$/g, ""),
+  };
+}
+
+async function callTelegram(method, payload) {
+  if (!telegramApiBaseUrl) {
+    return null;
+  }
+
+  const response = await fetch(`${telegramApiBaseUrl}/${method}`, {
+    body: JSON.stringify(payload),
+    headers: {
+      "Content-Type": "application/json",
+    },
+    method: "POST",
+  });
+  const result = await response.json().catch(() => ({}));
+
+  if (!response.ok || result.ok === false) {
+    throw new Error(result?.description || `Telegram ${method} failed.`);
+  }
+
+  return result.result;
+}
+
+async function sendTelegramMessage(chatId, text, extra = {}) {
+  return callTelegram("sendMessage", {
+    chat_id: chatId,
+    disable_web_page_preview: false,
+    text,
+    ...extra,
+  });
+}
+
+async function answerTelegramCommand(message) {
+  const chatId = message?.chat?.id;
+  const text = cleanText(message?.text || message?.caption, 2000);
+
+  if (!chatId || !text) {
+    return;
+  }
+
+  if (/^\/(start|help)\b/i.test(text)) {
+    await sendTelegramMessage(
+      chatId,
+      [
+        "Video downloader is ready.",
+        "",
+        "Send a Facebook, YouTube, or TikTok link to prepare an MP4.",
+        "Use /mp3 plus the link for audio, or /mp4 plus the link for video.",
+        "Only send media you own or have permission to download.",
+      ].join("\n"),
+    );
+    return;
+  }
+
+  const payload = parseTelegramDownloadRequest(text);
+
+  if (!payload) {
+    await sendTelegramMessage(chatId, "Send a Facebook, YouTube, or TikTok URL. Example: /mp4 https://...");
+    return;
+  }
+
+  let progressMessage = null;
+
+  try {
+    const downloadRequest = validateDownloadPayload(payload);
+    const jobId = randomUUID();
+    const job = {
+      createdAt: Date.now(),
+      error: "",
+      id: jobId,
+      progress: 0,
+      result: null,
+      stage: "Queued",
+      status: "queued",
+      updatedAt: Date.now(),
+    };
+
+    jobs.set(jobId, job);
+    progressMessage = await sendTelegramMessage(
+      chatId,
+      `Queued ${downloadRequest.platform} ${downloadRequest.format.toUpperCase()} download...`,
+    );
+
+    runDownloadJob(jobId, downloadRequest);
+
+    let lastProgress = -1;
+    let lastStage = "";
+
+    while (!["completed", "error"].includes(job.status)) {
+      if (
+        progressMessage?.message_id &&
+        (job.progress >= lastProgress + 10 || job.stage !== lastStage)
+      ) {
+        lastProgress = job.progress;
+        lastStage = job.stage;
+        await callTelegram("editMessageText", {
+          chat_id: chatId,
+          message_id: progressMessage.message_id,
+          text: `${job.stage || "Preparing"}... ${job.progress}%`,
+        }).catch(() => {});
+      }
+
+      await new Promise((resolve) => setTimeout(resolve, 2000));
+    }
+
+    if (job.status === "error") {
+      await sendTelegramMessage(chatId, job.error || "Could not prepare the download.");
+      return;
+    }
+
+    const item = getResultItems(job.result)[0];
+
+    if (!item?.downloadUrl) {
+      await sendTelegramMessage(chatId, "The download finished but no file link was created.");
+      return;
+    }
+
+    await sendTelegramMessage(
+      chatId,
+      [
+        "Download is ready.",
+        item.filename ? `File: ${item.filename}` : "",
+        `Link: ${item.downloadUrl}`,
+        "",
+        "Links expire after about 1 hour.",
+      ].filter(Boolean).join("\n"),
+    );
+  } catch (error) {
+    await sendTelegramMessage(chatId, error?.message || "Could not prepare the download.").catch(() => {});
+  }
+}
+
+async function pollTelegramUpdates() {
+  if (!telegramBotToken || !telegramPollingEnabled) {
+    return;
+  }
+
+  while (true) {
+    try {
+      const response = await fetch(`${telegramApiBaseUrl}/getUpdates`, {
+        body: JSON.stringify({
+          allowed_updates: ["message"],
+          offset: telegramUpdateOffset || undefined,
+          timeout: 25,
+        }),
+        headers: {
+          "Content-Type": "application/json",
+        },
+        method: "POST",
+      });
+      const payload = await response.json();
+
+      if (!response.ok || payload.ok === false) {
+        throw new Error(payload?.description || "Telegram polling failed.");
+      }
+
+      for (const update of payload.result || []) {
+        telegramUpdateOffset = update.update_id + 1;
+        answerTelegramCommand(update.message).catch((error) => {
+          console.error("Telegram message failed:", error?.message || error);
+        });
+      }
+    } catch (error) {
+      console.error("Telegram polling error:", error?.message || error);
+      await new Promise((resolve) => setTimeout(resolve, 5000));
+    }
+  }
+}
+
 async function prepareDownload(downloadRequest, jobId, job) {
   const jobDirectory = path.join(downloadRoot, jobId);
   const ffmpegPath = getFfmpegPath();
@@ -715,6 +918,15 @@ async function routeRequest(request, response) {
       ok: true,
       remoteComponents: cleanText(process.env.YTDLP_REMOTE_COMPONENTS, 1000) || "ejs:github",
       service: "AISupport local video downloader",
+      telegramBot: {
+        enabled: Boolean(telegramBotToken && telegramPollingEnabled),
+        polling: telegramPollingEnabled,
+      },
+      wakePing: {
+        enabled: wakePingEnabled,
+        intervalMs: wakePingIntervalMs,
+        target: publicServerUrl,
+      },
     });
     return;
   }
@@ -724,6 +936,30 @@ async function routeRequest(request, response) {
 
 await mkdir(downloadRoot, { recursive: true });
 setInterval(cleanupOldDownloads, 10 * 60 * 1000).unref();
+
+function startRenderWakePing() {
+  if (!wakePingEnabled || !publicServerUrl || publicServerUrl.startsWith("http://127.0.0.1")) {
+    return;
+  }
+
+  const ping = async () => {
+    try {
+      const response = await fetch(`${publicServerUrl}/health`, {
+        headers: {
+          "User-Agent": "aisupport-render-wake-ping/1.0",
+        },
+      });
+
+      if (!response.ok) {
+        console.warn(`Wake ping returned ${response.status}.`);
+      }
+    } catch (error) {
+      console.warn("Wake ping failed:", error?.message || error);
+    }
+  };
+
+  setInterval(ping, wakePingIntervalMs).unref();
+}
 
 createServer((request, response) => {
   routeRequest(request, response).catch((error) => {
@@ -735,4 +971,7 @@ createServer((request, response) => {
   console.log(`Video downloader server ready at http://${host}:${port}`);
   console.log(`Public video server URL: ${publicServerUrl}`);
   console.log("Install yt-dlp if needed: python -m pip install -U yt-dlp");
+  console.log(`Telegram bot: ${telegramBotToken && telegramPollingEnabled ? "enabled" : "disabled"}`);
+  startRenderWakePing();
+  pollTelegramUpdates();
 });

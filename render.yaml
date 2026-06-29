@@ -13,3 +13,11 @@ services:
         value: 0.0.0.0
       - key: VIDEO_SERVER_PORT
         value: "10000"
+      - key: TELEGRAM_BOT_TOKEN
+        sync: false
+      - key: TELEGRAM_BOT_ENABLED
+        value: "true"
+      - key: RENDER_WAKE_PING_ENABLED
+        value: "true"
+      - key: RENDER_WAKE_PING_INTERVAL_MS
+        value: "600000"

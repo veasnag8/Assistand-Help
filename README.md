@@ -74,6 +74,33 @@ YTDLP_COOKIES_BASE64=base64_encoded_cookies_txt
 
 Use only cookies from an account and media you are authorized to access.
 
+## Telegram video downloader bot
+
+The Node video server can also run a Telegram bot by long polling. Set the bot
+token on the server, then restart the video server:
+
+```bash
+TELEGRAM_BOT_TOKEN=your_telegram_bot_token
+TELEGRAM_BOT_ENABLED=true
+```
+
+Send the bot a Facebook, YouTube, or TikTok URL to prepare a 720p MP4 download.
+Use `/mp3 https://...` for audio or `/mp4 https://...` for video. The bot
+returns the same public download link used by the web app, and links expire
+after about 1 hour.
+
+On Render, add `TELEGRAM_BOT_TOKEN` as a secret environment variable. The
+included `render.yaml` also enables a `/health` self-ping every 10 minutes:
+
+```bash
+RENDER_WAKE_PING_ENABLED=true
+RENDER_WAKE_PING_INTERVAL_MS=600000
+```
+
+The ping helps keep a running Render instance warm by requesting its public
+health endpoint. If the service has already been fully stopped by the host, an
+external uptime ping may still be needed to wake it again.
+
 For production, keep video downloads behind your own server or an authorized
 Cobalt-compatible API instance. Public hosted Cobalt APIs are not intended for
 other projects without permission.
