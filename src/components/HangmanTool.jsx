@@ -140,11 +140,11 @@ async function postGameAction(roomId, payload) {
   return result;
 }
 
-function HangmanBoard({ game }) {
+function HangmanBoard({ compact = false, game }) {
   const hangmanParts = Math.min(game?.wrongCount || 0, game?.maxWrongGuesses || 6);
 
   return (
-    <div className="hangman-board">
+    <div className={compact ? "hangman-board hangman-board--compact" : "hangman-board"}>
       <svg className="hangman-drawing" viewBox="0 0 220 250" role="img" aria-label="Hangman drawing">
         <path className="hangman-frame" d="M42 230H184M64 230V26H154M154 26V54" />
         {hangmanParts >= 1 ? <circle className="hangman-body" cx="154" cy="78" r="24" /> : null}
@@ -351,6 +351,7 @@ export default function HangmanTool() {
         </form>
       ) : (
         <div className="hangman-guess-panel">
+          <HangmanBoard game={game} compact />
           <div className="hangman-word-preview" aria-label="Hangman word">
             {game.maskedWord?.map((letter, index) => (
               <span key={`${letter}-${index}`}>{letter}</span>
