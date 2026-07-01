@@ -114,6 +114,15 @@ const categories = [
     enabled: true,
   },
   {
+    id: "hangman",
+    title: "Hangman Game",
+    tabTitle: "Hangman",
+    description: "Scan to join, set a hidden word, and guess letters together.",
+    icon: Gamepad2,
+    tone: "indigo",
+    enabled: true,
+  },
+  {
     id: "scan-text",
     title: "Scanned Text",
     tabTitle: "Scanned Text",
@@ -139,15 +148,6 @@ const categories = [
     description: "Collect phone comments and show them on the screen.",
     icon: MessageSquare,
     tone: "pink",
-    enabled: true,
-  },
-  {
-    id: "hangman",
-    title: "Hangman Game",
-    tabTitle: "Hangman",
-    description: "Scan to join, set a hidden word, and guess letters together.",
-    icon: Gamepad2,
-    tone: "indigo",
     enabled: true,
   },
   {
