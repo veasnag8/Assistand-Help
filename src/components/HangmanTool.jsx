@@ -352,7 +352,7 @@ export default function HangmanTool() {
         </form>
       ) : (
         <div className="hangman-guess-panel">
-          <HangmanBoard game={game} compact />
+          {isPhoneView ? <HangmanBoard game={game} compact /> : null}
           <div className="hangman-word-preview" aria-label="Hangman word">
             {game.maskedWord?.map((letter, index) => (
               <span key={`${letter}-${index}`}>{letter}</span>
