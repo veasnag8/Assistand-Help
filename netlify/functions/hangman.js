@@ -71,8 +71,9 @@ function getPublicGameState(game) {
   }
 
   const guessedLetters = Array.isArray(game.guessedLetters) ? game.guessedLetters : [];
+  const storedWrongLetters = Array.isArray(game.wrongLetters) ? game.wrongLetters : null;
   const guessedSet = new Set(guessedLetters);
-  const wrongLetters = guessedLetters.filter((letter) => !game.word.includes(letter));
+  const wrongLetters = storedWrongLetters || guessedLetters.filter((letter) => !game.word.includes(letter));
   const maskedWord = game.word
     .split("")
     .map((letter) => (guessedSet.has(letter) ? letter : "_"));
@@ -208,6 +209,7 @@ export async function handler(event) {
           setterName: name,
           word,
           guessedLetters: [],
+          wrongLetters: [],
           createdAt: new Date().toISOString(),
           updatedAt: new Date().toISOString(),
         },
@@ -239,11 +241,19 @@ export async function handler(event) {
       }
 
       const guessedLetters = Array.isArray(room.game.guessedLetters) ? room.game.guessedLetters : [];
-      const nextLetters = guessedLetters.includes(guess) ? guessedLetters : [...guessedLetters, guess].sort();
+      const wrongLetters = Array.isArray(room.game.wrongLetters)
+        ? room.game.wrongLetters
+        : guessedLetters.filter((letter) => !room.game.word.includes(letter));
+      const isCorrectGuess = room.game.word.includes(guess);
+      const nextLetters = isCorrectGuess && !guessedLetters.includes(guess)
+        ? [...guessedLetters, guess].sort()
+        : guessedLetters;
+      const nextWrongLetters = isCorrectGuess ? wrongLetters : [...wrongLetters, guess];
       const nextRoom = await writeRoom(roomId, {
         game: {
           ...room.game,
           guessedLetters: nextLetters,
+          wrongLetters: nextWrongLetters,
           updatedAt: new Date().toISOString(),
         },
       });

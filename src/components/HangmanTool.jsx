@@ -182,6 +182,7 @@ export default function HangmanTool() {
   const isScreenOnlyView = hashParams.get("view") === "screen";
   const phoneUrl = getPhoneUrl(roomId);
   const guessedLetters = game?.guessedLetters || [];
+  const correctGuessedLetters = guessedLetters.filter((letter) => game?.maskedWord?.includes(letter));
   const availableLetters = "ABCDEFGHIJKLMNOPQRSTUVWXYZ".split("");
   const isWordSetter = Boolean(game?.setterId && game.setterId === playerId);
   const qrUrl = (() => {
@@ -367,7 +368,7 @@ export default function HangmanTool() {
               <button
                 key={letter}
                 type="button"
-                disabled={busy || game.status !== "playing" || guessedLetters.includes(letter)}
+                disabled={busy || game.status !== "playing" || correctGuessedLetters.includes(letter)}
                 onClick={() => handleGuess(letter)}
               >
                 {letter}
