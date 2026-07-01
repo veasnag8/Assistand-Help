@@ -1,10 +1,7 @@
 import { useEffect, useState } from "react";
 import {
   Copy,
-  Eye,
-  EyeOff,
   Expand,
-  Gamepad2,
   MessageSquare,
   Monitor,
   RefreshCw,
@@ -48,20 +45,6 @@ function getStoredRoomId() {
   const nextRoom = createRoomId();
   window.localStorage.setItem("comment-tool-room", nextRoom);
   return nextRoom;
-}
-
-function getPlayerId() {
-  const storedPlayerId = window.localStorage.getItem("comment-tool-player");
-
-  if (storedPlayerId) {
-    return storedPlayerId;
-  }
-
-  const nextPlayerId = window.crypto?.randomUUID
-    ? window.crypto.randomUUID()
-    : Math.random().toString(36).slice(2);
-  window.localStorage.setItem("comment-tool-player", nextPlayerId);
-  return nextPlayerId;
 }
 
 function formatCommentTime(value) {
@@ -172,10 +155,6 @@ async function postComment(roomId, payload) {
   return result;
 }
 
-async function postRoomAction(roomId, payload) {
-  return postComment(roomId, payload);
-}
-
 async function deleteComments(roomId) {
   const response = await fetch(getCommentsUrl(roomId), {
     method: "DELETE",
@@ -191,13 +170,9 @@ async function deleteComments(roomId) {
 
 export default function CommentTool() {
   const [roomId] = useState(getStoredRoomId);
-  const [playerId] = useState(getPlayerId);
   const [comments, setComments] = useState([]);
-  const [hangman, setHangman] = useState(null);
   const [name, setName] = useState(() => window.localStorage.getItem("comment-tool-name") || "");
   const [text, setText] = useState("");
-  const [hangmanWord, setHangmanWord] = useState("");
-  const [showHangmanWord, setShowHangmanWord] = useState(false);
   const [status, setStatus] = useState("Ready.");
   const [busy, setBusy] = useState(false);
 
@@ -224,7 +199,6 @@ export default function CommentTool() {
 
         if (active) {
           setComments((current) => mergeLiveComments(current, result.comments || []));
-          setHangman(result.hangman || null);
           setStatus("Live.");
         }
       } catch (error) {
@@ -254,7 +228,6 @@ export default function CommentTool() {
 
       window.localStorage.setItem("comment-tool-name", name);
       setComments((current) => mergeLiveComments(current, result.comments || []));
-      setHangman(result.hangman || null);
       setText("");
       setStatus("Sent.");
     } catch (error) {
@@ -272,7 +245,6 @@ export default function CommentTool() {
       const result = await fetchComments(roomId);
 
       setComments((current) => mergeLiveComments(current, result.comments || []));
-      setHangman(result.hangman || null);
       setStatus("Live.");
     } catch (error) {
       setStatus(error?.message || "Could not refresh comments.");
@@ -289,7 +261,6 @@ export default function CommentTool() {
       await deleteComments(roomId);
 
       setComments([]);
-      setHangman(null);
       setStatus("Cleared.");
     } catch (error) {
       setStatus(error?.message || "Could not clear comments.");
@@ -307,186 +278,6 @@ export default function CommentTool() {
     window.location.assign(getScreenUrl(roomId));
   }
 
-  async function handleStartHangman(event) {
-    event.preventDefault();
-
-    try {
-      setBusy(true);
-      setStatus("Starting Hangman...");
-
-      const result = await postRoomAction(roomId, {
-        action: "start-hangman",
-        name,
-        playerId,
-        word: hangmanWord,
-      });
-
-      window.localStorage.setItem("comment-tool-name", name);
-      setHangman(result.hangman || null);
-      setHangmanWord("");
-      setShowHangmanWord(false);
-      setStatus("Hangman started.");
-    } catch (error) {
-      setStatus(error?.message || "Could not start Hangman.");
-    } finally {
-      setBusy(false);
-    }
-  }
-
-  async function handleGuessHangman(letter) {
-    try {
-      setBusy(true);
-      setStatus(`Guessing ${letter}...`);
-
-      const result = await postRoomAction(roomId, {
-        action: "guess-hangman",
-        letter,
-        playerId,
-      });
-
-      setHangman(result.hangman || null);
-      setStatus("Guess sent.");
-    } catch (error) {
-      setStatus(error?.message || "Could not guess.");
-    } finally {
-      setBusy(false);
-    }
-  }
-
-  async function handleResetHangman() {
-    try {
-      setBusy(true);
-      setStatus("Resetting Hangman...");
-
-      const result = await postRoomAction(roomId, {
-        action: "reset-hangman",
-        playerId,
-      });
-
-      setHangman(result.hangman || null);
-      setStatus("Hangman reset.");
-    } catch (error) {
-      setStatus(error?.message || "Could not reset Hangman.");
-    } finally {
-      setBusy(false);
-    }
-  }
-
-  const guessedLetters = hangman?.guessedLetters || [];
-  const availableLetters = "ABCDEFGHIJKLMNOPQRSTUVWXYZ".split("");
-  const isWordSetter = Boolean(hangman?.setterId && hangman.setterId === playerId);
-  const hangmanParts = Math.min(hangman?.wrongCount || 0, hangman?.maxWrongGuesses || 6);
-
-  const hangmanPanel = (
-    <Panel
-      className="hangman-screen-panel"
-      eyebrow="Game"
-      title="Hangman"
-      description={hangman ? `${hangman.wrongCount}/${hangman.maxWrongGuesses} wrong` : "Scan to start"}
-    >
-      {hangman ? (
-        <div className="hangman-board">
-          <svg className="hangman-drawing" viewBox="0 0 220 250" role="img" aria-label="Hangman drawing">
-            <path className="hangman-frame" d="M42 230H184M64 230V26H154M154 26V54" />
-            {hangmanParts >= 1 ? <circle className="hangman-body" cx="154" cy="78" r="24" /> : null}
-            {hangmanParts >= 2 ? <path className="hangman-body" d="M154 102V154" /> : null}
-            {hangmanParts >= 3 ? <path className="hangman-body" d="M154 118L118 144" /> : null}
-            {hangmanParts >= 4 ? <path className="hangman-body" d="M154 118L190 144" /> : null}
-            {hangmanParts >= 5 ? <path className="hangman-body" d="M154 154L122 206" /> : null}
-            {hangmanParts >= 6 ? <path className="hangman-body" d="M154 154L188 206" /> : null}
-          </svg>
-          <div className="hangman-word-screen">
-            {hangman.maskedWord?.map((letter, index) => (
-              <span key={`${letter}-${index}`}>{letter}</span>
-            ))}
-          </div>
-          <div className="hangman-meta">
-            <span>Set by {hangman.setterName || "Player"}</span>
-            <span>Wrong: {hangman.wrongLetters?.join(" ") || "-"}</span>
-          </div>
-        </div>
-      ) : (
-        <div className="comment-empty">
-          <Gamepad2 size={46} strokeWidth={1.8} />
-          <span>Scan QR and set a word</span>
-        </div>
-      )}
-    </Panel>
-  );
-
-  const phoneHangmanCard = (
-    <div className="hangman-phone-card">
-      <div className="hangman-phone-title">
-        <span>
-          <Gamepad2 size={18} strokeWidth={2.2} />
-          Hangman Game
-        </span>
-        {hangman ? <small>{hangman.status}</small> : <small>set word</small>}
-      </div>
-
-      {!hangman ? (
-        <form className="hangman-word-form" onSubmit={handleStartHangman}>
-          <label htmlFor="hangman-word">Set word</label>
-          <div className="hangman-secret-row">
-            <input
-              id="hangman-word"
-              maxLength={32}
-              type={showHangmanWord ? "text" : "password"}
-              value={hangmanWord}
-              onChange={(event) => setHangmanWord(event.target.value.replace(/[^a-zA-Z0-9]/g, ""))}
-              placeholder="Secret word"
-              autoComplete="off"
-            />
-            <button
-              className="icon-button"
-              type="button"
-              onClick={() => setShowHangmanWord((current) => !current)}
-              aria-label={showHangmanWord ? "Hide word" : "Show word"}
-              title={showHangmanWord ? "Hide word" : "Show word"}
-            >
-              {showHangmanWord ? <EyeOff size={18} /> : <Eye size={18} />}
-            </button>
-          </div>
-          <button className="button secondary" type="submit" disabled={busy || hangmanWord.trim().length < 2}>
-            <Gamepad2 size={17} strokeWidth={2.2} />
-            <span>Start Game</span>
-          </button>
-        </form>
-      ) : (
-        <div className="hangman-guess-panel">
-          <div className="hangman-word-preview" aria-label="Hangman word">
-            {hangman.maskedWord?.map((letter, index) => (
-              <span key={`${letter}-${index}`}>{letter}</span>
-            ))}
-          </div>
-          <p>
-            {isWordSetter
-              ? "You set the word. Others can only see blanks."
-              : `Word set by ${hangman.setterName || "Player"}.`}
-          </p>
-          <div className="hangman-letter-grid" aria-label="Guess letters">
-            {availableLetters.map((letter) => (
-              <button
-                key={letter}
-                type="button"
-                disabled={busy || hangman.status !== "playing" || guessedLetters.includes(letter)}
-                onClick={() => handleGuessHangman(letter)}
-              >
-                {letter}
-              </button>
-            ))}
-          </div>
-          {isWordSetter ? (
-            <button className="button ghost" type="button" onClick={handleResetHangman} disabled={busy}>
-              <Trash2 size={16} strokeWidth={2.2} />
-              <span>New Word</span>
-            </button>
-          ) : null}
-        </div>
-      )}
-    </div>
-  );
-
   if (isPhoneView) {
     return (
       <section className="comment-phone-shell">
@@ -497,11 +288,9 @@ export default function CommentTool() {
             </span>
             <div>
               <p className="eyebrow">Comment Tool</p>
-              <h1>Join Room</h1>
+              <h1>Send Comment</h1>
             </div>
           </div>
-
-          {phoneHangmanCard}
 
           <form className="comment-form" onSubmit={handleSubmit}>
             <div className="field">
@@ -585,7 +374,6 @@ export default function CommentTool() {
     return (
       <section className="comment-tool comment-tool--screen-only">
         <div className="comment-stage comment-stage--screen-only">
-          {hangmanPanel}
           {liveCommentsPanel}
         </div>
       </section>
@@ -597,8 +385,8 @@ export default function CommentTool() {
       <div className="comment-stage">
         <Panel
           eyebrow="Phone"
-          title="Scan To Join"
-          description={`Comment + Hangman room ${roomId}`}
+          title="Scan To Comment"
+          description={`Room ${roomId}`}
         >
           <div className="comment-qr-card">
             <img src={qrUrl} alt="Phone comment QR code" />
@@ -625,10 +413,7 @@ export default function CommentTool() {
           </div>
         </Panel>
 
-        <div className="comment-side-stack">
-          {hangmanPanel}
-          {liveCommentsPanel}
-        </div>
+        {liveCommentsPanel}
       </div>
 
       <div className="pdf-status" role="status">

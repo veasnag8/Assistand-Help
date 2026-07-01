@@ -3825,6 +3825,10 @@ button.khmer-calendar-cell:hover {
 }
 
 .comment-stage--screen-only {
+  display: block;
+}
+
+.hangman-tool .comment-stage--screen-only {
   display: grid;
   grid-template-columns: minmax(360px, 0.8fr) minmax(520px, 1.2fr);
 }
@@ -3842,7 +3846,7 @@ button.khmer-calendar-cell:hover {
 }
 
 .comment-screen-panel .comment-list {
-  min-height: calc(100vh - 420px);
+  min-height: calc(100vh - 180px);
   max-height: none;
 }
 

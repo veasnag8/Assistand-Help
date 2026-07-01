@@ -8,6 +8,7 @@ import {
   Copy,
   Clock3,
   ExternalLink,
+  Gamepad2,
   HardDriveDownload,
   FileText,
   FileImage,
@@ -22,6 +23,7 @@ import {
 } from "lucide-react";
 import AcumaticaFlowTool from "./components/AcumaticaFlowTool";
 import CommentTool from "./components/CommentTool";
+import HangmanTool from "./components/HangmanTool";
 import KhmerCalendarTool from "./components/KhmerCalendarTool";
 import ImageTools from "./components/ImageTools";
 import LogoCutTool from "./components/LogoCutTool";
@@ -137,6 +139,15 @@ const categories = [
     description: "Collect phone comments and show them on the screen.",
     icon: MessageSquare,
     tone: "pink",
+    enabled: true,
+  },
+  {
+    id: "hangman",
+    title: "Hangman Game",
+    tabTitle: "Hangman",
+    description: "Scan to join, set a hidden word, and guess letters together.",
+    icon: Gamepad2,
+    tone: "indigo",
     enabled: true,
   },
   {
@@ -668,7 +679,8 @@ function ToolView({ activeId, onBack }) {
   );
   const hideHeader =
     activeId === "sna-gpt" ||
-    (activeId === "comment" && getHashParams().get("view") === "screen");
+    (activeId === "comment" && getHashParams().get("view") === "screen") ||
+    (activeId === "hangman" && getHashParams().get("view") === "screen");
 
   return (
     <section className={`tool-view tool-view--${activeId}`}>
@@ -682,10 +694,11 @@ function ToolView({ activeId, onBack }) {
       {activeId === "scan-text" ? <ScanTextTool /> : null}
       {activeId === "sna-gpt" ? <SnaGptTool onBack={onBack} /> : null}
       {activeId === "comment" ? <CommentTool /> : null}
+      {activeId === "hangman" ? <HangmanTool /> : null}
       {activeId === "video-download" ? <VideoDownloadTool /> : null}
       {activeId === "khmer-calendar" ? <KhmerCalendarTool /> : null}
       {activeId === "acumatica-flow" ? <AcumaticaFlowTool /> : null}
-      {activeId !== "timer" && activeId !== "qr" && activeId !== "pdf" && activeId !== "image" && activeId !== "logo-cut" && activeId !== "scan-text" && activeId !== "sna-gpt" && activeId !== "comment" && activeId !== "video-download" && activeId !== "khmer-calendar" && activeId !== "acumatica-flow" ? (
+      {activeId !== "timer" && activeId !== "qr" && activeId !== "pdf" && activeId !== "image" && activeId !== "logo-cut" && activeId !== "scan-text" && activeId !== "sna-gpt" && activeId !== "comment" && activeId !== "hangman" && activeId !== "video-download" && activeId !== "khmer-calendar" && activeId !== "acumatica-flow" ? (
         <PlaceholderTool category={category} />
       ) : null}
     </section>
