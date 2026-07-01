@@ -414,6 +414,79 @@ export default function CommentTool() {
     </Panel>
   );
 
+  const phoneHangmanCard = (
+    <div className="hangman-phone-card">
+      <div className="hangman-phone-title">
+        <span>
+          <Gamepad2 size={18} strokeWidth={2.2} />
+          Hangman Game
+        </span>
+        {hangman ? <small>{hangman.status}</small> : <small>set word</small>}
+      </div>
+
+      {!hangman ? (
+        <form className="hangman-word-form" onSubmit={handleStartHangman}>
+          <label htmlFor="hangman-word">Set word</label>
+          <div className="hangman-secret-row">
+            <input
+              id="hangman-word"
+              maxLength={32}
+              type={showHangmanWord ? "text" : "password"}
+              value={hangmanWord}
+              onChange={(event) => setHangmanWord(event.target.value.replace(/[^a-zA-Z0-9]/g, ""))}
+              placeholder="Secret word"
+              autoComplete="off"
+            />
+            <button
+              className="icon-button"
+              type="button"
+              onClick={() => setShowHangmanWord((current) => !current)}
+              aria-label={showHangmanWord ? "Hide word" : "Show word"}
+              title={showHangmanWord ? "Hide word" : "Show word"}
+            >
+              {showHangmanWord ? <EyeOff size={18} /> : <Eye size={18} />}
+            </button>
+          </div>
+          <button className="button secondary" type="submit" disabled={busy || hangmanWord.trim().length < 2}>
+            <Gamepad2 size={17} strokeWidth={2.2} />
+            <span>Start Game</span>
+          </button>
+        </form>
+      ) : (
+        <div className="hangman-guess-panel">
+          <div className="hangman-word-preview" aria-label="Hangman word">
+            {hangman.maskedWord?.map((letter, index) => (
+              <span key={`${letter}-${index}`}>{letter}</span>
+            ))}
+          </div>
+          <p>
+            {isWordSetter
+              ? "You set the word. Others can only see blanks."
+              : `Word set by ${hangman.setterName || "Player"}.`}
+          </p>
+          <div className="hangman-letter-grid" aria-label="Guess letters">
+            {availableLetters.map((letter) => (
+              <button
+                key={letter}
+                type="button"
+                disabled={busy || hangman.status !== "playing" || guessedLetters.includes(letter)}
+                onClick={() => handleGuessHangman(letter)}
+              >
+                {letter}
+              </button>
+            ))}
+          </div>
+          {isWordSetter ? (
+            <button className="button ghost" type="button" onClick={handleResetHangman} disabled={busy}>
+              <Trash2 size={16} strokeWidth={2.2} />
+              <span>New Word</span>
+            </button>
+          ) : null}
+        </div>
+      )}
+    </div>
+  );
+
   if (isPhoneView) {
     return (
       <section className="comment-phone-shell">
@@ -424,9 +497,11 @@ export default function CommentTool() {
             </span>
             <div>
               <p className="eyebrow">Comment Tool</p>
-              <h1>Send Comment</h1>
+              <h1>Join Room</h1>
             </div>
           </div>
+
+          {phoneHangmanCard}
 
           <form className="comment-form" onSubmit={handleSubmit}>
             <div className="field">
@@ -458,77 +533,6 @@ export default function CommentTool() {
               <span>{busy ? "Sending..." : "Send"}</span>
             </button>
           </form>
-
-          <div className="hangman-phone-card">
-            <div className="hangman-phone-title">
-              <span>
-                <Gamepad2 size={18} strokeWidth={2.2} />
-                Hangman
-              </span>
-              {hangman ? <small>{hangman.status}</small> : <small>waiting</small>}
-            </div>
-
-            {!hangman ? (
-              <form className="hangman-word-form" onSubmit={handleStartHangman}>
-                <label htmlFor="hangman-word">Set word</label>
-                <div className="hangman-secret-row">
-                  <input
-                    id="hangman-word"
-                    maxLength={32}
-                    type={showHangmanWord ? "text" : "password"}
-                    value={hangmanWord}
-                    onChange={(event) => setHangmanWord(event.target.value.replace(/[^a-zA-Z0-9]/g, ""))}
-                    placeholder="Secret word"
-                    autoComplete="off"
-                  />
-                  <button
-                    className="icon-button"
-                    type="button"
-                    onClick={() => setShowHangmanWord((current) => !current)}
-                    aria-label={showHangmanWord ? "Hide word" : "Show word"}
-                    title={showHangmanWord ? "Hide word" : "Show word"}
-                  >
-                    {showHangmanWord ? <EyeOff size={18} /> : <Eye size={18} />}
-                  </button>
-                </div>
-                <button className="button secondary" type="submit" disabled={busy || hangmanWord.trim().length < 2}>
-                  <Gamepad2 size={17} strokeWidth={2.2} />
-                  <span>Start Game</span>
-                </button>
-              </form>
-            ) : (
-              <div className="hangman-guess-panel">
-                <div className="hangman-word-preview" aria-label="Hangman word">
-                  {hangman.maskedWord?.map((letter, index) => (
-                    <span key={`${letter}-${index}`}>{letter}</span>
-                  ))}
-                </div>
-                <p>
-                  {isWordSetter
-                    ? "You set the word. Others can only see blanks."
-                    : `Word set by ${hangman.setterName || "Player"}.`}
-                </p>
-                <div className="hangman-letter-grid" aria-label="Guess letters">
-                  {availableLetters.map((letter) => (
-                    <button
-                      key={letter}
-                      type="button"
-                      disabled={busy || hangman.status !== "playing" || guessedLetters.includes(letter)}
-                      onClick={() => handleGuessHangman(letter)}
-                    >
-                      {letter}
-                    </button>
-                  ))}
-                </div>
-                {isWordSetter ? (
-                  <button className="button ghost" type="button" onClick={handleResetHangman} disabled={busy}>
-                    <Trash2 size={16} strokeWidth={2.2} />
-                    <span>New Word</span>
-                  </button>
-                ) : null}
-              </div>
-            )}
-          </div>
 
           <div className="pdf-status" role="status">
             {status}
@@ -593,8 +597,8 @@ export default function CommentTool() {
       <div className="comment-stage">
         <Panel
           eyebrow="Phone"
-          title="Scan To Comment"
-          description={`Room ${roomId}`}
+          title="Scan To Join"
+          description={`Comment + Hangman room ${roomId}`}
         >
           <div className="comment-qr-card">
             <img src={qrUrl} alt="Phone comment QR code" />
