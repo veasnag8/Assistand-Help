@@ -486,6 +486,7 @@ export default function ImageTools() {
   const [bgTolerance, setBgTolerance] = useState(42);
   const [documentTone, setDocumentTone] = useState("clean");
   const [documentPageSize, setDocumentPageSize] = useState("image");
+  const [scanDocManualCrop, setScanDocManualCrop] = useState(false);
   const [cropBox, setCropBox] = useState({ x: 0, y: 0, width: 1200, height: 800 });
   const [apiRemoveResult, setApiRemoveResult] = useState(null);
   const [aiRemoveResult, setAiRemoveResult] = useState(null);
@@ -600,6 +601,7 @@ export default function ImageTools() {
     sourceImage,
     documentPageSize,
     documentTone,
+    scanDocManualCrop,
   ]);
 
   async function handleSourceFile(file) {
@@ -810,6 +812,39 @@ export default function ImageTools() {
     sourceContext.imageSmoothingQuality = "high";
     sourceContext.drawImage(sourceImage, 0, 0, sourceCanvas.width, sourceCanvas.height);
 
+    if (scanDocManualCrop) {
+      const scaleX = sourceCanvas.width / sourceWidth;
+      const scaleY = sourceCanvas.height / sourceHeight;
+      const cropX = clampNumber(cropBox.x * scaleX, 0, sourceCanvas.width - 1);
+      const cropY = clampNumber(cropBox.y * scaleY, 0, sourceCanvas.height - 1);
+      const cropWidth = clampNumber(cropBox.width * scaleX, 1, sourceCanvas.width - cropX);
+      const cropHeight = clampNumber(cropBox.height * scaleY, 1, sourceCanvas.height - cropY);
+      const canvas = document.createElement("canvas");
+      const context = canvas.getContext("2d", { willReadFrequently: true });
+
+      if (!context) {
+        throw new Error("Could not prepare the document scan canvas.");
+      }
+
+      canvas.width = cropWidth;
+      canvas.height = cropHeight;
+      context.fillStyle = "#ffffff";
+      context.fillRect(0, 0, canvas.width, canvas.height);
+      context.drawImage(
+        sourceCanvas,
+        cropX,
+        cropY,
+        cropWidth,
+        cropHeight,
+        0,
+        0,
+        canvas.width,
+        canvas.height,
+      );
+
+      return cleanScannedDocumentCanvas(canvas);
+    }
+
     const sourceImageData = sourceContext.getImageData(0, 0, sourceCanvas.width, sourceCanvas.height);
     const detectedPaperBounds = detectPaperBounds(sourceImageData, sourceCanvas.width, sourceCanvas.height);
     const detectedLooksComplete =
@@ -851,6 +886,16 @@ export default function ImageTools() {
         canvas.width,
         canvas.height,
       );
+    }
+
+    return cleanScannedDocumentCanvas(canvas);
+  }
+
+  async function cleanScannedDocumentCanvas(canvas) {
+    const context = canvas.getContext("2d", { willReadFrequently: true });
+
+    if (!context) {
+      throw new Error("Could not prepare the document scan canvas.");
     }
 
     const imageData = context.getImageData(0, 0, canvas.width, canvas.height);
@@ -1357,9 +1402,18 @@ export default function ImageTools() {
             </select>
           </div>
 
+          <label className="image-check-row">
+            <input
+              type="checkbox"
+              checked={scanDocManualCrop}
+              onChange={(event) => setScanDocManualCrop(event.target.checked)}
+            />
+            <span>Manual crop before PDF</span>
+          </label>
+
           <div className="image-enhance-card">
             <FileText size={22} strokeWidth={2.1} />
-            <span>Auto fits the paper, flattens it, then exports PDF.</span>
+            <span>{scanDocManualCrop ? "Drag the crop box, then export PDF." : "Auto fits the paper, flattens it, then exports PDF."}</span>
           </div>
         </>
       );
@@ -1493,7 +1547,7 @@ export default function ImageTools() {
             </div>
 
             <div className={`image-preview-frame${mode === "remove-bg" ? " is-transparent" : ""}`}>
-              {mode === "crop" && sourceImage ? (
+              {(mode === "crop" || (mode === "scan-doc" && scanDocManualCrop)) && sourceImage ? (
                 <div
                   className="image-crop-editor"
                   onPointerMove={dragCrop}
