@@ -124,6 +124,65 @@ function isSupportedImage(file) {
   );
 }
 
+function getPixelLuminance(data, index) {
+  return data[index] * 0.299 + data[index + 1] * 0.587 + data[index + 2] * 0.114;
+}
+
+function isLikelyPaperPixel(data, index) {
+  const red = data[index];
+  const green = data[index + 1];
+  const blue = data[index + 2];
+  const luminance = getPixelLuminance(data, index);
+  const colorSpread = Math.max(red, green, blue) - Math.min(red, green, blue);
+
+  return luminance > 158 && colorSpread < 82;
+}
+
+function detectPaperBounds(imageData, width, height) {
+  const data = imageData.data;
+  let minX = width;
+  let minY = height;
+  let maxX = -1;
+  let maxY = -1;
+
+  for (let y = 0; y < height; y += 1) {
+    for (let x = 0; x < width; x += 1) {
+      const index = (y * width + x) * 4;
+
+      if (!isLikelyPaperPixel(data, index)) {
+        continue;
+      }
+
+      minX = Math.min(minX, x);
+      minY = Math.min(minY, y);
+      maxX = Math.max(maxX, x);
+      maxY = Math.max(maxY, y);
+    }
+  }
+
+  if (maxX < minX || maxY < minY) {
+    return null;
+  }
+
+  const detectedWidth = maxX - minX + 1;
+  const detectedHeight = maxY - minY + 1;
+  const detectedArea = detectedWidth * detectedHeight;
+  const sourceArea = width * height;
+
+  if (detectedArea < sourceArea * 0.08 || detectedWidth < width * 0.2 || detectedHeight < height * 0.2) {
+    return null;
+  }
+
+  const padding = Math.round(Math.min(width, height) * 0.018);
+
+  return {
+    height: Math.min(height, maxY + padding + 1) - Math.max(0, minY - padding),
+    width: Math.min(width, maxX + padding + 1) - Math.max(0, minX - padding),
+    x: Math.max(0, minX - padding),
+    y: Math.max(0, minY - padding),
+  };
+}
+
 export default function ImageTools() {
   const [mode, setMode] = useState("resize");
   const [sourceFile, setSourceFile] = useState(null);
@@ -432,6 +491,33 @@ export default function ImageTools() {
   }
 
   async function buildScannedDocumentImage(sourceWidth, sourceHeight) {
+    const sourceCanvas = document.createElement("canvas");
+    const sourceContext = sourceCanvas.getContext("2d", { willReadFrequently: true });
+
+    if (!sourceContext) {
+      throw new Error("Could not prepare the document scan canvas.");
+    }
+
+    const longestSide = Math.max(sourceWidth, sourceHeight);
+    const scale = Math.min(1, 2200 / longestSide);
+
+    sourceCanvas.width = Math.max(1, Math.round(sourceWidth * scale));
+    sourceCanvas.height = Math.max(1, Math.round(sourceHeight * scale));
+
+    sourceContext.fillStyle = "#ffffff";
+    sourceContext.fillRect(0, 0, sourceCanvas.width, sourceCanvas.height);
+    sourceContext.imageSmoothingEnabled = true;
+    sourceContext.imageSmoothingQuality = "high";
+    sourceContext.drawImage(sourceImage, 0, 0, sourceCanvas.width, sourceCanvas.height);
+
+    const sourceImageData = sourceContext.getImageData(0, 0, sourceCanvas.width, sourceCanvas.height);
+    const paperBounds =
+      detectPaperBounds(sourceImageData, sourceCanvas.width, sourceCanvas.height) || {
+        height: sourceCanvas.height,
+        width: sourceCanvas.width,
+        x: 0,
+        y: 0,
+      };
     const canvas = document.createElement("canvas");
     const context = canvas.getContext("2d", { willReadFrequently: true });
 
@@ -439,17 +525,21 @@ export default function ImageTools() {
       throw new Error("Could not prepare the document scan canvas.");
     }
 
-    const longestSide = Math.max(sourceWidth, sourceHeight);
-    const scale = Math.min(1, 2200 / longestSide);
-
-    canvas.width = Math.max(1, Math.round(sourceWidth * scale));
-    canvas.height = Math.max(1, Math.round(sourceHeight * scale));
-
+    canvas.width = paperBounds.width;
+    canvas.height = paperBounds.height;
     context.fillStyle = "#ffffff";
     context.fillRect(0, 0, canvas.width, canvas.height);
-    context.imageSmoothingEnabled = true;
-    context.imageSmoothingQuality = "high";
-    context.drawImage(sourceImage, 0, 0, canvas.width, canvas.height);
+    context.drawImage(
+      sourceCanvas,
+      paperBounds.x,
+      paperBounds.y,
+      paperBounds.width,
+      paperBounds.height,
+      0,
+      0,
+      canvas.width,
+      canvas.height,
+    );
 
     const imageData = context.getImageData(0, 0, canvas.width, canvas.height);
     const pixels = imageData.data;
@@ -458,7 +548,7 @@ export default function ImageTools() {
       const red = pixels[index];
       const green = pixels[index + 1];
       const blue = pixels[index + 2];
-      const luminance = red * 0.299 + green * 0.587 + blue * 0.114;
+      const luminance = getPixelLuminance(pixels, index);
       const contrast = clampNumber((luminance - 128) * 1.34 + 146, 0, 255);
       const value = documentTone === "bw" ? (contrast < 180 ? 0 : 255) : contrast;
 
@@ -864,7 +954,7 @@ export default function ImageTools() {
 
           <div className="image-enhance-card">
             <FileText size={22} strokeWidth={2.1} />
-            <span>Preview shows the cleaned page. Download exports PDF.</span>
+            <span>Auto crops the white paper, cleans it, then exports PDF.</span>
           </div>
         </>
       );
