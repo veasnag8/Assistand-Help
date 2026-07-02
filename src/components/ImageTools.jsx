@@ -811,8 +811,14 @@ export default function ImageTools() {
     sourceContext.drawImage(sourceImage, 0, 0, sourceCanvas.width, sourceCanvas.height);
 
     const sourceImageData = sourceContext.getImageData(0, 0, sourceCanvas.width, sourceCanvas.height);
-    const paperBounds =
-      detectPaperBounds(sourceImageData, sourceCanvas.width, sourceCanvas.height) || {
+    const detectedPaperBounds = detectPaperBounds(sourceImageData, sourceCanvas.width, sourceCanvas.height);
+    const detectedLooksComplete =
+      detectedPaperBounds &&
+      detectedPaperBounds.width >= sourceCanvas.width * 0.62 &&
+      detectedPaperBounds.height >= sourceCanvas.height * 0.72;
+    const paperBounds = detectedLooksComplete
+      ? detectedPaperBounds
+      : {
         corners: null,
         height: sourceCanvas.height,
         width: sourceCanvas.width,
