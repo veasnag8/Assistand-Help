@@ -1663,6 +1663,99 @@ button.khmer-calendar-cell:hover {
   box-shadow: 0 18px 34px rgba(39, 45, 88, 0.14);
 }
 
+.image-crop-editor {
+  position: relative;
+  display: inline-block;
+  max-width: 100%;
+  line-height: 0;
+  touch-action: none;
+  user-select: none;
+}
+
+.image-crop-editor img {
+  display: block;
+  pointer-events: none;
+}
+
+.image-crop-box {
+  position: absolute;
+  min-width: 18px;
+  min-height: 18px;
+  border: 2px solid #2563eb;
+  background:
+    linear-gradient(rgba(37, 99, 235, 0.18), rgba(37, 99, 235, 0.18)),
+    linear-gradient(90deg, transparent 32%, rgba(255, 255, 255, 0.72) 32%, rgba(255, 255, 255, 0.72) 34%, transparent 34%, transparent 65%, rgba(255, 255, 255, 0.72) 65%, rgba(255, 255, 255, 0.72) 67%, transparent 67%),
+    linear-gradient(transparent 32%, rgba(255, 255, 255, 0.72) 32%, rgba(255, 255, 255, 0.72) 34%, transparent 34%, transparent 65%, rgba(255, 255, 255, 0.72) 65%, rgba(255, 255, 255, 0.72) 67%, transparent 67%);
+  box-shadow:
+    0 0 0 9999px rgba(9, 16, 71, 0.46),
+    0 12px 24px rgba(9, 16, 71, 0.2);
+  cursor: move;
+}
+
+.image-crop-handle {
+  position: absolute;
+  width: 16px;
+  height: 16px;
+  border: 2px solid #ffffff;
+  border-radius: 999px;
+  background: #2563eb;
+  box-shadow: 0 3px 8px rgba(9, 16, 71, 0.24);
+}
+
+.image-crop-handle--n,
+.image-crop-handle--s {
+  left: 50%;
+  transform: translateX(-50%);
+  cursor: ns-resize;
+}
+
+.image-crop-handle--e,
+.image-crop-handle--w {
+  top: 50%;
+  transform: translateY(-50%);
+  cursor: ew-resize;
+}
+
+.image-crop-handle--n {
+  top: -9px;
+}
+
+.image-crop-handle--s {
+  bottom: -9px;
+}
+
+.image-crop-handle--e {
+  right: -9px;
+}
+
+.image-crop-handle--w {
+  left: -9px;
+}
+
+.image-crop-handle--nw {
+  top: -9px;
+  left: -9px;
+  cursor: nwse-resize;
+}
+
+.image-crop-handle--ne {
+  top: -9px;
+  right: -9px;
+  cursor: nesw-resize;
+}
+
+.image-crop-handle--se {
+  right: -9px;
+  bottom: -9px;
+  cursor: nwse-resize;
+}
+
+.image-crop-handle--sw {
+  bottom: -9px;
+  left: -9px;
+  cursor: nesw-resize;
+}
+
 .logo-cut-tool {
   display: grid;
   grid-template-columns: minmax(260px, 320px) minmax(0, 1fr);

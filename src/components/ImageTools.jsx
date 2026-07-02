@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   Archive,
   Cloud,
@@ -486,6 +486,8 @@ export default function ImageTools() {
   const [busy, setBusy] = useState(false);
   const [removeBgBusy, setRemoveBgBusy] = useState(false);
   const [previewBusy, setPreviewBusy] = useState(false);
+  const cropImageRef = useRef(null);
+  const cropDragRef = useRef(null);
 
   const activeMode = useMemo(
     () => modes.find((item) => item.id === mode) || modes[0],
@@ -507,6 +509,14 @@ export default function ImageTools() {
     apiRemoveResult?.sourceKey === currentSourceKey && apiRemoveResult?.blob,
   );
   const hasSelectedRemoveResult = removeBgMethod === "api" ? hasApiRemoveResult : hasAiRemoveResult;
+  const cropOverlayStyle = sourceImage
+    ? {
+        height: `${(cropBox.height / sourceSize.height) * 100}%`,
+        left: `${(cropBox.x / sourceSize.width) * 100}%`,
+        top: `${(cropBox.y / sourceSize.height) * 100}%`,
+        width: `${(cropBox.width / sourceSize.width) * 100}%`,
+      }
+    : {};
 
   useEffect(() => {
     return () => {
@@ -896,6 +906,99 @@ export default function ImageTools() {
 
       return next;
     });
+  }
+
+  function getCropPoint(event) {
+    const image = cropImageRef.current;
+    const rect = image?.getBoundingClientRect();
+
+    if (!rect || !sourceSize.width || !sourceSize.height) {
+      return null;
+    }
+
+    return {
+      x: ((event.clientX - rect.left) / rect.width) * sourceSize.width,
+      y: ((event.clientY - rect.top) / rect.height) * sourceSize.height,
+    };
+  }
+
+  function clampCropBox(nextBox) {
+    const maxWidth = sourceSize.width;
+    const maxHeight = sourceSize.height;
+    const next = {
+      height: clampNumber(nextBox.height, 1, maxHeight || 1),
+      width: clampNumber(nextBox.width, 1, maxWidth || 1),
+      x: clampNumber(nextBox.x, 0, Math.max(0, (maxWidth || 1) - 1)),
+      y: clampNumber(nextBox.y, 0, Math.max(0, (maxHeight || 1) - 1)),
+    };
+
+    next.width = clampNumber(next.width, 1, Math.max(1, maxWidth - next.x));
+    next.height = clampNumber(next.height, 1, Math.max(1, maxHeight - next.y));
+
+    return next;
+  }
+
+  function startCropDrag(event, action) {
+    if (mode !== "crop" || !sourceImage) {
+      return;
+    }
+
+    const point = getCropPoint(event);
+
+    if (!point) {
+      return;
+    }
+
+    event.preventDefault();
+    event.currentTarget.setPointerCapture?.(event.pointerId);
+    cropDragRef.current = {
+      action,
+      cropBox,
+      point,
+    };
+  }
+
+  function dragCrop(event) {
+    const drag = cropDragRef.current;
+
+    if (!drag) {
+      return;
+    }
+
+    const point = getCropPoint(event);
+
+    if (!point) {
+      return;
+    }
+
+    const dx = point.x - drag.point.x;
+    const dy = point.y - drag.point.y;
+    const start = drag.cropBox;
+    let next = { ...start };
+
+    if (drag.action === "move") {
+      next.x = start.x + dx;
+      next.y = start.y + dy;
+    } else {
+      const left = drag.action.includes("w") ? start.x + dx : start.x;
+      const top = drag.action.includes("n") ? start.y + dy : start.y;
+      const right = drag.action.includes("e") ? start.x + start.width + dx : start.x + start.width;
+      const bottom = drag.action.includes("s") ? start.y + start.height + dy : start.y + start.height;
+
+      next = {
+        height: bottom - top,
+        width: right - left,
+        x: left,
+        y: top,
+      };
+    }
+
+    setCropBox(clampCropBox(next));
+  }
+
+  function endCropDrag(event) {
+    cropDragRef.current = null;
+    event.currentTarget.releasePointerCapture?.(event.pointerId);
   }
 
   async function buildOutputImage({ runAi = false } = {}) {
@@ -1375,7 +1478,32 @@ export default function ImageTools() {
             </div>
 
             <div className={`image-preview-frame${mode === "remove-bg" ? " is-transparent" : ""}`}>
-              {previewUrl ? (
+              {mode === "crop" && sourceImage ? (
+                <div
+                  className="image-crop-editor"
+                  onPointerMove={dragCrop}
+                  onPointerUp={endCropDrag}
+                  onPointerCancel={endCropDrag}
+                >
+                  <img ref={cropImageRef} src={sourceImage.src} alt="Crop source" draggable="false" />
+                  <div
+                    className="image-crop-box"
+                    style={cropOverlayStyle}
+                    onPointerDown={(event) => startCropDrag(event, "move")}
+                  >
+                    {["nw", "n", "ne", "e", "se", "s", "sw", "w"].map((handle) => (
+                      <span
+                        className={`image-crop-handle image-crop-handle--${handle}`}
+                        key={handle}
+                        onPointerDown={(event) => {
+                          event.stopPropagation();
+                          startCropDrag(event, handle);
+                        }}
+                      />
+                    ))}
+                  </div>
+                </div>
+              ) : previewUrl ? (
                 <img src={previewUrl} alt={`${activeMode.label} preview`} />
               ) : (
                 <div className="image-empty-state">
