@@ -4,10 +4,13 @@ import {
   Eye,
   EyeOff,
   Expand,
+  Frown,
   Gamepad2,
   RefreshCw,
   Smartphone,
   Trash2,
+  Trophy,
+  X,
 } from "lucide-react";
 import Panel from "./Panel";
 
@@ -187,6 +190,85 @@ function HangmanBoard({ compact = false, game }) {
   );
 }
 
+function HangmanResultModal({
+  busy,
+  game,
+  isWordSetter,
+  onClose,
+  onNewWord,
+  players,
+}) {
+  const isWon = game?.status === "won";
+  const revealedWord = game?.word || game?.maskedWord?.join("") || "";
+
+  useEffect(() => {
+    function handleEscape(event) {
+      if (event.key === "Escape") {
+        onClose();
+      }
+    }
+
+    window.addEventListener("keydown", handleEscape);
+    return () => window.removeEventListener("keydown", handleEscape);
+  }, [onClose]);
+
+  return (
+    <div className="access-modal-backdrop hangman-result-backdrop" role="presentation" onMouseDown={onClose}>
+      <section
+        className={`access-modal hangman-result-modal hangman-result-modal--${isWon ? "won" : "lost"}`}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="hangman-result-title"
+        onMouseDown={(event) => event.stopPropagation()}
+      >
+        <header className="access-modal-header hangman-result-header">
+          <div>
+            <p className="eyebrow">{isWon ? "You did it" : "Nice try"}</p>
+            <h2 id="hangman-result-title">
+              <span className="hangman-result-icon" aria-hidden="true">
+                {isWon ? <Trophy size={24} strokeWidth={2.2} /> : <Frown size={24} strokeWidth={2.2} />}
+              </span>
+              {isWon ? "Congratulations!" : "Game Over"}
+            </h2>
+          </div>
+          <button className="access-icon-button" type="button" onClick={onClose} aria-label="Close">
+            <X size={18} strokeWidth={2.4} />
+          </button>
+        </header>
+
+        <p className="hangman-result-message">
+          {isWon
+            ? "The word was guessed correctly."
+            : `Too many wrong guesses. The word was not solved.`}
+        </p>
+
+        <div className="hangman-result-word" aria-label="Revealed word">
+          {revealedWord.split("").map((letter, index) => (
+            <span key={`${letter}-${index}`}>{letter}</span>
+          ))}
+        </div>
+
+        <HangmanPlayersList players={players} />
+
+        <footer className="access-modal-actions hangman-result-actions">
+          <span>Set by {game?.setterName || "Player"}</span>
+          <div className="button-row">
+            {isWordSetter ? (
+              <button className="button secondary" type="button" onClick={onNewWord} disabled={busy}>
+                <Trash2 size={16} strokeWidth={2.2} />
+                <span>New Word</span>
+              </button>
+            ) : null}
+            <button className="button primary" type="button" onClick={onClose}>
+              <span>Close</span>
+            </button>
+          </div>
+        </footer>
+      </section>
+    </div>
+  );
+}
+
 function HangmanPlayersList({ players }) {
   return (
     <div className="hangman-player-list">
@@ -224,6 +306,7 @@ export default function HangmanTool() {
   const [showWord, setShowWord] = useState(false);
   const [status, setStatus] = useState("Ready.");
   const [busy, setBusy] = useState(false);
+  const [dismissedResultGameId, setDismissedResultGameId] = useState(null);
 
   const hashParams = getHashParams();
   const isPhoneView = hashParams.get("view") === "phone";
@@ -233,6 +316,8 @@ export default function HangmanTool() {
   const correctGuessedLetters = guessedLetters.filter((letter) => game?.maskedWord?.includes(letter));
   const availableLetters = "ABCDEFGHIJKLMNOPQRSTUVWXYZ".split("");
   const isWordSetter = Boolean(game?.setterId && game.setterId === playerId);
+  const isGameFinished = game?.status === "won" || game?.status === "lost";
+  const showResultModal = Boolean(isGameFinished && game?.id && dismissedResultGameId !== game.id);
   const cleanName = name.trim();
   const hasPlayerName = cleanName.length > 0;
   const qrUrl = (() => {
@@ -272,6 +357,12 @@ export default function HangmanTool() {
       window.clearInterval(intervalId);
     };
   }, [roomId]);
+
+  useEffect(() => {
+    if (!game?.id) {
+      setDismissedResultGameId(null);
+    }
+  }, [game?.id]);
 
   useEffect(() => {
     if (!joinedName || isWordSetter) {
@@ -456,6 +547,28 @@ export default function HangmanTool() {
     window.location.assign(getScreenUrl(roomId));
   }
 
+  function handleCloseResultModal() {
+    if (game?.id) {
+      setDismissedResultGameId(game.id);
+    }
+  }
+
+  async function handleNewWordFromResult() {
+    await handleReset();
+    setDismissedResultGameId(null);
+  }
+
+  const resultModal = showResultModal ? (
+    <HangmanResultModal
+      busy={busy}
+      game={game}
+      isWordSetter={isWordSetter}
+      onClose={handleCloseResultModal}
+      onNewWord={handleNewWordFromResult}
+      players={players}
+    />
+  ) : null;
+
   const phonePanel = (
     <div className="hangman-phone-card">
       <div className="hangman-phone-title">
@@ -584,6 +697,8 @@ export default function HangmanTool() {
             {status}
           </div>
         </div>
+
+        {resultModal}
       </section>
     );
   }
@@ -618,6 +733,8 @@ export default function HangmanTool() {
             </div>
           </Panel>
         </div>
+
+        {resultModal}
       </section>
     );
   }
@@ -667,6 +784,8 @@ export default function HangmanTool() {
         {busy ? "Working... " : null}
         {status}
       </div>
+
+      {resultModal}
     </section>
   );
 }

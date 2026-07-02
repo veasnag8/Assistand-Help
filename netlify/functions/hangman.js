@@ -134,6 +134,7 @@ function getPublicGameState(game) {
     wrongCount: wrongLetters.length,
     maxWrongGuesses,
     status: isWon ? "won" : isLost ? "lost" : "playing",
+    word: isWon || isLost ? game.word : undefined,
     wordLength: game.word.length,
     createdAt: game.createdAt,
     updatedAt: game.updatedAt,
