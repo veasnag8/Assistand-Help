@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { createPortal } from "react-dom";
 import {
   Copy,
   Eye,
@@ -93,6 +94,22 @@ function getHangmanEndpoint() {
 
 function getHangmanUrl(roomId) {
   return `${getHangmanEndpoint()}?room=${encodeURIComponent(roomId)}`;
+}
+
+function getGameResultKey(game) {
+  if (!game) {
+    return null;
+  }
+
+  if (game.id) {
+    return game.id;
+  }
+
+  return `${game.createdAt || "game"}:${game.setterId || "setter"}:${game.wordLength || 0}`;
+}
+
+function getNormalizedGameStatus(game) {
+  return String(game?.status || "").toLowerCase();
 }
 
 async function readJsonResponse(response, fallbackMessage) {
@@ -198,7 +215,7 @@ function HangmanResultModal({
   onNewWord,
   players,
 }) {
-  const isWon = game?.status === "won";
+  const isWon = getNormalizedGameStatus(game) === "won";
   const revealedWord = game?.word || game?.maskedWord?.join("") || "";
 
   useEffect(() => {
@@ -316,8 +333,10 @@ export default function HangmanTool() {
   const correctGuessedLetters = guessedLetters.filter((letter) => game?.maskedWord?.includes(letter));
   const availableLetters = "ABCDEFGHIJKLMNOPQRSTUVWXYZ".split("");
   const isWordSetter = Boolean(game?.setterId && game.setterId === playerId);
-  const isGameFinished = game?.status === "won" || game?.status === "lost";
-  const showResultModal = Boolean(isGameFinished && game?.id && dismissedResultGameId !== game.id);
+  const gameResultKey = getGameResultKey(game);
+  const normalizedGameStatus = getNormalizedGameStatus(game);
+  const isGameFinished = normalizedGameStatus === "won" || normalizedGameStatus === "lost";
+  const showResultModal = Boolean(isGameFinished && gameResultKey && dismissedResultGameId !== gameResultKey);
   const cleanName = name.trim();
   const hasPlayerName = cleanName.length > 0;
   const qrUrl = (() => {
@@ -359,10 +378,10 @@ export default function HangmanTool() {
   }, [roomId]);
 
   useEffect(() => {
-    if (!game?.id) {
+    if (!game) {
       setDismissedResultGameId(null);
     }
-  }, [game?.id]);
+  }, [gameResultKey]);
 
   useEffect(() => {
     if (!joinedName || isWordSetter) {
@@ -548,8 +567,8 @@ export default function HangmanTool() {
   }
 
   function handleCloseResultModal() {
-    if (game?.id) {
-      setDismissedResultGameId(game.id);
+    if (gameResultKey) {
+      setDismissedResultGameId(gameResultKey);
     }
   }
 
@@ -558,16 +577,19 @@ export default function HangmanTool() {
     setDismissedResultGameId(null);
   }
 
-  const resultModal = showResultModal ? (
-    <HangmanResultModal
-      busy={busy}
-      game={game}
-      isWordSetter={isWordSetter}
-      onClose={handleCloseResultModal}
-      onNewWord={handleNewWordFromResult}
-      players={players}
-    />
-  ) : null;
+  const resultModal = showResultModal && typeof document !== "undefined"
+    ? createPortal(
+        <HangmanResultModal
+          busy={busy}
+          game={game}
+          isWordSetter={isWordSetter}
+          onClose={handleCloseResultModal}
+          onNewWord={handleNewWordFromResult}
+          players={players}
+        />,
+        document.body,
+      )
+    : null;
 
   const phonePanel = (
     <div className="hangman-phone-card">

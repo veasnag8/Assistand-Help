@@ -5390,7 +5390,7 @@ button.khmer-calendar-cell:hover {
 }
 
 .hangman-result-backdrop {
-  z-index: 80;
+  z-index: 1000;
 }
 
 .hangman-result-modal {

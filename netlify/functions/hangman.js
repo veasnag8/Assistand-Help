@@ -125,7 +125,7 @@ function getPublicGameState(game) {
   const isLost = wrongLetters.length >= maxWrongGuesses;
 
   return {
-    id: game.id,
+    id: game.id || `${game.createdAt || "game"}:${game.setterId || "setter"}`,
     setterId: game.setterId,
     setterName: game.setterName,
     maskedWord,
