@@ -203,10 +203,10 @@ function detectPaperBounds(imageData, width, height) {
   const denseColumns = findDenseRange(columnCounts, Math.max(8, Math.round(height * 0.12)), Math.round(width * 0.24));
 
   if (denseRows && denseColumns) {
-    minX = denseColumns.start;
-    maxX = denseColumns.end;
-    minY = denseRows.start;
-    maxY = denseRows.end;
+    let denseMinX = width;
+    let denseMinY = height;
+    let denseMaxX = -1;
+    let denseMaxY = -1;
 
     for (let y = denseRows.start; y <= denseRows.end; y += 1) {
       for (let x = denseColumns.start; x <= denseColumns.end; x += 1) {
@@ -216,11 +216,18 @@ function detectPaperBounds(imageData, width, height) {
           continue;
         }
 
-        minX = Math.min(minX, x);
-        minY = Math.min(minY, y);
-        maxX = Math.max(maxX, x);
-        maxY = Math.max(maxY, y);
+        denseMinX = Math.min(denseMinX, x);
+        denseMinY = Math.min(denseMinY, y);
+        denseMaxX = Math.max(denseMaxX, x);
+        denseMaxY = Math.max(denseMaxY, y);
       }
+    }
+
+    if (denseMaxX >= denseMinX && denseMaxY >= denseMinY) {
+      minX = denseMinX;
+      minY = denseMinY;
+      maxX = denseMaxX;
+      maxY = denseMaxY;
     }
   }
 
@@ -233,7 +240,7 @@ function detectPaperBounds(imageData, width, height) {
     return null;
   }
 
-  const padding = Math.round(Math.min(width, height) * 0.018);
+  const padding = Math.round(Math.min(width, height) * 0.004);
 
   return {
     height: Math.min(height, maxY + padding + 1) - Math.max(0, minY - padding),
