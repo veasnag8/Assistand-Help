@@ -183,7 +183,7 @@ export async function handler(event) {
     const payload = await readJsonBody(event);
     const action = cleanText(payload.action, 32);
     const playerId = cleanText(payload.playerId, 80);
-    const name = cleanText(payload.name, maxNameLength) || "Player";
+    const name = cleanText(payload.name, maxNameLength);
 
     if (!playerId) {
       return jsonResponse(400, { error: "Player ID is required." });
@@ -191,6 +191,10 @@ export async function handler(event) {
 
     if (action === "start") {
       const word = cleanWord(payload.word);
+
+      if (!name) {
+        return jsonResponse(400, { error: "Enter your name before playing." });
+      }
 
       if (word.length < 2) {
         return jsonResponse(400, { error: "Enter a word with at least 2 letters." });
@@ -223,6 +227,10 @@ export async function handler(event) {
 
     if (action === "guess") {
       const guess = cleanWord(payload.letter).slice(0, 1);
+
+      if (!name) {
+        return jsonResponse(400, { error: "Enter your name before playing." });
+      }
 
       if (!guess) {
         return jsonResponse(400, { error: "Choose a letter." });

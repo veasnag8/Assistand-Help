@@ -185,6 +185,8 @@ export default function HangmanTool() {
   const correctGuessedLetters = guessedLetters.filter((letter) => game?.maskedWord?.includes(letter));
   const availableLetters = "ABCDEFGHIJKLMNOPQRSTUVWXYZ".split("");
   const isWordSetter = Boolean(game?.setterId && game.setterId === playerId);
+  const cleanName = name.trim();
+  const hasPlayerName = cleanName.length > 0;
   const qrUrl = (() => {
     const params = new URLSearchParams({
       data: phoneUrl,
@@ -225,18 +227,24 @@ export default function HangmanTool() {
   async function handleStartGame(event) {
     event.preventDefault();
 
+    if (!hasPlayerName) {
+      setStatus("Enter your name before playing.");
+      return;
+    }
+
     try {
       setBusy(true);
       setStatus("Starting Hangman...");
 
       const result = await postGameAction(roomId, {
         action: "start",
-        name,
+        name: cleanName,
         playerId,
         word,
       });
 
-      window.localStorage.setItem("hangman-game-name", name);
+      window.localStorage.setItem("hangman-game-name", cleanName);
+      setName(cleanName);
       setGame(result.game || null);
       setWord("");
       setShowWord(false);
@@ -249,6 +257,11 @@ export default function HangmanTool() {
   }
 
   async function handleGuess(letter) {
+    if (!hasPlayerName) {
+      setStatus("Enter your name before playing.");
+      return;
+    }
+
     try {
       setBusy(true);
       setStatus(`Guessing ${letter}...`);
@@ -256,9 +269,12 @@ export default function HangmanTool() {
       const result = await postGameAction(roomId, {
         action: "guess",
         letter,
+        name: cleanName,
         playerId,
       });
 
+      window.localStorage.setItem("hangman-game-name", cleanName);
+      setName(cleanName);
       setGame(result.game || null);
       setStatus("Guess sent.");
     } catch (error) {
@@ -322,6 +338,18 @@ export default function HangmanTool() {
         {game ? <small>{game.status}</small> : <small>set word</small>}
       </div>
 
+      <div className="field">
+        <label htmlFor="hangman-name">Name</label>
+        <input
+          id="hangman-name"
+          maxLength={40}
+          value={name}
+          onChange={(event) => setName(event.target.value)}
+          placeholder="Enter your name"
+          required
+        />
+      </div>
+
       {!game ? (
         <form className="hangman-word-form" onSubmit={handleStartGame}>
           <label htmlFor="hangman-word">Set word</label>
@@ -345,7 +373,7 @@ export default function HangmanTool() {
               {showWord ? <EyeOff size={18} /> : <Eye size={18} />}
             </button>
           </div>
-          <button className="button secondary" type="submit" disabled={busy || word.trim().length < 2}>
+          <button className="button secondary" type="submit" disabled={busy || !hasPlayerName || word.trim().length < 2}>
             <Gamepad2 size={17} strokeWidth={2.2} />
             <span>Start Game</span>
           </button>
@@ -368,7 +396,7 @@ export default function HangmanTool() {
               <button
                 key={letter}
                 type="button"
-                disabled={busy || game.status !== "playing" || correctGuessedLetters.includes(letter)}
+                disabled={busy || !hasPlayerName || game.status !== "playing" || correctGuessedLetters.includes(letter)}
                 onClick={() => handleGuess(letter)}
               >
                 {letter}
@@ -398,17 +426,6 @@ export default function HangmanTool() {
               <p className="eyebrow">Hangman Game</p>
               <h1>Join Game</h1>
             </div>
-          </div>
-
-          <div className="field">
-            <label htmlFor="hangman-name">Name</label>
-            <input
-              id="hangman-name"
-              maxLength={40}
-              value={name}
-              onChange={(event) => setName(event.target.value)}
-              placeholder="Player"
-            />
           </div>
 
           {phonePanel}
