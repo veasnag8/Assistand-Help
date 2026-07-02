@@ -402,6 +402,7 @@ export default function HangmanTool() {
           placeholder="Enter your name"
           required
         />
+        {!hasPlayerName ? <div className="hangman-required-message">Enter your name</div> : null}
       </div>
 
       <button className="button secondary" type="button" onClick={handleJoinGame} disabled={busy || !hasPlayerName}>

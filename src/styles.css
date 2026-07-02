@@ -5255,6 +5255,13 @@ button.khmer-calendar-cell:hover {
   font-weight: 800;
 }
 
+.hangman-required-message {
+  margin-top: 6px;
+  color: #dc2626;
+  font-size: 0.76rem;
+  font-weight: 850;
+}
+
 .hangman-word-form,
 .hangman-guess-panel {
   display: grid;
