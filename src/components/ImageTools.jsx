@@ -169,6 +169,215 @@ function findDenseRange(counts, threshold, minLength) {
   return { end: bestEnd, start: bestStart };
 }
 
+function getDistance(first, second) {
+  return Math.hypot(first.x - second.x, first.y - second.y);
+}
+
+function getPaperCorners(data, width, bounds) {
+  const corners = {
+    bottomLeft: { point: null, score: Infinity },
+    bottomRight: { point: null, score: -Infinity },
+    topLeft: { point: null, score: Infinity },
+    topRight: { point: null, score: -Infinity },
+  };
+  const endX = bounds.x + bounds.width - 1;
+  const endY = bounds.y + bounds.height - 1;
+
+  for (let y = bounds.y; y <= endY; y += 1) {
+    for (let x = bounds.x; x <= endX; x += 1) {
+      const index = (y * width + x) * 4;
+
+      if (!isLikelyPaperPixel(data, index)) {
+        continue;
+      }
+
+      const sum = x + y;
+      const difference = x - y;
+
+      if (sum < corners.topLeft.score) {
+        corners.topLeft = { point: { x, y }, score: sum };
+      }
+
+      if (difference > corners.topRight.score) {
+        corners.topRight = { point: { x, y }, score: difference };
+      }
+
+      if (difference < corners.bottomLeft.score) {
+        corners.bottomLeft = { point: { x, y }, score: difference };
+      }
+
+      if (sum > corners.bottomRight.score) {
+        corners.bottomRight = { point: { x, y }, score: sum };
+      }
+    }
+  }
+
+  const points = {
+    bottomLeft: corners.bottomLeft.point,
+    bottomRight: corners.bottomRight.point,
+    topLeft: corners.topLeft.point,
+    topRight: corners.topRight.point,
+  };
+
+  if (!points.topLeft || !points.topRight || !points.bottomRight || !points.bottomLeft) {
+    return null;
+  }
+
+  const topWidth = getDistance(points.topLeft, points.topRight);
+  const bottomWidth = getDistance(points.bottomLeft, points.bottomRight);
+  const leftHeight = getDistance(points.topLeft, points.bottomLeft);
+  const rightHeight = getDistance(points.topRight, points.bottomRight);
+
+  if (Math.min(topWidth, bottomWidth, leftHeight, rightHeight) < 40) {
+    return null;
+  }
+
+  return points;
+}
+
+function solveLinearSystem(matrix, values) {
+  const size = values.length;
+  const rows = matrix.map((row, index) => [...row, values[index]]);
+
+  for (let column = 0; column < size; column += 1) {
+    let pivotRow = column;
+
+    for (let row = column + 1; row < size; row += 1) {
+      if (Math.abs(rows[row][column]) > Math.abs(rows[pivotRow][column])) {
+        pivotRow = row;
+      }
+    }
+
+    if (Math.abs(rows[pivotRow][column]) < 1e-8) {
+      return null;
+    }
+
+    [rows[column], rows[pivotRow]] = [rows[pivotRow], rows[column]];
+
+    const pivot = rows[column][column];
+    for (let item = column; item <= size; item += 1) {
+      rows[column][item] /= pivot;
+    }
+
+    for (let row = 0; row < size; row += 1) {
+      if (row === column) {
+        continue;
+      }
+
+      const factor = rows[row][column];
+      for (let item = column; item <= size; item += 1) {
+        rows[row][item] -= factor * rows[column][item];
+      }
+    }
+  }
+
+  return rows.map((row) => row[size]);
+}
+
+function getPerspectiveTransform(sourcePoints, targetPoints) {
+  const matrix = [];
+  const values = [];
+
+  for (let index = 0; index < sourcePoints.length; index += 1) {
+    const source = sourcePoints[index];
+    const target = targetPoints[index];
+
+    matrix.push([source.x, source.y, 1, 0, 0, 0, -target.x * source.x, -target.x * source.y]);
+    values.push(target.x);
+    matrix.push([0, 0, 0, source.x, source.y, 1, -target.y * source.x, -target.y * source.y]);
+    values.push(target.y);
+  }
+
+  const solution = solveLinearSystem(matrix, values);
+
+  if (!solution) {
+    return null;
+  }
+
+  return [...solution, 1];
+}
+
+function sampleImagePixel(source, width, height, x, y) {
+  const clampedX = Math.max(0, Math.min(width - 1, x));
+  const clampedY = Math.max(0, Math.min(height - 1, y));
+  const left = Math.floor(clampedX);
+  const top = Math.floor(clampedY);
+  const right = Math.min(width - 1, left + 1);
+  const bottom = Math.min(height - 1, top + 1);
+  const xRatio = clampedX - left;
+  const yRatio = clampedY - top;
+  const topLeftIndex = (top * width + left) * 4;
+  const topRightIndex = (top * width + right) * 4;
+  const bottomLeftIndex = (bottom * width + left) * 4;
+  const bottomRightIndex = (bottom * width + right) * 4;
+  const result = [0, 0, 0, 255];
+
+  for (let channel = 0; channel < 3; channel += 1) {
+    const topValue = source[topLeftIndex + channel] * (1 - xRatio) + source[topRightIndex + channel] * xRatio;
+    const bottomValue =
+      source[bottomLeftIndex + channel] * (1 - xRatio) + source[bottomRightIndex + channel] * xRatio;
+
+    result[channel] = Math.round(topValue * (1 - yRatio) + bottomValue * yRatio);
+  }
+
+  return result;
+}
+
+function warpPaperToCanvas(sourceCanvas, sourceContext, corners) {
+  const targetWidth = Math.max(
+    1,
+    Math.round((getDistance(corners.topLeft, corners.topRight) + getDistance(corners.bottomLeft, corners.bottomRight)) / 2),
+  );
+  const targetHeight = Math.max(
+    1,
+    Math.round((getDistance(corners.topLeft, corners.bottomLeft) + getDistance(corners.topRight, corners.bottomRight)) / 2),
+  );
+  const targetPoints = [
+    { x: 0, y: 0 },
+    { x: targetWidth - 1, y: 0 },
+    { x: targetWidth - 1, y: targetHeight - 1 },
+    { x: 0, y: targetHeight - 1 },
+  ];
+  const sourcePoints = [corners.topLeft, corners.topRight, corners.bottomRight, corners.bottomLeft];
+  const transform = getPerspectiveTransform(targetPoints, sourcePoints);
+
+  if (!transform) {
+    return null;
+  }
+
+  const canvas = document.createElement("canvas");
+  const context = canvas.getContext("2d", { willReadFrequently: true });
+
+  if (!context) {
+    return null;
+  }
+
+  canvas.width = targetWidth;
+  canvas.height = targetHeight;
+
+  const sourceImageData = sourceContext.getImageData(0, 0, sourceCanvas.width, sourceCanvas.height);
+  const outputImageData = context.createImageData(targetWidth, targetHeight);
+  const [a, b, c, d, e, f, g, h] = transform;
+
+  for (let y = 0; y < targetHeight; y += 1) {
+    for (let x = 0; x < targetWidth; x += 1) {
+      const denominator = g * x + h * y + 1;
+      const sourceX = (a * x + b * y + c) / denominator;
+      const sourceY = (d * x + e * y + f) / denominator;
+      const pixel = sampleImagePixel(sourceImageData.data, sourceCanvas.width, sourceCanvas.height, sourceX, sourceY);
+      const outputIndex = (y * targetWidth + x) * 4;
+
+      outputImageData.data[outputIndex] = pixel[0];
+      outputImageData.data[outputIndex + 1] = pixel[1];
+      outputImageData.data[outputIndex + 2] = pixel[2];
+      outputImageData.data[outputIndex + 3] = 255;
+    }
+  }
+
+  context.putImageData(outputImageData, 0, 0);
+  return canvas;
+}
+
 function detectPaperBounds(imageData, width, height) {
   const data = imageData.data;
   const rowCounts = new Array(height).fill(0);
@@ -242,11 +451,16 @@ function detectPaperBounds(imageData, width, height) {
 
   const padding = Math.round(Math.min(width, height) * 0.004);
 
-  return {
+  const bounds = {
     height: Math.min(height, maxY + padding + 1) - Math.max(0, minY - padding),
     width: Math.min(width, maxX + padding + 1) - Math.max(0, minX - padding),
     x: Math.max(0, minX - padding),
     y: Math.max(0, minY - padding),
+  };
+
+  return {
+    ...bounds,
+    corners: getPaperCorners(data, width, bounds),
   };
 }
 
@@ -580,33 +794,39 @@ export default function ImageTools() {
     const sourceImageData = sourceContext.getImageData(0, 0, sourceCanvas.width, sourceCanvas.height);
     const paperBounds =
       detectPaperBounds(sourceImageData, sourceCanvas.width, sourceCanvas.height) || {
+        corners: null,
         height: sourceCanvas.height,
         width: sourceCanvas.width,
         x: 0,
         y: 0,
       };
-    const canvas = document.createElement("canvas");
+    const warpedCanvas = paperBounds.corners
+      ? warpPaperToCanvas(sourceCanvas, sourceContext, paperBounds.corners)
+      : null;
+    const canvas = warpedCanvas || document.createElement("canvas");
     const context = canvas.getContext("2d", { willReadFrequently: true });
 
     if (!context) {
       throw new Error("Could not prepare the document scan canvas.");
     }
 
-    canvas.width = paperBounds.width;
-    canvas.height = paperBounds.height;
-    context.fillStyle = "#ffffff";
-    context.fillRect(0, 0, canvas.width, canvas.height);
-    context.drawImage(
-      sourceCanvas,
-      paperBounds.x,
-      paperBounds.y,
-      paperBounds.width,
-      paperBounds.height,
-      0,
-      0,
-      canvas.width,
-      canvas.height,
-    );
+    if (!warpedCanvas) {
+      canvas.width = paperBounds.width;
+      canvas.height = paperBounds.height;
+      context.fillStyle = "#ffffff";
+      context.fillRect(0, 0, canvas.width, canvas.height);
+      context.drawImage(
+        sourceCanvas,
+        paperBounds.x,
+        paperBounds.y,
+        paperBounds.width,
+        paperBounds.height,
+        0,
+        0,
+        canvas.width,
+        canvas.height,
+      );
+    }
 
     const imageData = context.getImageData(0, 0, canvas.width, canvas.height);
     const pixels = imageData.data;
@@ -1021,7 +1241,7 @@ export default function ImageTools() {
 
           <div className="image-enhance-card">
             <FileText size={22} strokeWidth={2.1} />
-            <span>Auto crops the white paper, cleans it, then exports PDF.</span>
+            <span>Auto fits the paper, flattens it, then exports PDF.</span>
           </div>
         </>
       );
