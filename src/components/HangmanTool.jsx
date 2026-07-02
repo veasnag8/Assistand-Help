@@ -14,6 +14,7 @@ import Panel from "./Panel";
 const hangmanEndpointPath = "/.netlify/functions/hangman";
 const qrCodeEndpoint = "https://api.qrserver.com/v1/create-qr-code/";
 const pollIntervalMs = 1400;
+const playerHeartbeatMs = 5000;
 
 function createRoomId() {
   if (window.crypto?.randomUUID) {
@@ -140,6 +141,25 @@ async function postGameAction(roomId, payload) {
   return result;
 }
 
+function sendGameActionBeacon(roomId, payload) {
+  const body = JSON.stringify(payload);
+
+  if (navigator.sendBeacon) {
+    const blob = new Blob([body], { type: "application/json" });
+    navigator.sendBeacon(getHangmanUrl(roomId), blob);
+    return;
+  }
+
+  fetch(getHangmanUrl(roomId), {
+    body,
+    headers: {
+      "Content-Type": "application/json",
+    },
+    keepalive: true,
+    method: "POST",
+  }).catch(() => {});
+}
+
 function HangmanBoard({ compact = false, game }) {
   const hangmanParts = Math.min(game?.wrongCount || 0, game?.maxWrongGuesses || 6);
 
@@ -253,6 +273,50 @@ export default function HangmanTool() {
     };
   }, [roomId]);
 
+  useEffect(() => {
+    if (!joinedName || isWordSetter) {
+      return undefined;
+    }
+
+    let active = true;
+
+    async function keepPlayerLive() {
+      try {
+        const result = await postGameAction(roomId, {
+          action: "join",
+          name: joinedName,
+          playerId,
+        });
+
+        if (active) {
+          setPlayers(result.players || []);
+        }
+      } catch {
+        // The polling loop will surface server state.
+      }
+    }
+
+    const intervalId = window.setInterval(keepPlayerLive, playerHeartbeatMs);
+    const leavePayload = {
+      action: "leave",
+      playerId,
+    };
+    const handlePageHide = () => {
+      sendGameActionBeacon(roomId, leavePayload);
+    };
+
+    window.addEventListener("pagehide", handlePageHide);
+    window.addEventListener("beforeunload", handlePageHide);
+
+    return () => {
+      active = false;
+      window.clearInterval(intervalId);
+      window.removeEventListener("pagehide", handlePageHide);
+      window.removeEventListener("beforeunload", handlePageHide);
+      sendGameActionBeacon(roomId, leavePayload);
+    };
+  }, [isWordSetter, joinedName, playerId, roomId]);
+
   async function handleStartGame(event) {
     event.preventDefault();
 
@@ -274,7 +338,7 @@ export default function HangmanTool() {
 
       window.localStorage.setItem("hangman-game-name", cleanName);
       setName(cleanName);
-      setJoinedName(cleanName);
+      setJoinedName("");
       setGame(result.game || null);
       setPlayers(result.players || []);
       setWord("");
@@ -402,7 +466,12 @@ export default function HangmanTool() {
         {game ? <small>{game.status}</small> : <small>set word</small>}
       </div>
 
-      {joinedName ? (
+      {isWordSetter ? (
+        <div className="hangman-joined-name">
+          <span>Word setter</span>
+          <strong>{game?.setterName || cleanName}</strong>
+        </div>
+      ) : joinedName ? (
         <div className="hangman-joined-name">
           <span>Joined as</span>
           <strong>{joinedName}</strong>
@@ -470,18 +539,20 @@ export default function HangmanTool() {
               ? "You set the word. Others can only see blanks."
               : `Word set by ${game.setterName || "Player"}.`}
           </p>
-          <div className="hangman-letter-grid" aria-label="Guess letters">
-            {availableLetters.map((letter) => (
-              <button
-                key={letter}
-                type="button"
-                disabled={busy || !hasPlayerName || game.status !== "playing" || correctGuessedLetters.includes(letter)}
-                onClick={() => handleGuess(letter)}
-              >
-                {letter}
-              </button>
-            ))}
-          </div>
+          {!isWordSetter ? (
+            <div className="hangman-letter-grid" aria-label="Guess letters">
+              {availableLetters.map((letter) => (
+                <button
+                  key={letter}
+                  type="button"
+                  disabled={busy || !hasPlayerName || game.status !== "playing" || correctGuessedLetters.includes(letter)}
+                  onClick={() => handleGuess(letter)}
+                >
+                  {letter}
+                </button>
+              ))}
+            </div>
+          ) : null}
           {isWordSetter ? (
             <button className="button ghost" type="button" onClick={handleReset} disabled={busy}>
               <Trash2 size={16} strokeWidth={2.2} />

@@ -6,6 +6,7 @@ const storeName = "hangman-game";
 const maxNameLength = 40;
 const maxWordLength = 32;
 const maxWrongGuesses = 6;
+const playerPresenceMs = 12000;
 const fallbackRooms = new Map();
 
 const corsHeaders = {
@@ -83,8 +84,21 @@ function upsertPlayer(players, playerId, name) {
   ].slice(-80);
 }
 
+function removePlayer(players, playerId) {
+  return (Array.isArray(players) ? players : []).filter((player) => player?.id && player.id !== playerId);
+}
+
+function prunePlayers(players) {
+  const cutoff = Date.now() - playerPresenceMs;
+
+  return (Array.isArray(players) ? players : []).filter((player) => {
+    const time = Date.parse(player?.updatedAt || player?.joinedAt || "");
+    return Number.isFinite(time) && time >= cutoff;
+  });
+}
+
 function getPublicPlayers(players) {
-  return (Array.isArray(players) ? players : [])
+  return prunePlayers(players)
     .filter((player) => player?.id && player?.name)
     .map((player) => ({
       id: player.id,
@@ -194,9 +208,15 @@ export async function handler(event) {
 
   if (event.httpMethod === "GET") {
     const room = await readRoom(roomId);
+    const activePlayers = prunePlayers(room.players);
+
+    if (activePlayers.length !== room.players.length) {
+      await writeRoom(roomId, { ...room, players: activePlayers });
+    }
+
     return jsonResponse(200, {
       game: getPublicGameState(room.game),
-      players: getPublicPlayers(room.players),
+      players: getPublicPlayers(activePlayers),
       roomId,
     });
   }
@@ -248,7 +268,7 @@ export async function handler(event) {
           createdAt: new Date().toISOString(),
           updatedAt: new Date().toISOString(),
         },
-        players: upsertPlayer(room.players, playerId, name),
+        players: removePlayer(room.players, playerId),
       });
 
       return jsonResponse(201, {
@@ -267,6 +287,20 @@ export async function handler(event) {
       const nextRoom = await writeRoom(roomId, {
         ...room,
         players: upsertPlayer(room.players, playerId, name),
+      });
+
+      return jsonResponse(200, {
+        game: getPublicGameState(nextRoom.game),
+        players: getPublicPlayers(nextRoom.players),
+        roomId,
+      });
+    }
+
+    if (action === "leave") {
+      const room = await readRoom(roomId);
+      const nextRoom = await writeRoom(roomId, {
+        ...room,
+        players: removePlayer(room.players, playerId),
       });
 
       return jsonResponse(200, {
