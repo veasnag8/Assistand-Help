@@ -519,27 +519,6 @@ export default function ScanTextTool() {
                 </div>
               ) : null}
 
-              <div className="button-row wrap">
-                <button
-                  className="button secondary scan-text-action"
-                  type="button"
-                  onClick={copyScannedText}
-                  disabled={!combinedText || scanBusy}
-                >
-                  <Copy size={17} strokeWidth={2.2} />
-                  <span>Copy Text</span>
-                </button>
-                <button
-                  className="button secondary scan-text-action"
-                  type="button"
-                  onClick={downloadScannedText}
-                  disabled={!combinedText || scanBusy}
-                >
-                  <Download size={17} strokeWidth={2.2} />
-                  <span>Save Text</span>
-                </button>
-              </div>
-
               <div className="scan-text-paste-card">
                 <ClipboardPaste size={22} strokeWidth={2.1} />
                 <span>Paste image from clipboard</span>
@@ -554,19 +533,41 @@ export default function ScanTextTool() {
                 <strong>{activePage?.label || "No file selected"}</strong>
               </div>
               {sourceFile ? (
-                <small>
-                  {isPdfFile(sourceFile) ? (
-                    <>
-                      <FileText size={14} strokeWidth={2.2} />
-                      <span>PDF</span>
-                    </>
-                  ) : (
-                    <>
-                      <ImageIcon size={14} strokeWidth={2.2} />
-                      <span>{activePage?.width} x {activePage?.height}</span>
-                    </>
-                  )}
-                </small>
+                <div className="scan-text-header-actions">
+                  <div className="button-row wrap">
+                    <button
+                      className="button secondary scan-text-action"
+                      type="button"
+                      onClick={copyScannedText}
+                      disabled={!combinedText || scanBusy}
+                    >
+                      <Copy size={17} strokeWidth={2.2} />
+                      <span>Copy Text</span>
+                    </button>
+                    <button
+                      className="button secondary scan-text-action"
+                      type="button"
+                      onClick={downloadScannedText}
+                      disabled={!combinedText || scanBusy}
+                    >
+                      <Download size={17} strokeWidth={2.2} />
+                      <span>Save Text</span>
+                    </button>
+                  </div>
+                  <small>
+                    {isPdfFile(sourceFile) ? (
+                      <>
+                        <FileText size={14} strokeWidth={2.2} />
+                        <span>PDF</span>
+                      </>
+                    ) : (
+                      <>
+                        <ImageIcon size={14} strokeWidth={2.2} />
+                        <span>{activePage?.width} x {activePage?.height}</span>
+                      </>
+                    )}
+                  </small>
+                </div>
               ) : null}
             </div>
 

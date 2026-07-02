@@ -2280,6 +2280,13 @@ button.khmer-calendar-cell:hover {
   gap: 2px;
 }
 
+.scan-text-preview-header .scan-text-header-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 12px;
+}
+
 .scan-text-preview-header span,
 .scan-text-preview-header small {
   color: var(--muted);
@@ -4836,6 +4843,13 @@ button.khmer-calendar-cell:hover {
   .scan-text-preview-header {
     align-items: flex-start;
     flex-direction: column;
+  }
+
+  .scan-text-preview-header .scan-text-header-actions {
+    width: 100%;
+    align-items: flex-start;
+    flex-direction: column-reverse;
+    justify-content: flex-start;
   }
 
   .scan-text-original-frame,
