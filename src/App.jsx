@@ -163,7 +163,7 @@ const categories = [
     id: "image",
     title: "Image Tools",
     tabTitle: "Image Tools",
-    description: "Resize, compress, remove background, convert, crop, and enhance photos.",
+    description: "Resize, compress, scan to document, convert, crop, and enhance photos.",
     icon: FileImage,
     tone: "cyan",
     enabled: true,

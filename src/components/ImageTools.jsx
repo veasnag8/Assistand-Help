@@ -4,6 +4,7 @@ import {
   Cloud,
   Crop,
   Eraser,
+  FileText,
   FileImage,
   Image as ImageIcon,
   Minimize2,
@@ -54,6 +55,12 @@ const modes = [
     label: "AI Enhance Photo",
     icon: WandSparkles,
     description: "Improve sharpness, contrast, and color.",
+  },
+  {
+    id: "scan-doc",
+    label: "Scan to Document",
+    icon: FileText,
+    description: "Clean a photo of a page and export it as a PDF document.",
   },
 ];
 
@@ -128,6 +135,8 @@ export default function ImageTools() {
   const [quality, setQuality] = useState(0.82);
   const [removeBgMethod, setRemoveBgMethod] = useState("api");
   const [bgTolerance, setBgTolerance] = useState(42);
+  const [documentTone, setDocumentTone] = useState("clean");
+  const [documentPageSize, setDocumentPageSize] = useState("image");
   const [cropBox, setCropBox] = useState({ x: 0, y: 0, width: 1200, height: 800 });
   const [apiRemoveResult, setApiRemoveResult] = useState(null);
   const [aiRemoveResult, setAiRemoveResult] = useState(null);
@@ -230,6 +239,8 @@ export default function ImageTools() {
     resizeHeight,
     resizeWidth,
     sourceImage,
+    documentPageSize,
+    documentTone,
   ]);
 
   async function handleSourceFile(file) {
@@ -420,6 +431,60 @@ export default function ImageTools() {
     };
   }
 
+  async function buildScannedDocumentImage(sourceWidth, sourceHeight) {
+    const canvas = document.createElement("canvas");
+    const context = canvas.getContext("2d", { willReadFrequently: true });
+
+    if (!context) {
+      throw new Error("Could not prepare the document scan canvas.");
+    }
+
+    const longestSide = Math.max(sourceWidth, sourceHeight);
+    const scale = Math.min(1, 2200 / longestSide);
+
+    canvas.width = Math.max(1, Math.round(sourceWidth * scale));
+    canvas.height = Math.max(1, Math.round(sourceHeight * scale));
+
+    context.fillStyle = "#ffffff";
+    context.fillRect(0, 0, canvas.width, canvas.height);
+    context.imageSmoothingEnabled = true;
+    context.imageSmoothingQuality = "high";
+    context.drawImage(sourceImage, 0, 0, canvas.width, canvas.height);
+
+    const imageData = context.getImageData(0, 0, canvas.width, canvas.height);
+    const pixels = imageData.data;
+
+    for (let index = 0; index < pixels.length; index += 4) {
+      const red = pixels[index];
+      const green = pixels[index + 1];
+      const blue = pixels[index + 2];
+      const luminance = red * 0.299 + green * 0.587 + blue * 0.114;
+      const contrast = clampNumber((luminance - 128) * 1.34 + 146, 0, 255);
+      const value = documentTone === "bw" ? (contrast < 180 ? 0 : 255) : contrast;
+
+      if (documentTone === "color") {
+        pixels[index] = clampNumber((red - 128) * 1.12 + 142, 0, 255);
+        pixels[index + 1] = clampNumber((green - 128) * 1.12 + 142, 0, 255);
+        pixels[index + 2] = clampNumber((blue - 128) * 1.12 + 142, 0, 255);
+      } else {
+        pixels[index] = value;
+        pixels[index + 1] = value;
+        pixels[index + 2] = value;
+      }
+
+      pixels[index + 3] = 255;
+    }
+
+    context.putImageData(imageData, 0, 0);
+
+    return {
+      blob: await canvasToBlob(canvas, "image/jpeg", 0.92),
+      canvas,
+      height: canvas.height,
+      width: canvas.width,
+    };
+  }
+
   function updateResizeWidth(value) {
     const width = clampNumber(value, 1, 12000);
     setResizeWidth(width);
@@ -498,6 +563,8 @@ export default function ImageTools() {
       canvas.width = sourceWidth;
       canvas.height = sourceHeight;
       context.drawImage(enhancedImage, 0, 0, sourceWidth, sourceHeight);
+    } else if (mode === "scan-doc") {
+      return buildScannedDocumentImage(sourceWidth, sourceHeight);
     } else if (mode === "remove-bg") {
       if (removeBgMethod === "api") {
         if (hasApiRemoveResult) {
@@ -560,7 +627,17 @@ export default function ImageTools() {
         return;
       }
 
-      const { blob, width, height } = await buildOutputImage();
+      const { blob, canvas, width, height } = await buildOutputImage();
+
+      if (mode === "scan-doc") {
+        const pdfBlob = await buildScannedDocumentPdf(canvas);
+
+        downloadBlob(pdfBlob, `${getBaseName(sourceFile?.name)}-document.pdf`);
+        setPreviewSize(pdfBlob.size);
+        setStatus(`Downloaded scanned document - ${formatFileSize(pdfBlob.size)}.`);
+        return;
+      }
+
       const fileName = `${getBaseName(sourceFile?.name)}-${mode}.${activeFormatOption.extension}`;
 
       downloadBlob(blob, fileName);
@@ -575,6 +652,46 @@ export default function ImageTools() {
 
   async function handleRemoveBackground() {
     openRemoveBgUpload();
+  }
+
+  async function buildScannedDocumentPdf(canvas) {
+    if (!canvas) {
+      throw new Error("Could not prepare the scanned document.");
+    }
+
+    const { PDFDocument } = await import("pdf-lib");
+    const pdf = await PDFDocument.create();
+    const imageBytes = await canvasToBlob(canvas, "image/jpeg", 0.92).then((blob) =>
+      blob.arrayBuffer(),
+    );
+    const image = await pdf.embedJpg(imageBytes);
+    const imageWidth = image.width;
+    const imageHeight = image.height;
+    const a4Portrait = { width: 595.28, height: 841.89 };
+    const a4Landscape = { width: 841.89, height: 595.28 };
+    const pageSize =
+      documentPageSize === "a4"
+        ? imageWidth > imageHeight
+          ? a4Landscape
+          : a4Portrait
+        : { width: imageWidth, height: imageHeight };
+    const page = pdf.addPage([pageSize.width, pageSize.height]);
+    const margin = documentPageSize === "a4" ? 28 : 0;
+    const maxWidth = pageSize.width - margin * 2;
+    const maxHeight = pageSize.height - margin * 2;
+    const scale = Math.min(maxWidth / imageWidth, maxHeight / imageHeight);
+    const drawWidth = imageWidth * scale;
+    const drawHeight = imageHeight * scale;
+
+    page.drawImage(image, {
+      height: drawHeight,
+      width: drawWidth,
+      x: (pageSize.width - drawWidth) / 2,
+      y: (pageSize.height - drawHeight) / 2,
+    });
+
+    const pdfBytes = await pdf.save();
+    return new Blob([pdfBytes], { type: "application/pdf" });
   }
 
   function renderModeControls() {
@@ -717,6 +834,42 @@ export default function ImageTools() {
       );
     }
 
+    if (mode === "scan-doc") {
+      return (
+        <>
+          <div className="field">
+            <label htmlFor="document-tone">Document style</label>
+            <select
+              id="document-tone"
+              value={documentTone}
+              onChange={(event) => setDocumentTone(event.target.value)}
+            >
+              <option value="clean">Clean grayscale</option>
+              <option value="bw">Black and white</option>
+              <option value="color">Clean color</option>
+            </select>
+          </div>
+
+          <div className="field">
+            <label htmlFor="document-page-size">PDF page</label>
+            <select
+              id="document-page-size"
+              value={documentPageSize}
+              onChange={(event) => setDocumentPageSize(event.target.value)}
+            >
+              <option value="image">Fit to image</option>
+              <option value="a4">A4 page</option>
+            </select>
+          </div>
+
+          <div className="image-enhance-card">
+            <FileText size={22} strokeWidth={2.1} />
+            <span>Preview shows the cleaned page. Download exports PDF.</span>
+          </div>
+        </>
+      );
+    }
+
     if (mode === "crop") {
       return (
         <div className="image-inline-grid">
@@ -827,7 +980,7 @@ export default function ImageTools() {
               onClick={handleDownload}
               disabled={!sourceImage || busy || previewBusy || removeBgBusy}
             >
-              Download Image
+              {mode === "scan-doc" ? "Download PDF" : "Download Image"}
             </button>
           </div>
 
