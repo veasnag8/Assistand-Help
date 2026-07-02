@@ -5199,6 +5199,62 @@ button.khmer-calendar-cell:hover {
   text-transform: uppercase;
 }
 
+.hangman-player-list {
+  width: 100%;
+  display: grid;
+  gap: 10px;
+  border: 1px solid rgba(37, 99, 235, 0.12);
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.72);
+  padding: 12px;
+}
+
+.hangman-player-list-title {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  color: #091047;
+  font-weight: 900;
+}
+
+.hangman-player-list-title small {
+  display: inline-grid;
+  min-width: 26px;
+  min-height: 26px;
+  place-items: center;
+  border-radius: 999px;
+  background: rgba(37, 99, 235, 0.1);
+  color: #2563eb;
+}
+
+.hangman-player-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+}
+
+.hangman-player-chips span {
+  max-width: 100%;
+  overflow: hidden;
+  border: 1px solid rgba(9, 16, 71, 0.1);
+  border-radius: 999px;
+  background: #fff;
+  color: #091047;
+  padding: 7px 10px;
+  font-size: 0.82rem;
+  font-weight: 850;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.hangman-player-list p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.78rem;
+  font-weight: 800;
+}
+
 .hangman-word-form,
 .hangman-guess-panel {
   display: grid;

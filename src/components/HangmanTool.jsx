@@ -167,11 +167,32 @@ function HangmanBoard({ compact = false, game }) {
   );
 }
 
+function HangmanPlayersList({ players }) {
+  return (
+    <div className="hangman-player-list">
+      <div className="hangman-player-list-title">
+        <span>Players</span>
+        <small>{players.length}</small>
+      </div>
+      {players.length ? (
+        <div className="hangman-player-chips">
+          {players.map((player) => (
+            <span key={player.id}>{player.name}</span>
+          ))}
+        </div>
+      ) : (
+        <p>No players joined yet.</p>
+      )}
+    </div>
+  );
+}
+
 export default function HangmanTool() {
   const [roomId] = useState(getStoredRoomId);
   const [playerId] = useState(getPlayerId);
   const [game, setGame] = useState(null);
-  const [name, setName] = useState(() => window.localStorage.getItem("hangman-game-name") || "");
+  const [name, setName] = useState(() => (getHashParams().get("view") === "phone" ? "" : window.localStorage.getItem("hangman-game-name") || ""));
+  const [players, setPlayers] = useState([]);
   const [word, setWord] = useState("");
   const [showWord, setShowWord] = useState(false);
   const [status, setStatus] = useState("Ready.");
@@ -206,6 +227,7 @@ export default function HangmanTool() {
 
         if (active) {
           setGame(result.game || null);
+          setPlayers(result.players || []);
           setStatus("Live.");
         }
       } catch (error) {
@@ -246,6 +268,7 @@ export default function HangmanTool() {
       window.localStorage.setItem("hangman-game-name", cleanName);
       setName(cleanName);
       setGame(result.game || null);
+      setPlayers(result.players || []);
       setWord("");
       setShowWord(false);
       setStatus("Hangman started.");
@@ -276,6 +299,7 @@ export default function HangmanTool() {
       window.localStorage.setItem("hangman-game-name", cleanName);
       setName(cleanName);
       setGame(result.game || null);
+      setPlayers(result.players || []);
       setStatus("Guess sent.");
     } catch (error) {
       setStatus(error?.message || "Could not guess.");
@@ -295,6 +319,7 @@ export default function HangmanTool() {
       });
 
       setGame(result.game || null);
+      setPlayers(result.players || []);
       setStatus("Hangman reset.");
     } catch (error) {
       setStatus(error?.message || "Could not reset Hangman.");
@@ -311,6 +336,7 @@ export default function HangmanTool() {
       const result = await fetchGame(roomId);
 
       setGame(result.game || null);
+      setPlayers(result.players || []);
       setStatus("Live.");
     } catch (error) {
       setStatus(error?.message || "Could not refresh Hangman.");
@@ -322,6 +348,34 @@ export default function HangmanTool() {
   async function handleCopyLink() {
     await navigator.clipboard.writeText(phoneUrl);
     setStatus("Phone link copied.");
+  }
+
+  async function handleJoinGame() {
+    if (!hasPlayerName) {
+      setStatus("Enter your name before joining.");
+      return;
+    }
+
+    try {
+      setBusy(true);
+      setStatus("Joining...");
+
+      const result = await postGameAction(roomId, {
+        action: "join",
+        name: cleanName,
+        playerId,
+      });
+
+      window.localStorage.setItem("hangman-game-name", cleanName);
+      setName(cleanName);
+      setGame(result.game || null);
+      setPlayers(result.players || []);
+      setStatus("Joined game.");
+    } catch (error) {
+      setStatus(error?.message || "Could not join game.");
+    } finally {
+      setBusy(false);
+    }
   }
 
   function openScreenOnlyView() {
@@ -349,6 +403,11 @@ export default function HangmanTool() {
           required
         />
       </div>
+
+      <button className="button secondary" type="button" onClick={handleJoinGame} disabled={busy || !hasPlayerName}>
+        <Smartphone size={17} strokeWidth={2.2} />
+        <span>Join Game</span>
+      </button>
 
       {!game ? (
         <form className="hangman-word-form" onSubmit={handleStartGame}>
@@ -465,6 +524,7 @@ export default function HangmanTool() {
             <div className="comment-qr-card">
               <img src={qrUrl} alt="Phone Hangman QR code" />
               <div className="comment-link-box">{phoneUrl}</div>
+              <HangmanPlayersList players={players} />
             </div>
           </Panel>
         </div>
@@ -479,6 +539,7 @@ export default function HangmanTool() {
           <div className="comment-qr-card">
             <img src={qrUrl} alt="Phone Hangman QR code" />
             <div className="comment-link-box">{phoneUrl}</div>
+            <HangmanPlayersList players={players} />
           </div>
 
           <div className="button-row wrap">

@@ -52,7 +52,7 @@ function getRoomKey(roomId) {
 }
 
 function createEmptyRoom() {
-  return { game: null };
+  return { game: null, players: [] };
 }
 
 function normalizeRoomData(roomData) {
@@ -62,7 +62,37 @@ function normalizeRoomData(roomData) {
 
   return {
     game: roomData.game && typeof roomData.game === "object" ? roomData.game : null,
+    players: Array.isArray(roomData.players) ? roomData.players : [],
   };
+}
+
+function upsertPlayer(players, playerId, name) {
+  const now = new Date().toISOString();
+  const currentPlayers = Array.isArray(players) ? players : [];
+  const existingPlayer = currentPlayers.find((player) => player?.id === playerId);
+  const filteredPlayers = currentPlayers.filter((player) => player?.id && player.id !== playerId);
+
+  return [
+    ...filteredPlayers,
+    {
+      id: playerId,
+      joinedAt: existingPlayer?.joinedAt || now,
+      name,
+      updatedAt: now,
+    },
+  ].slice(-80);
+}
+
+function getPublicPlayers(players) {
+  return (Array.isArray(players) ? players : [])
+    .filter((player) => player?.id && player?.name)
+    .map((player) => ({
+      id: player.id,
+      joinedAt: player.joinedAt,
+      name: player.name,
+      updatedAt: player.updatedAt,
+    }))
+    .sort((first, second) => String(first.joinedAt).localeCompare(String(second.joinedAt)));
 }
 
 function getPublicGameState(game) {
@@ -166,13 +196,14 @@ export async function handler(event) {
     const room = await readRoom(roomId);
     return jsonResponse(200, {
       game: getPublicGameState(room.game),
+      players: getPublicPlayers(room.players),
       roomId,
     });
   }
 
   if (event.httpMethod === "DELETE") {
     await deleteRoom(roomId);
-    return jsonResponse(200, { cleared: true, game: null, roomId });
+    return jsonResponse(200, { cleared: true, game: null, players: [], roomId });
   }
 
   if (event.httpMethod !== "POST") {
@@ -217,10 +248,30 @@ export async function handler(event) {
           createdAt: new Date().toISOString(),
           updatedAt: new Date().toISOString(),
         },
+        players: upsertPlayer(room.players, playerId, name),
       });
 
       return jsonResponse(201, {
         game: getPublicGameState(nextRoom.game),
+        players: getPublicPlayers(nextRoom.players),
+        roomId,
+      });
+    }
+
+    if (action === "join") {
+      if (!name) {
+        return jsonResponse(400, { error: "Enter your name before joining." });
+      }
+
+      const room = await readRoom(roomId);
+      const nextRoom = await writeRoom(roomId, {
+        ...room,
+        players: upsertPlayer(room.players, playerId, name),
+      });
+
+      return jsonResponse(200, {
+        game: getPublicGameState(nextRoom.game),
+        players: getPublicPlayers(nextRoom.players),
         roomId,
       });
     }
@@ -264,10 +315,12 @@ export async function handler(event) {
           wrongLetters: nextWrongLetters,
           updatedAt: new Date().toISOString(),
         },
+        players: upsertPlayer(room.players, playerId, name),
       });
 
       return jsonResponse(200, {
         game: getPublicGameState(nextRoom.game),
+        players: getPublicPlayers(nextRoom.players),
         roomId,
       });
     }
@@ -279,9 +332,10 @@ export async function handler(event) {
         return jsonResponse(403, { error: "Only the word setter can start a new word." });
       }
 
-      const nextRoom = await writeRoom(roomId, { game: null });
+      const nextRoom = await writeRoom(roomId, { ...room, game: null });
       return jsonResponse(200, {
         game: getPublicGameState(nextRoom.game),
+        players: getPublicPlayers(nextRoom.players),
         roomId,
       });
     }
