@@ -135,11 +135,44 @@ function isLikelyPaperPixel(data, index) {
   const luminance = getPixelLuminance(data, index);
   const colorSpread = Math.max(red, green, blue) - Math.min(red, green, blue);
 
-  return luminance > 158 && colorSpread < 82;
+  return luminance > 184 && colorSpread < 58;
+}
+
+function findDenseRange(counts, threshold, minLength) {
+  let bestStart = -1;
+  let bestEnd = -1;
+  let start = -1;
+
+  for (let index = 0; index <= counts.length; index += 1) {
+    const isDense = index < counts.length && counts[index] >= threshold;
+
+    if (isDense && start === -1) {
+      start = index;
+    }
+
+    if ((!isDense || index === counts.length) && start !== -1) {
+      const end = index - 1;
+
+      if (end - start + 1 >= minLength && end - start > bestEnd - bestStart) {
+        bestStart = start;
+        bestEnd = end;
+      }
+
+      start = -1;
+    }
+  }
+
+  if (bestStart === -1) {
+    return null;
+  }
+
+  return { end: bestEnd, start: bestStart };
 }
 
 function detectPaperBounds(imageData, width, height) {
   const data = imageData.data;
+  const rowCounts = new Array(height).fill(0);
+  const columnCounts = new Array(width).fill(0);
   let minX = width;
   let minY = height;
   let maxX = -1;
@@ -153,6 +186,8 @@ function detectPaperBounds(imageData, width, height) {
         continue;
       }
 
+      rowCounts[y] += 1;
+      columnCounts[x] += 1;
       minX = Math.min(minX, x);
       minY = Math.min(minY, y);
       maxX = Math.max(maxX, x);
@@ -162,6 +197,31 @@ function detectPaperBounds(imageData, width, height) {
 
   if (maxX < minX || maxY < minY) {
     return null;
+  }
+
+  const denseRows = findDenseRange(rowCounts, Math.max(8, Math.round(width * 0.12)), Math.round(height * 0.24));
+  const denseColumns = findDenseRange(columnCounts, Math.max(8, Math.round(height * 0.12)), Math.round(width * 0.24));
+
+  if (denseRows && denseColumns) {
+    minX = denseColumns.start;
+    maxX = denseColumns.end;
+    minY = denseRows.start;
+    maxY = denseRows.end;
+
+    for (let y = denseRows.start; y <= denseRows.end; y += 1) {
+      for (let x = denseColumns.start; x <= denseColumns.end; x += 1) {
+        const index = (y * width + x) * 4;
+
+        if (!isLikelyPaperPixel(data, index)) {
+          continue;
+        }
+
+        minX = Math.min(minX, x);
+        minY = Math.min(minY, y);
+        maxX = Math.max(maxX, x);
+        maxY = Math.max(maxY, y);
+      }
+    }
   }
 
   const detectedWidth = maxX - minX + 1;
