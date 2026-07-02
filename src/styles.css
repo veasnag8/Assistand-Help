@@ -2288,6 +2288,7 @@ button.khmer-calendar-cell:hover {
 }
 
 .scan-text-preview-header .scan-text-header-actions .button-row {
+  display: flex;
   flex-direction: row;
   flex-wrap: nowrap;
 }
