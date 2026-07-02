@@ -323,7 +323,7 @@ function sampleImagePixel(source, width, height, x, y) {
   return result;
 }
 
-function warpPaperToCanvas(sourceCanvas, sourceContext, corners) {
+function warpPaperToCanvas(sourceCanvas, sourceContext, corners, bounds) {
   const targetWidth = Math.max(
     1,
     Math.round((getDistance(corners.topLeft, corners.topRight) + getDistance(corners.bottomLeft, corners.bottomRight)) / 2),
@@ -332,6 +332,15 @@ function warpPaperToCanvas(sourceCanvas, sourceContext, corners) {
     1,
     Math.round((getDistance(corners.topLeft, corners.bottomLeft) + getDistance(corners.topRight, corners.bottomRight)) / 2),
   );
+  const targetRatio = targetWidth / targetHeight;
+  const boundsRatio = bounds.width / bounds.height;
+  const coversDetectedPaper = targetWidth >= bounds.width * 0.72 && targetHeight >= bounds.height * 0.72;
+  const hasSimilarShape = targetRatio > boundsRatio * 0.55 && targetRatio < boundsRatio * 1.75;
+
+  if (!coversDetectedPaper || !hasSimilarShape) {
+    return null;
+  }
+
   const targetPoints = [
     { x: 0, y: 0 },
     { x: targetWidth - 1, y: 0 },
@@ -449,7 +458,7 @@ function detectPaperBounds(imageData, width, height) {
     return null;
   }
 
-  const padding = Math.round(Math.min(width, height) * 0.004);
+  const padding = Math.round(Math.min(width, height) * 0.012);
 
   const bounds = {
     height: Math.min(height, maxY + padding + 1) - Math.max(0, minY - padding),
@@ -811,7 +820,7 @@ export default function ImageTools() {
         y: 0,
       };
     const warpedCanvas = paperBounds.corners
-      ? warpPaperToCanvas(sourceCanvas, sourceContext, paperBounds.corners)
+      ? warpPaperToCanvas(sourceCanvas, sourceContext, paperBounds.corners, paperBounds)
       : null;
     const canvas = warpedCanvas || document.createElement("canvas");
     const context = canvas.getContext("2d", { willReadFrequently: true });
