@@ -5228,24 +5228,55 @@ button.khmer-calendar-cell:hover {
   color: #2563eb;
 }
 
-.hangman-player-chips {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 7px;
+.hangman-player-rows {
+  display: grid;
+  gap: 8px;
 }
 
-.hangman-player-chips span {
-  max-width: 100%;
-  overflow: hidden;
+.hangman-player-row {
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 10px;
   border: 1px solid rgba(9, 16, 71, 0.1);
-  border-radius: 999px;
+  border-radius: 12px;
   background: #fff;
-  color: #091047;
-  padding: 7px 10px;
+  padding: 9px 10px;
+}
+
+.hangman-player-avatar {
+  width: 34px;
+  height: 34px;
+  flex: 0 0 34px;
+  display: inline-grid;
+  place-items: center;
+  border-radius: 10px;
+  background: #2563eb;
+  color: #fff;
   font-size: 0.82rem;
-  font-weight: 850;
+  font-weight: 950;
+}
+
+.hangman-player-info {
+  min-width: 0;
+  display: grid;
+  gap: 2px;
+}
+
+.hangman-player-info strong {
+  overflow: hidden;
+  color: #091047;
+  font-size: 0.9rem;
+  font-weight: 900;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.hangman-player-info small {
+  color: var(--muted);
+  font-size: 0.72rem;
+  font-weight: 850;
+  text-transform: uppercase;
 }
 
 .hangman-player-list p {

@@ -175,9 +175,15 @@ function HangmanPlayersList({ players }) {
         <small>{players.length}</small>
       </div>
       {players.length ? (
-        <div className="hangman-player-chips">
-          {players.map((player) => (
-            <span key={player.id}>{player.name}</span>
+        <div className="hangman-player-rows">
+          {players.map((player, index) => (
+            <div className="hangman-player-row" key={player.id}>
+              <span className="hangman-player-avatar">{index + 1}</span>
+              <span className="hangman-player-info">
+                <strong>{player.name}</strong>
+                <small>Joined</small>
+              </span>
+            </div>
           ))}
         </div>
       ) : (
@@ -538,7 +544,6 @@ export default function HangmanTool() {
             <div className="comment-qr-card">
               <img src={qrUrl} alt="Phone Hangman QR code" />
               <div className="comment-link-box">{phoneUrl}</div>
-              <HangmanPlayersList players={players} />
             </div>
           </Panel>
         </div>
@@ -553,7 +558,6 @@ export default function HangmanTool() {
           <div className="comment-qr-card">
             <img src={qrUrl} alt="Phone Hangman QR code" />
             <div className="comment-link-box">{phoneUrl}</div>
-            <HangmanPlayersList players={players} />
           </div>
 
           <div className="button-row wrap">
@@ -582,6 +586,7 @@ export default function HangmanTool() {
               </span>
               <span>{game?.status || "Waiting"}</span>
             </div>
+            <HangmanPlayersList players={players} />
             {phonePanel}
           </Panel>
         </div>
