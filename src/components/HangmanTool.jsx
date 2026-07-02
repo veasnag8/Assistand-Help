@@ -193,6 +193,7 @@ export default function HangmanTool() {
   const [game, setGame] = useState(null);
   const [name, setName] = useState(() => (getHashParams().get("view") === "phone" ? "" : window.localStorage.getItem("hangman-game-name") || ""));
   const [players, setPlayers] = useState([]);
+  const [joinedName, setJoinedName] = useState("");
   const [word, setWord] = useState("");
   const [showWord, setShowWord] = useState(false);
   const [status, setStatus] = useState("Ready.");
@@ -267,6 +268,7 @@ export default function HangmanTool() {
 
       window.localStorage.setItem("hangman-game-name", cleanName);
       setName(cleanName);
+      setJoinedName(cleanName);
       setGame(result.game || null);
       setPlayers(result.players || []);
       setWord("");
@@ -298,6 +300,7 @@ export default function HangmanTool() {
 
       window.localStorage.setItem("hangman-game-name", cleanName);
       setName(cleanName);
+      setJoinedName(cleanName);
       setGame(result.game || null);
       setPlayers(result.players || []);
       setStatus("Guess sent.");
@@ -368,6 +371,7 @@ export default function HangmanTool() {
 
       window.localStorage.setItem("hangman-game-name", cleanName);
       setName(cleanName);
+      setJoinedName(cleanName);
       setGame(result.game || null);
       setPlayers(result.players || []);
       setStatus("Joined game.");
@@ -392,23 +396,32 @@ export default function HangmanTool() {
         {game ? <small>{game.status}</small> : <small>set word</small>}
       </div>
 
-      <div className="field">
-        <label htmlFor="hangman-name">Name</label>
-        <input
-          id="hangman-name"
-          maxLength={40}
-          value={name}
-          onChange={(event) => setName(event.target.value)}
-          placeholder="Enter your name"
-          required
-        />
-        {!hasPlayerName ? <div className="hangman-required-message">Enter your name</div> : null}
-      </div>
+      {joinedName ? (
+        <div className="hangman-joined-name">
+          <span>Joined as</span>
+          <strong>{joinedName}</strong>
+        </div>
+      ) : (
+        <>
+          <div className="field">
+            <label htmlFor="hangman-name">Name</label>
+            <input
+              id="hangman-name"
+              maxLength={40}
+              value={name}
+              onChange={(event) => setName(event.target.value)}
+              placeholder="Enter your name"
+              required
+            />
+            {!hasPlayerName ? <div className="hangman-required-message">Enter your name</div> : null}
+          </div>
 
-      <button className="button secondary" type="button" onClick={handleJoinGame} disabled={busy || !hasPlayerName}>
-        <Smartphone size={17} strokeWidth={2.2} />
-        <span>Join Game</span>
-      </button>
+          <button className="button secondary" type="button" onClick={handleJoinGame} disabled={busy || !hasPlayerName}>
+            <Smartphone size={17} strokeWidth={2.2} />
+            <span>Join Game</span>
+          </button>
+        </>
+      )}
 
       {!game ? (
         <form className="hangman-word-form" onSubmit={handleStartGame}>
