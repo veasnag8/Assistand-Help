@@ -484,7 +484,7 @@ export default function ImageTools() {
   const [quality, setQuality] = useState(0.82);
   const [removeBgMethod, setRemoveBgMethod] = useState("api");
   const [bgTolerance, setBgTolerance] = useState(42);
-  const [documentTone, setDocumentTone] = useState("clean");
+  const [documentTone, setDocumentTone] = useState("color");
   const [documentPageSize, setDocumentPageSize] = useState("image");
   const [scanDocManualCrop, setScanDocManualCrop] = useState(false);
   const [cropBox, setCropBox] = useState({ x: 0, y: 0, width: 1200, height: 800 });
