@@ -73,6 +73,10 @@ function normalizeRuns(items, fallbackSize = 24) {
   }));
 }
 
+function isPageLabelText(value) {
+  return /^page\s+\d+$/i.test(cleanText(value, 40));
+}
+
 function tableCellFromText(value) {
   return new TableCell({
     children: [new Paragraph({ children: [new TextRun({ text: cleanText(value, 6000) || " ", font: defaultFont })] })],
@@ -92,16 +96,9 @@ function blockToDocx(block, index) {
   const type = cleanText(block?.type, 24).toLowerCase();
 
   if (type === "heading") {
-    const level = Number(block?.level);
-    const headingLevel =
-      level === 1 ? HeadingLevel.HEADING_1 :
-      level === 2 ? HeadingLevel.HEADING_2 :
-      level === 3 ? HeadingLevel.HEADING_3 :
-      HeadingLevel.HEADING_2;
-
+    const runs = normalizeRuns(block?.runs || [{ text: block?.text }], 24);
     return new Paragraph({
-      heading: headingLevel,
-      children: normalizeRuns(block?.runs || [{ text: block?.text }], 28),
+      children: runs,
       spacing: { after: 120, before: index === 0 ? 0 : 120 },
     });
   }
@@ -139,6 +136,7 @@ function blockToDocx(block, index) {
 function buildDocxFromStructuredContent(payload, fallbackName) {
   const pages = Array.isArray(payload?.pages) ? payload.pages : [];
   const children = [];
+  let removedPageLabels = 0;
 
   pages.forEach((page, pageIndex) => {
     if (pageIndex > 0) {
@@ -146,7 +144,16 @@ function buildDocxFromStructuredContent(payload, fallbackName) {
     }
 
     const blocks = Array.isArray(page?.blocks) ? page.blocks : [];
-    blocks.forEach((block, blockIndex) => {
+    const filteredBlocks = blocks.filter((block) => {
+      const text = cleanText(block?.text || block?.runs?.map((run) => run?.text).join(" ") || "", 120);
+      if (block?.type === "heading" && isPageLabelText(text)) {
+        removedPageLabels += 1;
+        return false;
+      }
+
+      return true;
+    });
+    filteredBlocks.forEach((block, blockIndex) => {
       const item = blockToDocx(block, blockIndex);
       if (Array.isArray(item)) {
         children.push(...item);
@@ -203,9 +210,11 @@ async function convertWithGemini(pdfBuffer, fileName) {
     "You convert PDFs into a Word-friendly structured JSON document.",
     "Preserve the original page layout, reading order, headings, paragraphs, bullet lists, tables, spacing, emphasis, and page breaks as closely as possible.",
     "Do not add artificial page labels like Page 1 or Page 2.",
+    "Do not create page titles or section labels unless they are visible in the PDF itself.",
     "Do not summarize, translate, rewrite, or normalize wording unless the source text is unreadable.",
     "If the PDF has scanned pages or mixed Khmer/English text, OCR the visible text carefully and keep the original wording as close as possible.",
     "When the document is complex, prioritize fidelity to the source over beautification. Keep awkward line breaks, repeated labels, and layout structure if they appear in the original.",
+    "If the first line looks like a page number artifact such as Page 1, Page 2, or similar, omit it.",
     "Return only valid JSON with this shape:",
     "{",
     '  "title": "short document title",',
