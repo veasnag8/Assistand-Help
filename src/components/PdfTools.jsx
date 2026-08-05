@@ -208,6 +208,8 @@ function isSupportedWordPdfFile(file) {
   return isPdfFile(file);
 }
 
+const pdfToWordEndpointPath = "/.netlify/functions/pdf-to-word";
+
 function countMatches(text, pattern) {
   return text.match(pattern)?.length || 0;
 }
@@ -236,6 +238,141 @@ function splitParagraphs(text) {
     .split(/\n{2,}/)
     .map((paragraph) => paragraph.replace(/\n+/g, " ").replace(/[ \t]{2,}/g, " ").trim())
     .filter(Boolean);
+}
+
+function clampWordSize(value) {
+  return Math.max(16, Math.min(96, Math.round(value * 2)));
+}
+
+function normalizeWordColor(value) {
+  if (typeof value !== "string") {
+    return null;
+  }
+
+  const hex = value.trim().replace(/^#/, "");
+  return /^[0-9a-f]{6}$/i.test(hex) ? `#${hex.toUpperCase()}` : null;
+}
+
+function createWordTextRun(text, { bold = false, italic = false, size = 24, color = null, font = "Noto Sans Khmer" } = {}) {
+  return new TextRun({
+    bold,
+    color: normalizeWordColor(color) || undefined,
+    font,
+    italics: italic,
+    size: clampWordSize(size),
+    text,
+  });
+}
+
+function lineItemStyle(item) {
+  const style = item.style || {};
+
+  return {
+    bold: Boolean(style.bold || style.fontWeight >= 600),
+    color: style.color || item.color || null,
+    italic: Boolean(style.italic || style.fontStyle === "italic"),
+    size: item.height || style.fontSize || 12,
+  };
+}
+
+function sortTextItems(items = []) {
+  return [...items].sort((left, right) => {
+    const leftY = Math.round((left.transform?.[5] || 0) * 10) / 10;
+    const rightY = Math.round((right.transform?.[5] || 0) * 10) / 10;
+
+    if (Math.abs(leftY - rightY) > 2) {
+      return rightY - leftY;
+    }
+
+    return (left.transform?.[4] || 0) - (right.transform?.[4] || 0);
+  });
+}
+
+function groupTextItemsIntoLines(items = []) {
+  const lines = [];
+
+  for (const item of sortTextItems(items)) {
+    const y = Math.round((item.transform?.[5] || 0) * 10) / 10;
+    const lastLine = lines[lines.length - 1];
+
+    if (!lastLine || Math.abs(lastLine.y - y) > 2.5) {
+      lines.push({ items: [item], y });
+    } else {
+      lastLine.items.push(item);
+    }
+  }
+
+  return lines.map((line) => ({
+    items: [...line.items].sort((left, right) => (left.transform?.[4] || 0) - (right.transform?.[4] || 0)),
+    y: line.y,
+  }));
+}
+
+function buildParagraphRunsFromTextItems(items = []) {
+  const runs = [];
+  let currentStyle = null;
+
+  for (const item of items) {
+    const text = item.str || "";
+
+    if (!text) {
+      continue;
+    }
+
+    const style = lineItemStyle(item);
+    const sameStyle =
+      currentStyle &&
+      currentStyle.bold === style.bold &&
+      currentStyle.italic === style.italic &&
+      currentStyle.size === style.size &&
+      currentStyle.color === style.color;
+
+    if (!sameStyle) {
+      currentStyle = { ...style, text };
+      runs.push(createWordTextRun(text, currentStyle));
+      continue;
+    }
+
+    currentStyle.text += text;
+    runs[runs.length - 1] = createWordTextRun(currentStyle.text, currentStyle);
+  }
+
+  return runs.length ? runs : [createWordTextRun(" ")];
+}
+
+function buildParagraphsFromTextContent(textContent) {
+  const lines = groupTextItemsIntoLines(textContent?.items || []);
+  const paragraphs = [];
+  let current = [];
+  let previousY = null;
+
+  for (const line of lines) {
+    const lineText = line.items.map((item) => item.str || "").join("").trim();
+
+    if (!lineText) {
+      if (current.length) {
+        paragraphs.push(current);
+        current = [];
+      }
+
+      previousY = null;
+      continue;
+    }
+
+    if (previousY !== null && previousY - line.y > 14 && current.length) {
+      paragraphs.push(current);
+      current = [];
+    }
+
+    current.push(...line.items);
+    previousY = line.y;
+  }
+
+  if (current.length) {
+    paragraphs.push(current);
+  }
+
+  return paragraphs.map((items) => buildParagraphRunsFromTextItems(items));
 }
 
 async function renderPdfPagesForWord(file, { maxPages = Infinity, onProgress } = {}) {
@@ -279,85 +416,115 @@ async function renderPdfPagesForWord(file, { maxPages = Infinity, onProgress } =
   return pages;
 }
 
-async function ocrPdfToWord(file, { onProgress } = {}) {
-  const pages = await renderPdfPagesForWord(file, { onProgress });
+async function ocrPdfPageToRuns(imageDataUrl) {
   const { createWorker } = await import("tesseract.js");
   const worker = await createWorker("khm+eng", 1, {
-    logger: (message) => {
-      onProgress?.(message);
-    },
+    logger: () => {},
   });
-
-  const paragraphs = [];
 
   try {
     await worker.setParameters({
       preserve_interword_spaces: "1",
     });
 
-    for (const page of pages) {
-      const {
-        data: { confidence, text },
-      } = await worker.recognize(page.dataUrl);
-      const cleanText = normalizeOcrText(text);
+    const { data } = await worker.recognize(imageDataUrl);
+    const cleanText = normalizeOcrText(data.text || "");
 
-      if (cleanText) {
-        paragraphs.push({
-          pageNumber: page.pageNumber,
-          score: scoreOcrText(cleanText, confidence),
-          text: cleanText,
-        });
-      }
+    if (!cleanText) {
+      return null;
     }
+
+    return splitParagraphs(cleanText).map((paragraph) => [createWordTextRun(paragraph, { size: 24 })]);
   } finally {
     await worker.terminate();
+  }
+}
+
+async function ocrPdfToWord(file, { onProgress } = {}) {
+  const { getDocument } = await loadPdfJs();
+  const data = await readFileAsArrayBuffer(file);
+  const pdf = await getDocument({ data }).promise;
+  const children = [];
+
+  try {
+    for (let pageNumber = 1; pageNumber <= pdf.numPages; pageNumber += 1) {
+      onProgress?.(pageNumber, pdf.numPages);
+      const page = await pdf.getPage(pageNumber);
+      const viewport = page.getViewport({ scale: 2 });
+      const canvas = document.createElement("canvas");
+      const context = canvas.getContext("2d");
+
+      if (!context) {
+        throw new Error("Could not prepare the PDF page canvas.");
+      }
+
+      canvas.width = Math.ceil(viewport.width);
+      canvas.height = Math.ceil(viewport.height);
+
+      await page.render({
+        canvasContext: context,
+        viewport,
+      }).promise;
+
+      let pageRuns = null;
+
+      try {
+        const textContent = await page.getTextContent({
+          disableCombineTextItems: false,
+          normalizeWhitespace: false,
+        });
+        pageRuns = buildParagraphsFromTextContent(textContent);
+      } catch {
+        pageRuns = null;
+      }
+
+      if (!pageRuns || !pageRuns.length) {
+        pageRuns = await ocrPdfPageToRuns(canvas.toDataURL("image/png"));
+      }
+
+      children.push(
+        new Paragraph({
+          children: [
+            createWordTextRun(`Page ${pageNumber}`, {
+              bold: true,
+              size: 26,
+            }),
+          ],
+          spacing: { after: 120, before: pageNumber === 1 ? 0 : 200 },
+        }),
+      );
+
+      if (pageRuns && pageRuns.length) {
+        pageRuns.forEach((runs) => {
+          children.push(
+            new Paragraph({
+              children: runs,
+              spacing: { after: 180 },
+            }),
+          );
+        });
+      } else {
+        children.push(
+          new Paragraph({
+            children: [
+              createWordTextRun("No readable text was detected in this page.", {
+                size: 24,
+              }),
+            ],
+          }),
+        );
+      }
+
+      page.cleanup();
+    }
+  } finally {
+    await pdf.destroy();
   }
 
   const doc = new Document({
     sections: [
       {
-        children: paragraphs.length
-          ? paragraphs.flatMap((page, index) => {
-              const pageParagraphs = splitParagraphs(page.text).map(
-                (paragraph) =>
-                  new Paragraph({
-                    children: [
-                      new TextRun({
-                        font: "Noto Sans Khmer",
-                        size: 24,
-                        text: paragraph,
-                      }),
-                    ],
-                    spacing: { after: 180 },
-                  }),
-              );
-
-              return [
-                new Paragraph({
-                  children: [
-                    new TextRun({
-                      bold: true,
-                      font: "Noto Sans Khmer",
-                      size: 26,
-                      text: `Page ${page.pageNumber}`,
-                    }),
-                  ],
-                  spacing: { after: 120, before: index === 0 ? 0 : 200 },
-                }),
-                ...pageParagraphs,
-              ];
-            })
-          : [
-              new Paragraph({
-                children: [
-                  new TextRun({
-                    font: "Noto Sans Khmer",
-                    size: 24,
-                    text: "No readable text was detected in the selected PDF.",
-                  }),
-                ],
-              }),
-            ],
+        children,
       },
     ],
   });
@@ -367,7 +534,49 @@ async function ocrPdfToWord(file, { onProgress } = {}) {
   return {
     blob,
     filename: `${getBaseName(file.name)}-ocr.docx`,
-    pages,
+  };
+}
+
+function getPdfToWordEndpoint() {
+  return pdfToWordEndpointPath;
+}
+
+async function readDocxResponse(response, fallbackMessage) {
+  const contentType = response.headers.get("content-type") || "";
+
+  if (contentType.includes("application/json")) {
+    return response.json();
+  }
+
+  if (contentType.includes("application/vnd.openxmlformats-officedocument.wordprocessingml.document")) {
+    return response.arrayBuffer();
+  }
+
+  const text = await response.text();
+  throw new Error(text || fallbackMessage);
+}
+
+async function convertPdfToWordWithGemini(file) {
+  const response = await fetch(getPdfToWordEndpoint(), {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/pdf",
+      "X-File-Name": encodeURIComponent(file.name),
+    },
+    body: await readFileAsArrayBuffer(file),
+  });
+
+  const result = await readDocxResponse(response, "Could not convert the PDF to Word.");
+
+  if (!response.ok) {
+    throw new Error(result?.error || "Could not convert the PDF to Word.");
+  }
+
+  return {
+    blob: new Blob([result], {
+      type: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+    }),
+    filename: `${getBaseName(file.name)}-gemini.docx`,
   };
 }
 
@@ -814,16 +1023,24 @@ export default function PdfTools() {
         throw new Error("Please choose a PDF file.");
       }
 
-      const result = await ocrPdfToWord(wordFile, {
-        onProgress: (message) => {
-          const statusText = typeof message === "string"
-            ? message
-            : message?.progress
-              ? `OCR ${Math.round(message.progress * 100)}%`
-              : "Scanning PDF...";
-          setStatus(statusText);
-        },
-      });
+      let result;
+
+      try {
+        setStatus("Sending PDF to Gemini for layout-preserving conversion...");
+        result = await convertPdfToWordWithGemini(wordFile);
+      } catch (apiError) {
+        setStatus(apiError?.message || "Gemini conversion failed. Falling back to local OCR...");
+        result = await ocrPdfToWord(wordFile, {
+          onProgress: (message) => {
+            const statusText = typeof message === "string"
+              ? message
+              : message?.progress
+                ? `OCR ${Math.round(message.progress * 100)}%`
+                : "Scanning PDF...";
+            setStatus(statusText);
+          },
+        });
+      }
 
       downloadBlob(result.blob, result.filename);
       setStatus(`Downloaded Word document: ${result.filename}.`);
@@ -979,7 +1196,7 @@ export default function PdfTools() {
               />
               {compressFile ? (
                 <div className="meta-line">
-                  {compressFile.name} · {formatFileSize(compressFile.size)}
+                  {compressFile.name} Â· {formatFileSize(compressFile.size)}
                 </div>
               ) : null}
             </div>
@@ -990,7 +1207,7 @@ export default function PdfTools() {
                   <span>Original</span>
                   <strong>{formatFileSize(compressFile.size)}</strong>
                 </div>
-                <div className="pdf-size-arrow" aria-hidden="true">→</div>
+                <div className="pdf-size-arrow" aria-hidden="true">â†’</div>
                 <div className={`pdf-size-card ${compressResult?.originalReason ? "is-neutral" : "is-compressed"}`}>
                   <span>After</span>
                   <strong>
@@ -1042,13 +1259,13 @@ export default function PdfTools() {
               />
               {wordFile ? (
                 <div className="meta-line">
-                  {wordFile.name} Â· {formatFileSize(wordFile.size)}
+                  {wordFile.name} · {formatFileSize(wordFile.size)}
                 </div>
               ) : null}
             </div>
 
             <div className="hint">
-              Uses OCR to extract Khmer and English text, then exports a Word document with paragraph breaks preserved.
+              Uses Gemini to preserve page order, headings, lists, and tables in the Word export, then falls back to local OCR if needed.
             </div>
 
             <button className="button" type="button" onClick={handleWordExport} disabled={busy || wordBusy || !wordFile}>
@@ -1065,3 +1282,4 @@ export default function PdfTools() {
     </section>
   );
 }
+

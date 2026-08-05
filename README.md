@@ -9,14 +9,15 @@ npm install
 npm run dev
 ```
 
-The Removal.AI and SNA GPT Gemini APIs run through Netlify functions so API keys
-are not exposed in the browser. Set `REMOVAL_AI_API_KEY` and `GEMINI_API_KEY` in
-Netlify environment variables before deploying. `GEMINI_MODEL` is optional and
-defaults to `gemini-2.5-flash`. Set `SNA_GPT_FALLBACK_MODELS` to a
-comma-separated list to let SNA GPT retry text-only chats with fallback models
-when the primary Gemini model reaches a quota or rate limit. For local API
-testing, create `.env` from `.env.example` and run the app with Netlify CLI, for
-example `npx netlify-cli dev`. Set
+The Removal.AI, SNA GPT Gemini, and PDF-to-Word Gemini APIs run through Netlify
+functions so API keys are not exposed in the browser. Set `REMOVAL_AI_API_KEY`
+and `GEMINI_API_KEY` in Netlify environment variables before deploying.
+`GEMINI_MODEL` is optional and defaults to `gemini-2.5-flash`. Set
+`SNA_GPT_FALLBACK_MODELS` to a comma-separated list to let SNA GPT retry
+text-only chats with fallback models when the primary Gemini model reaches a
+quota or rate limit. The PDF-to-Word export uses Gemini first and falls back to
+local OCR if the API is unavailable. For local API testing, create `.env` from
+`.env.example` and run the app with Netlify CLI, for example `npx netlify-cli dev`. Set
 `VITE_SNA_GPT_DAILY_TOKEN_LIMIT` and
 `VITE_SNA_GPT_DAILY_MESSAGE_LIMIT` to show estimated remaining daily usage in
 the SNA GPT sidebar. The default fallback model is `gemini-2.5-flash-lite`.
