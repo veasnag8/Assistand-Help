@@ -4,6 +4,7 @@ import { Document, HeadingLevel, Packer, Paragraph, Table, TableCell, TableRow, 
 const geminiBaseUrl = "https://generativelanguage.googleapis.com/v1beta/models";
 const defaultModel = "gemini-2.5-flash";
 const maxUploadBytes = 20 * 1024 * 1024;
+const defaultFont = "Khmer OS Battambang";
 const corsHeaders = {
   "Access-Control-Allow-Headers": "Content-Type",
   "Access-Control-Allow-Methods": "POST, OPTIONS",
@@ -67,14 +68,23 @@ function normalizeRuns(items, fallbackSize = 24) {
     text: cleanText(item?.text, 12000) || " ",
     bold: Boolean(item?.bold),
     italics: Boolean(item?.italic),
+    font: item?.font || defaultFont,
     size: Math.max(16, Math.min(64, Math.round(Number(item?.size) || fallbackSize))),
   }));
 }
 
 function tableCellFromText(value) {
   return new TableCell({
-    children: [new Paragraph({ children: [new TextRun({ text: cleanText(value, 6000) || " " })] })],
+    children: [new Paragraph({ children: [new TextRun({ text: cleanText(value, 6000) || " ", font: defaultFont })] })],
     margins: { top: 80, bottom: 80, left: 80, right: 80 },
+  });
+}
+
+function makeParagraph(children, options = {}) {
+  return new Paragraph({
+    children,
+    spacing: options.spacing || { after: 120 },
+    alignment: options.alignment,
   });
 }
 
@@ -99,7 +109,7 @@ function blockToDocx(block, index) {
   if (type === "list") {
     const items = Array.isArray(block?.items) ? block.items : [];
     return items.map((item) => new Paragraph({
-      text: cleanText(item, 8000) || " ",
+      children: [new TextRun({ text: cleanText(item, 8000) || " ", font: defaultFont })],
       bullet: { level: 0 },
       spacing: { after: 60 },
     }));
@@ -123,23 +133,12 @@ function blockToDocx(block, index) {
     return new Paragraph({ text: "", pageBreakBefore: true });
   }
 
-  return new Paragraph({
-    children: normalizeRuns(block?.runs || [{ text: block?.text }], 24),
-    spacing: { after: 120 },
-  });
+  return makeParagraph(normalizeRuns(block?.runs || [{ text: block?.text }], 24));
 }
 
 function buildDocxFromStructuredContent(payload, fallbackName) {
   const pages = Array.isArray(payload?.pages) ? payload.pages : [];
   const children = [];
-
-  if (cleanText(payload?.title, 240)) {
-    children.push(new Paragraph({
-      heading: HeadingLevel.HEADING_1,
-      children: [new TextRun({ text: cleanText(payload.title, 240), bold: true, size: 32 })],
-      spacing: { after: 160 },
-    }));
-  }
 
   pages.forEach((page, pageIndex) => {
     if (pageIndex > 0) {
@@ -165,6 +164,16 @@ function buildDocxFromStructuredContent(payload, fallbackName) {
     sections: [{ children }],
     creator: "Assistand Help",
     title: fallbackName,
+    styles: {
+      default: {
+        document: {
+          run: {
+            font: defaultFont,
+            size: 24,
+          },
+        },
+      },
+    },
   });
 }
 
@@ -213,6 +222,7 @@ async function convertWithGemini(pdfBuffer, fileName) {
     "Keep tables as tables and do not flatten them into paragraphs.",
     "If a page has no readable text, still include it with an empty blocks array.",
     "Do not invent content that is not clearly visible in the source.",
+    "Use the same source language and keep Khmer text in Khmer script.",
   ].join(" ");
 
   const response = await fetch(`${geminiBaseUrl}/${encodeURIComponent(model)}:generateContent?key=${encodeURIComponent(apiKey)}`, {
