@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { Archive, FileStack, FileType, Scissors, X } from "lucide-react";
 import { PDFDocument } from "pdf-lib";
-import { Document, HeadingLevel, Packer, Paragraph, Table, TableCell, TableRow, TextRun, WidthType } from "docx";
+import { Document, Packer, Paragraph, ImageRun } from "docx";
 import Panel from "./Panel";
 import {
   downloadBlob,
@@ -210,12 +210,6 @@ function isSupportedWordPdfFile(file) {
 
 const pdfToWordEndpointPath = "/.netlify/functions/pdf-to-word";
 
-const defaultWordFont = "Khmer UI";
-
-function isPageLabelText(value) {
-  return /^page\s+\d+$/i.test(String(value || "").trim());
-}
-
 function cleanWordText(value, maxLength = 12000) {
   return String(value || "")
     .replace(/\u0000/g, "")
@@ -223,221 +217,15 @@ function cleanWordText(value, maxLength = 12000) {
     .slice(0, maxLength);
 }
 
-function createWordTextRun(text, { bold = false, italic = false, size = 24, font = defaultWordFont } = {}) {
-  return new TextRun({
-    bold,
-    font: {
-      ascii: font,
-      cs: font,
-      eastAsia: font,
-      hAnsi: font,
-      hint: "eastAsia",
-    },
-    italics: italic,
-    size: Math.max(12, Math.min(36, Math.round(size * 1.2))),
-    text: cleanWordText(text) || " ",
-  });
-}
+function base64ToUint8Array(base64) {
+  const binary = window.atob(base64);
+  const bytes = new Uint8Array(binary.length);
 
-function createWordParagraph(children, options = {}) {
-  return new Paragraph({
-    children,
-    spacing: options.spacing || { after: 120 },
-  });
-}
-
-function createWordTableCell(value) {
-  return new TableCell({
-    children: [new Paragraph({ children: [createWordTextRun(value, { size: 18 })] })],
-    margins: { top: 80, bottom: 80, left: 80, right: 80 },
-  });
-}
-
-function textContentToParagraphRuns(textContent) {
-  const items = [...(textContent?.items || [])].sort((left, right) => {
-    const leftY = Math.round((left.transform?.[5] || 0) * 10) / 10;
-    const rightY = Math.round((right.transform?.[5] || 0) * 10) / 10;
-
-    if (Math.abs(leftY - rightY) > 2) {
-      return rightY - leftY;
-    }
-
-    return (left.transform?.[4] || 0) - (right.transform?.[4] || 0);
-  });
-
-  const lines = [];
-  let current = [];
-  let previousY = null;
-
-  for (const item of items) {
-    const text = cleanWordText(item?.str || "", 200);
-    if (!text) {
-      continue;
-    }
-
-    const y = Math.round((item.transform?.[5] || 0) * 10) / 10;
-
-    if (previousY !== null && Math.abs(previousY - y) > 10 && current.length) {
-      lines.push(current);
-      current = [];
-    }
-
-    current.push(item);
-    previousY = y;
+  for (let index = 0; index < binary.length; index += 1) {
+    bytes[index] = binary.charCodeAt(index);
   }
 
-  if (current.length) {
-    lines.push(current);
-  }
-
-  return lines.map((lineItems) => lineItems.map((item) => {
-    const fontSize = Math.max(12, Math.min(24, Math.round((item.height || 12) * 0.9)));
-    const text = cleanWordText(item.str || "", 200);
-    return createWordTextRun(text, {
-      bold: Boolean(item.fontName && /bold/i.test(item.fontName)),
-      italic: Boolean(item.fontName && /italic/i.test(item.fontName)),
-      size: fontSize,
-    });
-  }));
-}
-
-function extractTextContentString(textContent) {
-  return cleanWordText(
-    (textContent?.items || []).map((item) => item?.str || "").join(" "),
-    5000,
-  );
-}
-
-function shouldUseOcrForTextContent(textContent) {
-  const text = extractTextContentString(textContent);
-
-  if (!text) {
-    return true;
-  }
-
-  const replacementCount = countMatches(text, /�/g);
-  const khmerCount = countMatches(text, /[\u1780-\u17ff]/g);
-  const latinCount = countMatches(text, /[A-Za-z]/g);
-  const score = scoreOcrText(text, 0);
-  const totalLetters = khmerCount + latinCount;
-
-  if (replacementCount >= 2) {
-    return true;
-  }
-
-  if (khmerCount >= 8 && score < 40) {
-    return true;
-  }
-
-  if (khmerCount >= 4 && latinCount > khmerCount * 4) {
-    return true;
-  }
-
-  return totalLetters > 0 && score < 18;
-}
-
-function createWordBlock(block, index) {
-  const type = cleanWordText(block?.type, 24).toLowerCase();
-
-  if (type === "heading") {
-    return new Paragraph({
-      children: [createWordTextRun(block?.text || block?.runs?.map((run) => run?.text).join(" "), { bold: true, size: 16 })],
-      spacing: { after: 24, before: index === 0 ? 0 : 24 },
-    });
-  }
-
-  if (type === "list") {
-    const items = Array.isArray(block?.items) ? block.items : [];
-    return items.map((item) => new Paragraph({
-      bullet: { level: 0 },
-      children: [createWordTextRun(item, { size: 13 })],
-      spacing: { after: 18 },
-    }));
-  }
-
-  if (type === "table") {
-    const rows = Array.isArray(block?.rows) ? block.rows : [];
-    if (!rows.length) {
-      return new Paragraph({ children: [createWordTextRun(" ")] });
-    }
-
-    return new Table({
-      width: { size: 100, type: WidthType.PERCENTAGE },
-      rows: rows.map((row) => new TableRow({
-        children: Array.isArray(row) ? row.map(createWordTableCell) : [createWordTableCell(row)],
-      })),
-    });
-  }
-
-  return createWordParagraph([
-    createWordTextRun(block?.text || block?.runs?.map((run) => run?.text).join(" "), { size: 13 }),
-  ]);
-}
-
-function buildWordDocumentFromStructuredContent(structured, fallbackName) {
-  const pages = Array.isArray(structured?.pages) ? structured.pages : [];
-  const children = [];
-
-  pages.forEach((page, pageIndex) => {
-    if (pageIndex > 0) {
-      children.push(new Paragraph({ text: "", pageBreakBefore: true }));
-    }
-
-    const blocks = Array.isArray(page?.blocks) ? page.blocks : [];
-    const filteredBlocks = blocks.filter((block) => {
-      const blockText = cleanWordText(
-        block?.text || block?.runs?.map((run) => run?.text).join(" ") || "",
-        120,
-      );
-
-      return !(cleanWordText(block?.type, 24).toLowerCase() === "heading" && isPageLabelText(blockText));
-    });
-
-    filteredBlocks.forEach((block, blockIndex) => {
-      const item = createWordBlock(block, blockIndex);
-      if (Array.isArray(item)) {
-        children.push(...item);
-      } else {
-        children.push(item);
-      }
-    });
-  });
-
-  if (!children.length) {
-    children.push(new Paragraph({ children: [createWordTextRun("No content could be extracted.")] }));
-  }
-
-  return new Document({
-    creator: "Assistand Help",
-    sections: [{ children }],
-    properties: {
-      page: {
-        margin: {
-          top: 720,
-          right: 720,
-          bottom: 720,
-          left: 720,
-        },
-      },
-    },
-    styles: {
-      default: {
-        document: {
-          run: {
-            font: {
-              ascii: defaultWordFont,
-              cs: defaultWordFont,
-              eastAsia: defaultWordFont,
-              hAnsi: defaultWordFont,
-              hint: "eastAsia",
-            },
-            size: 16,
-          },
-        },
-      },
-    },
-    title: fallbackName,
-  });
+  return bytes;
 }
 
 function countMatches(text, pattern) {
@@ -483,6 +271,27 @@ function normalizeWordColor(value) {
   return /^[0-9a-f]{6}$/i.test(hex) ? `#${hex.toUpperCase()}` : null;
 }
 
+function createPageImageParagraph(dataUrl, pageWidthPx, pageHeightPx) {
+  const maxWidthPx = 720;
+  const scale = Math.min(1, maxWidthPx / Math.max(1, pageWidthPx));
+  const widthPx = Math.max(1, Math.round(pageWidthPx * scale));
+  const heightPx = Math.max(1, Math.round(pageHeightPx * scale));
+  const imageBase64 = String(dataUrl || "").split(",")[1] || "";
+
+  return new Paragraph({
+    children: [
+      new ImageRun({
+        data: base64ToUint8Array(imageBase64),
+        transformation: {
+          height: heightPx,
+          width: widthPx,
+        },
+      }),
+    ],
+    spacing: { after: 0, before: 0 },
+  });
+}
+
 async function renderPdfPagesForWord(file, { maxPages = Infinity, onProgress } = {}) {
   const { getDocument } = await loadPdfJs();
   const data = await readFileAsArrayBuffer(file);
@@ -512,7 +321,9 @@ async function renderPdfPagesForWord(file, { maxPages = Infinity, onProgress } =
 
       pages.push({
         dataUrl: canvas.toDataURL("image/png"),
+        height: canvas.height,
         pageNumber,
+        width: canvas.width,
       });
 
       page.cleanup();
@@ -542,97 +353,10 @@ async function ocrPdfPageToRuns(imageDataUrl) {
       return null;
     }
 
-    return splitParagraphs(cleanText).map((paragraph) => [createWordTextRun(paragraph, { size: 24 })]);
+    return splitParagraphs(cleanText).map((paragraph) => [paragraph]);
   } finally {
     await worker.terminate();
   }
-}
-
-async function ocrPdfToWord(file, { onProgress } = {}) {
-  const { getDocument } = await loadPdfJs();
-  const data = await readFileAsArrayBuffer(file);
-  const pdf = await getDocument({ data }).promise;
-  const children = [];
-
-  try {
-    for (let pageNumber = 1; pageNumber <= pdf.numPages; pageNumber += 1) {
-      onProgress?.(pageNumber, pdf.numPages);
-      const page = await pdf.getPage(pageNumber);
-      const viewport = page.getViewport({ scale: 2 });
-      const canvas = document.createElement("canvas");
-      const context = canvas.getContext("2d");
-
-      if (!context) {
-        throw new Error("Could not prepare the PDF page canvas.");
-      }
-
-      canvas.width = Math.ceil(viewport.width);
-      canvas.height = Math.ceil(viewport.height);
-
-      await page.render({
-        canvasContext: context,
-        viewport,
-      }).promise;
-
-      let pageRuns = null;
-
-      try {
-        const textContent = await page.getTextContent({
-          disableCombineTextItems: false,
-          normalizeWhitespace: false,
-        });
-        if (!shouldUseOcrForTextContent(textContent)) {
-          pageRuns = textContentToParagraphRuns(textContent);
-        }
-      } catch {
-        pageRuns = null;
-      }
-
-      if (!pageRuns || !pageRuns.length) {
-        pageRuns = await ocrPdfPageToRuns(canvas.toDataURL("image/png"));
-      }
-
-      if (pageRuns && pageRuns.length) {
-        pageRuns.forEach((runs) => {
-          children.push(
-            new Paragraph({
-              children: runs,
-              spacing: { after: 180 },
-            }),
-          );
-        });
-      } else {
-        children.push(
-          new Paragraph({
-            children: [
-              createWordTextRun("No readable text was detected in this page.", {
-                size: 24,
-              }),
-            ],
-          }),
-        );
-      }
-
-      page.cleanup();
-    }
-  } finally {
-    await pdf.destroy();
-  }
-
-  const doc = new Document({
-    sections: [
-      {
-        children,
-      },
-    ],
-  });
-
-  const blob = await Packer.toBlob(doc);
-
-  return {
-    blob,
-    filename: `${getBaseName(file.name)}-ocr.docx`,
-  };
 }
 
 function getPdfToWordEndpoint() {
@@ -670,11 +394,43 @@ async function convertPdfToWordWithGemini(file) {
     throw new Error(result?.error || "Could not convert the PDF to Word.");
   }
 
-  const doc = buildWordDocumentFromStructuredContent(result.structured, result.fileName);
-  const blob = await Packer.toBlob(doc);
+  const pages = await renderPdfPagesForWord(file, {
+    onProgress: () => {},
+  });
+
+  const children = [];
+
+  pages.forEach((page, pageIndex) => {
+    if (pageIndex > 0) {
+      children.push(new Paragraph({ text: "", pageBreakBefore: true }));
+    }
+
+    children.push(
+      createPageImageParagraph(page.dataUrl, page.width, page.height),
+    );
+  });
+
+  const doc = new Document({
+    creator: "Assistand Help",
+    sections: [
+      {
+        properties: {
+          page: {
+            margin: {
+              top: 0,
+              right: 0,
+              bottom: 0,
+              left: 0,
+            },
+          },
+        },
+        children,
+      },
+    ],
+  });
 
   return {
-    blob,
+    blob: await Packer.toBlob(doc),
     filename: `${getBaseName(result.fileName || file.name)}-gemini.docx`,
   };
 }
