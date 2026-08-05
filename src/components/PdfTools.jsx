@@ -31,7 +31,7 @@ const modes = [
   },
   {
     id: "word",
-    label: "To Word",
+    label: "PDF to Word",
     icon: FileType,
     description: "Scan PDF pages and export Khmer-friendly Word text.",
   },
@@ -860,7 +860,7 @@ export default function PdfTools() {
 
       <Panel
         eyebrow="PDF Tool"
-        title={`${activeMode.label} PDF`}
+        title={mode === "word" ? "PDF to Word" : `${activeMode.label} PDF`}
         description={activeMode.description}
       >
         {mode === "split" ? (
@@ -1052,7 +1052,7 @@ export default function PdfTools() {
             </div>
 
             <button className="button" type="button" onClick={handleWordExport} disabled={busy || wordBusy || !wordFile}>
-              Export Word Document
+              Export PDF to Word
             </button>
           </div>
         ) : null}
