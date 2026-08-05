@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { Archive, FileStack, FileType, Scissors, X } from "lucide-react";
 import { PDFDocument } from "pdf-lib";
-import { Document, Packer, Paragraph, ImageRun } from "docx";
+import { Document, Packer, Paragraph, ImageRun, TextRun } from "docx";
 import Panel from "./Panel";
 import {
   downloadBlob,
@@ -209,12 +209,29 @@ function isSupportedWordPdfFile(file) {
 }
 
 const pdfToWordEndpointPath = "/.netlify/functions/pdf-to-word";
+const defaultWordFont = "Khmer UI";
 
 function cleanWordText(value, maxLength = 12000) {
   return String(value || "")
     .replace(/\u0000/g, "")
     .trim()
     .slice(0, maxLength);
+}
+
+function createWordTextRun(text, { bold = false, italic = false, size = 24, font = defaultWordFont } = {}) {
+  return new TextRun({
+    bold,
+    font: {
+      ascii: font,
+      cs: font,
+      eastAsia: font,
+      hAnsi: font,
+      hint: "eastAsia",
+    },
+    italics: italic,
+    size: Math.max(12, Math.min(36, Math.round(size * 1.2))),
+    text: cleanWordText(text) || " ",
+  });
 }
 
 function base64ToUint8Array(base64) {
@@ -289,6 +306,101 @@ function createPageImageParagraph(dataUrl, pageWidthPx, pageHeightPx) {
       }),
     ],
     spacing: { after: 0, before: 0 },
+  });
+}
+
+function createTextParagraphRuns(textContent) {
+  const text = cleanWordText(
+    (textContent?.items || []).map((item) => item?.str || "").join(" "),
+    5000,
+  );
+
+  if (!text) {
+    return null;
+  }
+
+  return [createWordTextRun(text, { size: 14 })];
+}
+
+async function buildEditableWordDocument(file) {
+  const { getDocument } = await loadPdfJs();
+  const data = await readFileAsArrayBuffer(file);
+  const pdf = await getDocument({ data }).promise;
+  const children = [];
+
+  try {
+    for (let pageNumber = 1; pageNumber <= pdf.numPages; pageNumber += 1) {
+      const page = await pdf.getPage(pageNumber);
+      const viewport = page.getViewport({ scale: 2 });
+      const canvas = document.createElement("canvas");
+      const context = canvas.getContext("2d");
+
+      if (!context) {
+        throw new Error("Could not prepare the PDF page canvas.");
+      }
+
+      canvas.width = Math.ceil(viewport.width);
+      canvas.height = Math.ceil(viewport.height);
+
+      await page.render({
+        canvasContext: context,
+        viewport,
+      }).promise;
+
+      let pageRuns = null;
+
+      try {
+        const textContent = await page.getTextContent({
+          disableCombineTextItems: false,
+          normalizeWhitespace: false,
+        });
+        pageRuns = createTextParagraphRuns(textContent);
+      } catch {
+        pageRuns = null;
+      }
+
+      if (!pageRuns || !pageRuns.length) {
+        pageRuns = await ocrPdfPageToRuns(canvas.toDataURL("image/png"));
+      }
+
+      if (pageNumber > 1) {
+        children.push(new Paragraph({ text: "", pageBreakBefore: true }));
+      }
+
+      if (pageRuns && pageRuns.length) {
+        children.push(
+          new Paragraph({
+            children: pageRuns,
+            spacing: { after: 120, before: 0 },
+          }),
+        );
+      } else {
+        children.push(new Paragraph({
+          children: [createWordTextRun("No readable text was detected in this page.", { size: 14 })],
+        }));
+      }
+
+      page.cleanup();
+    }
+  } finally {
+    await pdf.destroy();
+  }
+
+  return new Document({
+    creator: "Assistand Help",
+    sections: [{
+      properties: {
+        page: {
+          margin: {
+            top: 720,
+            right: 720,
+            bottom: 720,
+            left: 720,
+          },
+        },
+      },
+      children,
+    }],
   });
 }
 
@@ -394,6 +506,13 @@ async function convertPdfToWordWithGemini(file) {
     throw new Error(result?.error || "Could not convert the PDF to Word.");
   }
 
+  return {
+    blob: await Packer.toBlob(await buildEditableWordDocument(file)),
+    filename: `${getBaseName(result.fileName || file.name)}-gemini.docx`,
+  };
+}
+
+async function convertPdfToFaithfulWord(file) {
   const pages = await renderPdfPagesForWord(file, {
     onProgress: () => {},
   });
@@ -405,9 +524,7 @@ async function convertPdfToWordWithGemini(file) {
       children.push(new Paragraph({ text: "", pageBreakBefore: true }));
     }
 
-    children.push(
-      createPageImageParagraph(page.dataUrl, page.width, page.height),
-    );
+    children.push(createPageImageParagraph(page.dataUrl, page.width, page.height));
   });
 
   const doc = new Document({
@@ -431,7 +548,7 @@ async function convertPdfToWordWithGemini(file) {
 
   return {
     blob: await Packer.toBlob(doc),
-    filename: `${getBaseName(result.fileName || file.name)}-gemini.docx`,
+    filename: `${getBaseName(file.name)}-faithful.docx`,
   };
 }
 
@@ -447,6 +564,7 @@ export default function PdfTools() {
   const [compressResult, setCompressResult] = useState(null);
   const [compressPreviewBusy, setCompressPreviewBusy] = useState(false);
   const [wordFile, setWordFile] = useState(null);
+  const [wordExportMode, setWordExportMode] = useState("editable");
   const [wordBusy, setWordBusy] = useState(false);
   const [status, setStatus] = useState("Choose a mode and upload PDF files.");
   const [busy, setBusy] = useState(false);
@@ -880,21 +998,26 @@ export default function PdfTools() {
 
       let result;
 
-      try {
-        setStatus("Sending PDF to Gemini for layout-preserving conversion...");
-        result = await convertPdfToWordWithGemini(wordFile);
-      } catch (apiError) {
-        setStatus(apiError?.message || "Gemini conversion failed. Falling back to local OCR...");
-        result = await ocrPdfToWord(wordFile, {
-          onProgress: (message) => {
-            const statusText = typeof message === "string"
-              ? message
-              : message?.progress
-                ? `OCR ${Math.round(message.progress * 100)}%`
-                : "Scanning PDF...";
-            setStatus(statusText);
-          },
-        });
+      if (wordExportMode === "faithful") {
+        setStatus("Creating faithful image-based Word document...");
+        result = await convertPdfToFaithfulWord(wordFile);
+      } else {
+        try {
+          setStatus("Creating editable Word document...");
+          result = await convertPdfToWordWithGemini(wordFile);
+        } catch (apiError) {
+          setStatus(apiError?.message || "Editable conversion failed. Falling back to OCR...");
+          result = await ocrPdfToWord(wordFile, {
+            onProgress: (message) => {
+              const statusText = typeof message === "string"
+                ? message
+                : message?.progress
+                  ? `OCR ${Math.round(message.progress * 100)}%`
+                  : "Scanning PDF...";
+              setStatus(statusText);
+            },
+          });
+        }
       }
 
       downloadBlob(result.blob, result.filename);
@@ -1119,8 +1242,23 @@ export default function PdfTools() {
               ) : null}
             </div>
 
+            <div className="field">
+              <label htmlFor="word-export-mode">Word output</label>
+              <select
+                id="word-export-mode"
+                value={wordExportMode}
+                onChange={(event) => setWordExportMode(event.target.value)}
+              >
+                <option value="editable">Editable text</option>
+                <option value="faithful">Faithful image</option>
+              </select>
+              <div className="hint">
+                Editable text can be changed in Word. Faithful image keeps the original PDF layout almost exactly.
+              </div>
+            </div>
+
             <div className="hint">
-              Uses Gemini to preserve page order, headings, lists, and tables in the Word export, then falls back to local OCR if needed.
+              Editable mode uses Gemini plus OCR. Faithful mode exports the PDF pages as images.
             </div>
 
             <button className="button" type="button" onClick={handleWordExport} disabled={busy || wordBusy || !wordFile}>
