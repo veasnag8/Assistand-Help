@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { Archive, FileStack, FileType, Scissors, X } from "lucide-react";
 import { PDFDocument } from "pdf-lib";
-import { Document, Packer, Paragraph, TextRun } from "docx";
+import { Document, HeadingLevel, Packer, Paragraph, Table, TableCell, TableRow, TextRun, WidthType } from "docx";
 import Panel from "./Panel";
 import {
   downloadBlob,
@@ -210,6 +210,139 @@ function isSupportedWordPdfFile(file) {
 
 const pdfToWordEndpointPath = "/.netlify/functions/pdf-to-word";
 
+const defaultWordFont = "Khmer OS Battambang";
+
+function isPageLabelText(value) {
+  return /^page\s+\d+$/i.test(String(value || "").trim());
+}
+
+function cleanWordText(value, maxLength = 12000) {
+  return String(value || "")
+    .replace(/\u0000/g, "")
+    .trim()
+    .slice(0, maxLength);
+}
+
+function createWordTextRun(text, { bold = false, italic = false, size = 24, font = defaultWordFont } = {}) {
+  return new TextRun({
+    bold,
+    font,
+    italics: italic,
+    size: Math.max(16, Math.min(64, Math.round(size * 2))),
+    text: cleanWordText(text) || " ",
+  });
+}
+
+function createWordParagraph(children, options = {}) {
+  return new Paragraph({
+    children,
+    spacing: options.spacing || { after: 120 },
+  });
+}
+
+function createWordTableCell(value) {
+  return new TableCell({
+    children: [new Paragraph({ children: [createWordTextRun(value, { size: 18 })] })],
+    margins: { top: 80, bottom: 80, left: 80, right: 80 },
+  });
+}
+
+function createWordBlock(block, index) {
+  const type = cleanWordText(block?.type, 24).toLowerCase();
+
+  if (type === "heading") {
+    const level = Number(block?.level);
+    const headingLevel =
+      level === 1 ? HeadingLevel.HEADING_1 :
+      level === 2 ? HeadingLevel.HEADING_2 :
+      level === 3 ? HeadingLevel.HEADING_3 :
+      HeadingLevel.HEADING_2;
+
+    return new Paragraph({
+      heading: headingLevel,
+      children: [createWordTextRun(block?.text || block?.runs?.map((run) => run?.text).join(" "), { bold: true, size: 24 })],
+      spacing: { after: 120, before: index === 0 ? 0 : 120 },
+    });
+  }
+
+  if (type === "list") {
+    const items = Array.isArray(block?.items) ? block.items : [];
+    return items.map((item) => new Paragraph({
+      bullet: { level: 0 },
+      children: [createWordTextRun(item, { size: 18 })],
+      spacing: { after: 60 },
+    }));
+  }
+
+  if (type === "table") {
+    const rows = Array.isArray(block?.rows) ? block.rows : [];
+    if (!rows.length) {
+      return new Paragraph({ children: [createWordTextRun(" ")] });
+    }
+
+    return new Table({
+      width: { size: 100, type: WidthType.PERCENTAGE },
+      rows: rows.map((row) => new TableRow({
+        children: Array.isArray(row) ? row.map(createWordTableCell) : [createWordTableCell(row)],
+      })),
+    });
+  }
+
+  return createWordParagraph([
+    createWordTextRun(block?.text || block?.runs?.map((run) => run?.text).join(" "), { size: 18 }),
+  ]);
+}
+
+function buildWordDocumentFromStructuredContent(structured, fallbackName) {
+  const pages = Array.isArray(structured?.pages) ? structured.pages : [];
+  const children = [];
+
+  pages.forEach((page, pageIndex) => {
+    if (pageIndex > 0) {
+      children.push(new Paragraph({ text: "", pageBreakBefore: true }));
+    }
+
+    const blocks = Array.isArray(page?.blocks) ? page.blocks : [];
+    const filteredBlocks = blocks.filter((block) => {
+      const blockText = cleanWordText(
+        block?.text || block?.runs?.map((run) => run?.text).join(" ") || "",
+        120,
+      );
+
+      return !(cleanWordText(block?.type, 24).toLowerCase() === "heading" && isPageLabelText(blockText));
+    });
+
+    filteredBlocks.forEach((block, blockIndex) => {
+      const item = createWordBlock(block, blockIndex);
+      if (Array.isArray(item)) {
+        children.push(...item);
+      } else {
+        children.push(item);
+      }
+    });
+  });
+
+  if (!children.length) {
+    children.push(new Paragraph({ children: [createWordTextRun("No content could be extracted.")] }));
+  }
+
+  return new Document({
+    creator: "Assistand Help",
+    sections: [{ children }],
+    styles: {
+      default: {
+        document: {
+          run: {
+            font: defaultWordFont,
+            size: 24,
+          },
+        },
+      },
+    },
+    title: fallbackName,
+  });
+}
+
 function countMatches(text, pattern) {
   return text.match(pattern)?.length || 0;
 }
@@ -251,128 +384,6 @@ function normalizeWordColor(value) {
 
   const hex = value.trim().replace(/^#/, "");
   return /^[0-9a-f]{6}$/i.test(hex) ? `#${hex.toUpperCase()}` : null;
-}
-
-function createWordTextRun(text, { bold = false, italic = false, size = 24, color = null, font = "Noto Sans Khmer" } = {}) {
-  return new TextRun({
-    bold,
-    color: normalizeWordColor(color) || undefined,
-    font,
-    italics: italic,
-    size: clampWordSize(size),
-    text,
-  });
-}
-
-function lineItemStyle(item) {
-  const style = item.style || {};
-
-  return {
-    bold: Boolean(style.bold || style.fontWeight >= 600),
-    color: style.color || item.color || null,
-    italic: Boolean(style.italic || style.fontStyle === "italic"),
-    size: item.height || style.fontSize || 12,
-  };
-}
-
-function sortTextItems(items = []) {
-  return [...items].sort((left, right) => {
-    const leftY = Math.round((left.transform?.[5] || 0) * 10) / 10;
-    const rightY = Math.round((right.transform?.[5] || 0) * 10) / 10;
-
-    if (Math.abs(leftY - rightY) > 2) {
-      return rightY - leftY;
-    }
-
-    return (left.transform?.[4] || 0) - (right.transform?.[4] || 0);
-  });
-}
-
-function groupTextItemsIntoLines(items = []) {
-  const lines = [];
-
-  for (const item of sortTextItems(items)) {
-    const y = Math.round((item.transform?.[5] || 0) * 10) / 10;
-    const lastLine = lines[lines.length - 1];
-
-    if (!lastLine || Math.abs(lastLine.y - y) > 2.5) {
-      lines.push({ items: [item], y });
-    } else {
-      lastLine.items.push(item);
-    }
-  }
-
-  return lines.map((line) => ({
-    items: [...line.items].sort((left, right) => (left.transform?.[4] || 0) - (right.transform?.[4] || 0)),
-    y: line.y,
-  }));
-}
-
-function buildParagraphRunsFromTextItems(items = []) {
-  const runs = [];
-  let currentStyle = null;
-
-  for (const item of items) {
-    const text = item.str || "";
-
-    if (!text) {
-      continue;
-    }
-
-    const style = lineItemStyle(item);
-    const sameStyle =
-      currentStyle &&
-      currentStyle.bold === style.bold &&
-      currentStyle.italic === style.italic &&
-      currentStyle.size === style.size &&
-      currentStyle.color === style.color;
-
-    if (!sameStyle) {
-      currentStyle = { ...style, text };
-      runs.push(createWordTextRun(text, currentStyle));
-      continue;
-    }
-
-    currentStyle.text += text;
-    runs[runs.length - 1] = createWordTextRun(currentStyle.text, currentStyle);
-  }
-
-  return runs.length ? runs : [createWordTextRun(" ")];
-}
-
-function buildParagraphsFromTextContent(textContent) {
-  const lines = groupTextItemsIntoLines(textContent?.items || []);
-  const paragraphs = [];
-  let current = [];
-  let previousY = null;
-
-  for (const line of lines) {
-    const lineText = line.items.map((item) => item.str || "").join("").trim();
-
-    if (!lineText) {
-      if (current.length) {
-        paragraphs.push(current);
-        current = [];
-      }
-
-      previousY = null;
-      continue;
-    }
-
-    if (previousY !== null && previousY - line.y > 14 && current.length) {
-      paragraphs.push(current);
-      current = [];
-    }
-
-    current.push(...line.items);
-    previousY = line.y;
-  }
-
-  if (current.length) {
-    paragraphs.push(current);
-  }
-
-  return paragraphs.map((items) => buildParagraphRunsFromTextItems(items));
 }
 
 async function renderPdfPagesForWord(file, { maxPages = Infinity, onProgress } = {}) {
@@ -572,11 +583,12 @@ async function convertPdfToWordWithGemini(file) {
     throw new Error(result?.error || "Could not convert the PDF to Word.");
   }
 
+  const doc = buildWordDocumentFromStructuredContent(result.structured, result.fileName);
+  const blob = await Packer.toBlob(doc);
+
   return {
-    blob: new Blob([result], {
-      type: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-    }),
-    filename: `${getBaseName(file.name)}-gemini.docx`,
+    blob,
+    filename: `${getBaseName(result.fileName || file.name)}-gemini.docx`,
   };
 }
 
