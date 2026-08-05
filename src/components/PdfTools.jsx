@@ -210,7 +210,7 @@ function isSupportedWordPdfFile(file) {
 
 const pdfToWordEndpointPath = "/.netlify/functions/pdf-to-word";
 
-const defaultWordFont = "Khmer OS Battambang";
+const defaultWordFont = "Khmer UI";
 
 function isPageLabelText(value) {
   return /^page\s+\d+$/i.test(String(value || "").trim());
@@ -226,7 +226,13 @@ function cleanWordText(value, maxLength = 12000) {
 function createWordTextRun(text, { bold = false, italic = false, size = 24, font = defaultWordFont } = {}) {
   return new TextRun({
     bold,
-    font,
+    font: {
+      ascii: font,
+      cs: font,
+      eastAsia: font,
+      hAnsi: font,
+      hint: "eastAsia",
+    },
     italics: italic,
     size: Math.max(12, Math.min(36, Math.round(size * 1.2))),
     text: cleanWordText(text) || " ",
@@ -383,7 +389,13 @@ function buildWordDocumentFromStructuredContent(structured, fallbackName) {
       default: {
         document: {
           run: {
-            font: defaultWordFont,
+            font: {
+              ascii: defaultWordFont,
+              cs: defaultWordFont,
+              eastAsia: defaultWordFont,
+              hAnsi: defaultWordFont,
+              hint: "eastAsia",
+            },
             size: 16,
           },
         },
