@@ -228,7 +228,7 @@ function createWordTextRun(text, { bold = false, italic = false, size = 24, font
     bold,
     font,
     italics: italic,
-    size: Math.max(16, Math.min(64, Math.round(size * 2))),
+    size: Math.max(12, Math.min(36, Math.round(size * 1.2))),
     text: cleanWordText(text) || " ",
   });
 }
@@ -247,21 +247,61 @@ function createWordTableCell(value) {
   });
 }
 
+function textContentToParagraphRuns(textContent) {
+  const items = [...(textContent?.items || [])].sort((left, right) => {
+    const leftY = Math.round((left.transform?.[5] || 0) * 10) / 10;
+    const rightY = Math.round((right.transform?.[5] || 0) * 10) / 10;
+
+    if (Math.abs(leftY - rightY) > 2) {
+      return rightY - leftY;
+    }
+
+    return (left.transform?.[4] || 0) - (right.transform?.[4] || 0);
+  });
+
+  const lines = [];
+  let current = [];
+  let previousY = null;
+
+  for (const item of items) {
+    const text = cleanWordText(item?.str || "", 200);
+    if (!text) {
+      continue;
+    }
+
+    const y = Math.round((item.transform?.[5] || 0) * 10) / 10;
+
+    if (previousY !== null && Math.abs(previousY - y) > 10 && current.length) {
+      lines.push(current);
+      current = [];
+    }
+
+    current.push(item);
+    previousY = y;
+  }
+
+  if (current.length) {
+    lines.push(current);
+  }
+
+  return lines.map((lineItems) => lineItems.map((item) => {
+    const fontSize = Math.max(12, Math.min(24, Math.round((item.height || 12) * 0.9)));
+    const text = cleanWordText(item.str || "", 200);
+    return createWordTextRun(text, {
+      bold: Boolean(item.fontName && /bold/i.test(item.fontName)),
+      italic: Boolean(item.fontName && /italic/i.test(item.fontName)),
+      size: fontSize,
+    });
+  }));
+}
+
 function createWordBlock(block, index) {
   const type = cleanWordText(block?.type, 24).toLowerCase();
 
   if (type === "heading") {
-    const level = Number(block?.level);
-    const headingLevel =
-      level === 1 ? HeadingLevel.HEADING_1 :
-      level === 2 ? HeadingLevel.HEADING_2 :
-      level === 3 ? HeadingLevel.HEADING_3 :
-      HeadingLevel.HEADING_2;
-
     return new Paragraph({
-      heading: headingLevel,
-      children: [createWordTextRun(block?.text || block?.runs?.map((run) => run?.text).join(" "), { bold: true, size: 24 })],
-      spacing: { after: 120, before: index === 0 ? 0 : 120 },
+      children: [createWordTextRun(block?.text || block?.runs?.map((run) => run?.text).join(" "), { bold: true, size: 16 })],
+      spacing: { after: 24, before: index === 0 ? 0 : 24 },
     });
   }
 
@@ -269,8 +309,8 @@ function createWordBlock(block, index) {
     const items = Array.isArray(block?.items) ? block.items : [];
     return items.map((item) => new Paragraph({
       bullet: { level: 0 },
-      children: [createWordTextRun(item, { size: 18 })],
-      spacing: { after: 60 },
+      children: [createWordTextRun(item, { size: 13 })],
+      spacing: { after: 18 },
     }));
   }
 
@@ -289,7 +329,7 @@ function createWordBlock(block, index) {
   }
 
   return createWordParagraph([
-    createWordTextRun(block?.text || block?.runs?.map((run) => run?.text).join(" "), { size: 18 }),
+    createWordTextRun(block?.text || block?.runs?.map((run) => run?.text).join(" "), { size: 13 }),
   ]);
 }
 
@@ -329,12 +369,22 @@ function buildWordDocumentFromStructuredContent(structured, fallbackName) {
   return new Document({
     creator: "Assistand Help",
     sections: [{ children }],
+    properties: {
+      page: {
+        margin: {
+          top: 720,
+          right: 720,
+          bottom: 720,
+          left: 720,
+        },
+      },
+    },
     styles: {
       default: {
         document: {
           run: {
             font: defaultWordFont,
-            size: 24,
+            size: 16,
           },
         },
       },
@@ -484,7 +534,7 @@ async function ocrPdfToWord(file, { onProgress } = {}) {
           disableCombineTextItems: false,
           normalizeWhitespace: false,
         });
-        pageRuns = buildParagraphsFromTextContent(textContent);
+        pageRuns = textContentToParagraphRuns(textContent);
       } catch {
         pageRuns = null;
       }
@@ -492,18 +542,6 @@ async function ocrPdfToWord(file, { onProgress } = {}) {
       if (!pageRuns || !pageRuns.length) {
         pageRuns = await ocrPdfPageToRuns(canvas.toDataURL("image/png"));
       }
-
-      children.push(
-        new Paragraph({
-          children: [
-            createWordTextRun(`Page ${pageNumber}`, {
-              bold: true,
-              size: 26,
-            }),
-          ],
-          spacing: { after: 120, before: pageNumber === 1 ? 0 : 200 },
-        }),
-      );
 
       if (pageRuns && pageRuns.length) {
         pageRuns.forEach((runs) => {
