@@ -301,6 +301,41 @@ function textContentToParagraphRuns(textContent) {
   }));
 }
 
+function extractTextContentString(textContent) {
+  return cleanWordText(
+    (textContent?.items || []).map((item) => item?.str || "").join(" "),
+    5000,
+  );
+}
+
+function shouldUseOcrForTextContent(textContent) {
+  const text = extractTextContentString(textContent);
+
+  if (!text) {
+    return true;
+  }
+
+  const replacementCount = countMatches(text, /�/g);
+  const khmerCount = countMatches(text, /[\u1780-\u17ff]/g);
+  const latinCount = countMatches(text, /[A-Za-z]/g);
+  const score = scoreOcrText(text, 0);
+  const totalLetters = khmerCount + latinCount;
+
+  if (replacementCount >= 2) {
+    return true;
+  }
+
+  if (khmerCount >= 8 && score < 40) {
+    return true;
+  }
+
+  if (khmerCount >= 4 && latinCount > khmerCount * 4) {
+    return true;
+  }
+
+  return totalLetters > 0 && score < 18;
+}
+
 function createWordBlock(block, index) {
   const type = cleanWordText(block?.type, 24).toLowerCase();
 
@@ -546,7 +581,9 @@ async function ocrPdfToWord(file, { onProgress } = {}) {
           disableCombineTextItems: false,
           normalizeWhitespace: false,
         });
-        pageRuns = textContentToParagraphRuns(textContent);
+        if (!shouldUseOcrForTextContent(textContent)) {
+          pageRuns = textContentToParagraphRuns(textContent);
+        }
       } catch {
         pageRuns = null;
       }
