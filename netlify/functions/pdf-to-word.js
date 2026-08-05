@@ -136,7 +136,6 @@ function blockToDocx(block, index) {
 function buildDocxFromStructuredContent(payload, fallbackName) {
   const pages = Array.isArray(payload?.pages) ? payload.pages : [];
   const children = [];
-  let removedPageLabels = 0;
 
   pages.forEach((page, pageIndex) => {
     if (pageIndex > 0) {
@@ -147,7 +146,6 @@ function buildDocxFromStructuredContent(payload, fallbackName) {
     const filteredBlocks = blocks.filter((block) => {
       const text = cleanText(block?.text || block?.runs?.map((run) => run?.text).join(" ") || "", 120);
       if (block?.type === "heading" && isPageLabelText(text)) {
-        removedPageLabels += 1;
         return false;
       }
 
@@ -171,16 +169,6 @@ function buildDocxFromStructuredContent(payload, fallbackName) {
     sections: [{ children }],
     creator: "Assistand Help",
     title: fallbackName,
-    styles: {
-      default: {
-        document: {
-          run: {
-            font: defaultFont,
-            size: 24,
-          },
-        },
-      },
-    },
   });
 }
 
@@ -190,7 +178,13 @@ function getModelName() {
 }
 
 async function readGeminiPayload(response) {
+  const contentType = response.headers.get("content-type") || "";
   const text = await response.text();
+
+  if (!contentType.includes("application/json")) {
+    throw new Error(text || "Gemini returned an unexpected response.");
+  }
+
   return JSON.parse(text);
 }
 
@@ -271,47 +265,47 @@ async function convertWithGemini(pdfBuffer, fileName) {
 }
 
 export async function handler(event) {
-  if (event.httpMethod === "OPTIONS") {
-    return { body: "", headers: corsHeaders, statusCode: 204 };
-  }
-
-  if (event.httpMethod !== "POST") {
-    return jsonResponse(405, { error: "Use POST to convert a PDF to Word." }, { Allow: "POST, OPTIONS" });
-  }
-
-  if (!event.body) {
-    return jsonResponse(400, { error: "No PDF file was uploaded." });
-  }
-
-  const contentType = getHeader(event.headers, "content-type").split(";")[0].trim().toLowerCase();
-  const rawName = getHeader(event.headers, "x-file-name");
-  let fileName = "document.pdf";
-
-  if (rawName) {
-    try {
-      fileName = decodeURIComponent(rawName);
-    } catch {
-      fileName = rawName;
-    }
-  }
-
-  fileName = cleanText(fileName.replace(/[\\/]/g, "_"), 160) || "document.pdf";
-
-  if (contentType !== "application/pdf" && !fileName.toLowerCase().endsWith(".pdf")) {
-    return jsonResponse(415, { error: "Please upload a PDF file." });
-  }
-
-  const pdfBuffer = Buffer.from(event.body, event.isBase64Encoded ? "base64" : "binary");
-
-  if (!pdfBuffer.length) {
-    return jsonResponse(400, { error: "The uploaded PDF was empty." });
-  }
-
-  if (pdfBuffer.length > maxUploadBytes) {
-    return jsonResponse(413, { error: "PDF is too large. Please upload a file smaller than 20 MB." });
-  }
-
   try {
+    if (event.httpMethod === "OPTIONS") {
+      return { body: "", headers: corsHeaders, statusCode: 204 };
+    }
+
+    if (event.httpMethod !== "POST") {
+      return jsonResponse(405, { error: "Use POST to convert a PDF to Word." }, { Allow: "POST, OPTIONS" });
+    }
+
+    if (!event.body) {
+      return jsonResponse(400, { error: "No PDF file was uploaded." });
+    }
+
+    const contentType = getHeader(event.headers, "content-type").split(";")[0].trim().toLowerCase();
+    const rawName = getHeader(event.headers, "x-file-name");
+    let fileName = "document.pdf";
+
+    if (rawName) {
+      try {
+        fileName = decodeURIComponent(rawName);
+      } catch {
+        fileName = rawName;
+      }
+    }
+
+    fileName = cleanText(fileName.replace(/[\\/]/g, "_"), 160) || "document.pdf";
+
+    if (contentType !== "application/pdf" && !fileName.toLowerCase().endsWith(".pdf")) {
+      return jsonResponse(415, { error: "Please upload a PDF file." });
+    }
+
+    const pdfBuffer = Buffer.from(event.body, event.isBase64Encoded ? "base64" : "binary");
+
+    if (!pdfBuffer.length) {
+      return jsonResponse(400, { error: "The uploaded PDF was empty." });
+    }
+
+    if (pdfBuffer.length > maxUploadBytes) {
+      return jsonResponse(413, { error: "PDF is too large. Please upload a file smaller than 20 MB." });
+    }
+
     const structured = await convertWithGemini(pdfBuffer, fileName);
     const doc = buildDocxFromStructuredContent(structured, fileName);
     const docxBuffer = await Packer.toBuffer(doc);
