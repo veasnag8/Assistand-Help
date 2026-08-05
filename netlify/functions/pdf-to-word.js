@@ -146,13 +146,6 @@ function buildDocxFromStructuredContent(payload, fallbackName) {
       children.push(new Paragraph({ text: "", pageBreakBefore: true }));
     }
 
-    const pageTitle = cleanText(page?.title || `Page ${pageIndex + 1}`, 120);
-    children.push(new Paragraph({
-      heading: HeadingLevel.HEADING_2,
-      children: [new TextRun({ text: pageTitle, bold: true, size: 24 })],
-      spacing: { after: 120 },
-    }));
-
     const blocks = Array.isArray(page?.blocks) ? page.blocks : [];
     blocks.forEach((block, blockIndex) => {
       const item = blockToDocx(block, blockIndex);
@@ -199,14 +192,16 @@ async function convertWithGemini(pdfBuffer, fileName) {
   const model = getModelName();
   const instruction = [
     "You convert PDFs into a Word-friendly structured JSON document.",
-    "Preserve the original reading order, headings, paragraphs, bullet lists, tables, emphasis, and page breaks as closely as possible.",
-    "Do not summarize, translate, or rewrite. Keep the original wording exactly where possible.",
-    "If the PDF has scanned pages, OCR the visible text carefully.",
+    "Preserve the original page layout, reading order, headings, paragraphs, bullet lists, tables, spacing, emphasis, and page breaks as closely as possible.",
+    "Do not add artificial page labels like Page 1 or Page 2.",
+    "Do not summarize, translate, rewrite, or normalize wording unless the source text is unreadable.",
+    "If the PDF has scanned pages or mixed Khmer/English text, OCR the visible text carefully and keep the original wording as close as possible.",
+    "When the document is complex, prioritize fidelity to the source over beautification. Keep awkward line breaks, repeated labels, and layout structure if they appear in the original.",
     "Return only valid JSON with this shape:",
     "{",
     '  "title": "short document title",',
     '  "pages": [',
-    '    { "title": "Page 1", "blocks": [',
+    '    { "blocks": [',
     '      { "type": "heading", "level": 1, "text": "..." },',
     '      { "type": "paragraph", "text": "..." },',
     '      { "type": "list", "items": ["...", "..."] },',
@@ -217,6 +212,7 @@ async function convertWithGemini(pdfBuffer, fileName) {
     "Use block.type values only from heading, paragraph, list, table.",
     "Keep tables as tables and do not flatten them into paragraphs.",
     "If a page has no readable text, still include it with an empty blocks array.",
+    "Do not invent content that is not clearly visible in the source.",
   ].join(" ");
 
   const response = await fetch(`${geminiBaseUrl}/${encodeURIComponent(model)}:generateContent?key=${encodeURIComponent(apiKey)}`, {
