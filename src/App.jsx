@@ -80,7 +80,7 @@ const categories = [
     id: "pdf",
     title: "PDF Tools",
     tabTitle: "PDF",
-    description: "Split, merge, and compress PDF files.",
+    description: "Split, merge, compress, and convert PDF files to Word.",
     icon: FileText,
     tone: "red",
     enabled: true,

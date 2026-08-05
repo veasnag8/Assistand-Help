@@ -17,6 +17,7 @@
   "dependencies": {
     "@imgly/background-removal": "^1.7.0",
     "@netlify/blobs": "^10.7.8",
+    "docx": "^9.7.1",
     "khmercal": "^0.1.0",
     "lucide-react": "^1.16.0",
     "onnxruntime-web": "^1.21.0",

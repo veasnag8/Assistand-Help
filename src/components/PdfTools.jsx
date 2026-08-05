@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
-import { Archive, FileStack, Scissors, X } from "lucide-react";
+import { Archive, FileStack, FileType, Scissors, X } from "lucide-react";
 import { PDFDocument } from "pdf-lib";
+import { Document, Packer, Paragraph, TextRun } from "docx";
 import Panel from "./Panel";
 import {
   downloadBlob,
@@ -27,6 +28,12 @@ const modes = [
     label: "Compress",
     icon: Archive,
     description: "Reduce file size without keeping larger rebuilt PDFs.",
+  },
+  {
+    id: "word",
+    label: "To Word",
+    icon: FileType,
+    description: "Scan PDF pages and export Khmer-friendly Word text.",
   },
 ];
 
@@ -197,6 +204,173 @@ function getCompressionStatusMessage(result) {
   return `After compression: ${formatFileSize(result.originalBytes)} -> ${formatFileSize(result.compressedBytes)}.`;
 }
 
+function isSupportedWordPdfFile(file) {
+  return isPdfFile(file);
+}
+
+function countMatches(text, pattern) {
+  return text.match(pattern)?.length || 0;
+}
+
+function scoreOcrText(text, confidence) {
+  const normalizedConfidence = Number.isFinite(confidence) ? confidence : 0;
+  const khmerChars = countMatches(text, /[\u1780-\u17ff]/g);
+  const latinChars = countMatches(text, /[A-Za-z]/g);
+  const digits = countMatches(text, /\d/g);
+  const punctuation = countMatches(text, /[^\w\s\u1780-\u17ff]/g);
+
+  return normalizedConfidence + khmerChars * 12 + latinChars * 2 + digits * 0.08 - punctuation * 1.5;
+}
+
+function normalizeOcrText(text) {
+  return text
+    .replace(/\r\n/g, "\n")
+    .replace(/\u00a0/g, " ")
+    .replace(/[ \t]+\n/g, "\n")
+    .replace(/\n{3,}/g, "\n\n")
+    .trim();
+}
+
+function splitParagraphs(text) {
+  return normalizeOcrText(text)
+    .split(/\n{2,}/)
+    .map((paragraph) => paragraph.replace(/\n+/g, " ").replace(/[ \t]{2,}/g, " ").trim())
+    .filter(Boolean);
+}
+
+async function renderPdfPagesForWord(file, { maxPages = Infinity, onProgress } = {}) {
+  const { getDocument } = await loadPdfJs();
+  const data = await readFileAsArrayBuffer(file);
+  const pdf = await getDocument({ data }).promise;
+  const pageCount = Math.min(pdf.numPages, maxPages);
+  const pages = [];
+
+  try {
+    for (let pageNumber = 1; pageNumber <= pageCount; pageNumber += 1) {
+      onProgress?.(pageNumber, pageCount);
+      const page = await pdf.getPage(pageNumber);
+      const viewport = page.getViewport({ scale: 2 });
+      const canvas = document.createElement("canvas");
+      const context = canvas.getContext("2d");
+
+      if (!context) {
+        throw new Error("Could not prepare the PDF page canvas.");
+      }
+
+      canvas.width = Math.ceil(viewport.width);
+      canvas.height = Math.ceil(viewport.height);
+
+      await page.render({
+        canvasContext: context,
+        viewport,
+      }).promise;
+
+      pages.push({
+        dataUrl: canvas.toDataURL("image/png"),
+        pageNumber,
+      });
+
+      page.cleanup();
+    }
+  } finally {
+    await pdf.destroy();
+  }
+
+  return pages;
+}
+
+async function ocrPdfToWord(file, { onProgress } = {}) {
+  const pages = await renderPdfPagesForWord(file, { onProgress });
+  const { createWorker } = await import("tesseract.js");
+  const worker = await createWorker("khm+eng", 1, {
+    logger: (message) => {
+      onProgress?.(message);
+    },
+  });
+
+  const paragraphs = [];
+
+  try {
+    await worker.setParameters({
+      preserve_interword_spaces: "1",
+    });
+
+    for (const page of pages) {
+      const {
+        data: { confidence, text },
+      } = await worker.recognize(page.dataUrl);
+      const cleanText = normalizeOcrText(text);
+
+      if (cleanText) {
+        paragraphs.push({
+          pageNumber: page.pageNumber,
+          score: scoreOcrText(cleanText, confidence),
+          text: cleanText,
+        });
+      }
+    }
+  } finally {
+    await worker.terminate();
+  }
+
+  const doc = new Document({
+    sections: [
+      {
+        children: paragraphs.length
+          ? paragraphs.flatMap((page, index) => {
+              const pageParagraphs = splitParagraphs(page.text).map(
+                (paragraph) =>
+                  new Paragraph({
+                    children: [
+                      new TextRun({
+                        font: "Noto Sans Khmer",
+                        size: 24,
+                        text: paragraph,
+                      }),
+                    ],
+                    spacing: { after: 180 },
+                  }),
+              );
+
+              return [
+                new Paragraph({
+                  children: [
+                    new TextRun({
+                      bold: true,
+                      font: "Noto Sans Khmer",
+                      size: 26,
+                      text: `Page ${page.pageNumber}`,
+                    }),
+                  ],
+                  spacing: { after: 120, before: index === 0 ? 0 : 200 },
+                }),
+                ...pageParagraphs,
+              ];
+            })
+          : [
+              new Paragraph({
+                children: [
+                  new TextRun({
+                    font: "Noto Sans Khmer",
+                    size: 24,
+                    text: "No readable text was detected in the selected PDF.",
+                  }),
+                ],
+              }),
+            ],
+      },
+    ],
+  });
+
+  const blob = await Packer.toBlob(doc);
+
+  return {
+    blob,
+    filename: `${getBaseName(file.name)}-ocr.docx`,
+    pages,
+  };
+}
+
 export default function PdfTools() {
   const [mode, setMode] = useState("split");
   const [splitFile, setSplitFile] = useState(null);
@@ -208,6 +382,8 @@ export default function PdfTools() {
   const [compressProfile, setCompressProfile] = useState("50");
   const [compressResult, setCompressResult] = useState(null);
   const [compressPreviewBusy, setCompressPreviewBusy] = useState(false);
+  const [wordFile, setWordFile] = useState(null);
+  const [wordBusy, setWordBusy] = useState(false);
   const [status, setStatus] = useState("Choose a mode and upload PDF files.");
   const [busy, setBusy] = useState(false);
 
@@ -628,6 +804,37 @@ export default function PdfTools() {
     }
   }
 
+  async function handleWordExport() {
+    try {
+      setBusy(true);
+      setWordBusy(true);
+      setStatus("Preparing PDF to Word export...");
+
+      if (!wordFile || !isSupportedWordPdfFile(wordFile)) {
+        throw new Error("Please choose a PDF file.");
+      }
+
+      const result = await ocrPdfToWord(wordFile, {
+        onProgress: (message) => {
+          const statusText = typeof message === "string"
+            ? message
+            : message?.progress
+              ? `OCR ${Math.round(message.progress * 100)}%`
+              : "Scanning PDF...";
+          setStatus(statusText);
+        },
+      });
+
+      downloadBlob(result.blob, result.filename);
+      setStatus(`Downloaded Word document: ${result.filename}.`);
+    } catch (error) {
+      setStatus(error?.message || "Could not convert the PDF to Word.");
+    } finally {
+      setBusy(false);
+      setWordBusy(false);
+    }
+  }
+
   return (
     <section className="pdf-tools">
       <div className="pdf-mode-grid" role="tablist" aria-label="PDF tools">
@@ -819,6 +1026,33 @@ export default function PdfTools() {
               disabled={busy || compressPreviewBusy || Boolean(compressResult?.originalReason)}
             >
               {compressResult?.originalReason ? "Original Kept" : "Compress PDF"}
+            </button>
+          </div>
+        ) : null}
+
+        {mode === "word" ? (
+          <div className="pdf-form">
+            <div className="field">
+              <label htmlFor="word-pdf">Source PDF</label>
+              <input
+                id="word-pdf"
+                type="file"
+                accept="application/pdf,.pdf"
+                onChange={(event) => setWordFile(event.target.files?.[0] || null)}
+              />
+              {wordFile ? (
+                <div className="meta-line">
+                  {wordFile.name} Â· {formatFileSize(wordFile.size)}
+                </div>
+              ) : null}
+            </div>
+
+            <div className="hint">
+              Uses OCR to extract Khmer and English text, then exports a Word document with paragraph breaks preserved.
+            </div>
+
+            <button className="button" type="button" onClick={handleWordExport} disabled={busy || wordBusy || !wordFile}>
+              Export Word Document
             </button>
           </div>
         ) : null}
