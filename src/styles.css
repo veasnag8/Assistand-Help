@@ -851,6 +851,107 @@ img {
   color: #334155;
 }
 
+.acumatica-flow-notes {
+  display: grid;
+  gap: 12px;
+}
+
+.acumatica-flow-note {
+  display: grid;
+  gap: 10px;
+  border: 1px solid rgba(9, 16, 71, 0.1);
+  border-radius: 14px;
+  background: #fff;
+  box-shadow: 0 14px 28px rgba(39, 45, 88, 0.08);
+  padding: 14px 16px;
+}
+
+.acumatica-flow-note-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 14px;
+}
+
+.acumatica-flow-note-header > div:first-child {
+  min-width: 0;
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+}
+
+.acumatica-flow-note-no {
+  color: #1d4ed8;
+  font-size: 0.95rem;
+  font-weight: 950;
+}
+
+.acumatica-flow-note h3 {
+  margin: 0;
+  color: #091047;
+  font-size: 1.02rem;
+  line-height: 1.25;
+}
+
+.acumatica-flow-note-action {
+  flex: 0 0 auto;
+  border-radius: 999px;
+  background: rgba(37, 99, 235, 0.1);
+  color: #1d4ed8;
+  padding: 6px 10px;
+  font-size: 0.74rem;
+  font-weight: 900;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.acumatica-flow-note-summary {
+  margin: 0;
+  color: #334155;
+  font-size: 0.9rem;
+  font-weight: 700;
+  line-height: 1.5;
+}
+
+.acumatica-flow-note-list {
+  display: grid;
+  gap: 10px;
+}
+
+.acumatica-flow-note-item {
+  display: grid;
+  grid-template-columns: 14px minmax(0, 1fr);
+  gap: 8px;
+  align-items: start;
+}
+
+.acumatica-flow-note-bullet {
+  color: #1d4ed8;
+  font-weight: 900;
+  line-height: 1.4;
+}
+
+.acumatica-flow-note-item p,
+.acumatica-flow-note-item span {
+  margin: 0;
+}
+
+.acumatica-flow-note-item p {
+  color: #091047;
+  font-size: 0.9rem;
+  font-weight: 750;
+  line-height: 1.45;
+}
+
+.acumatica-flow-note-item span {
+  display: block;
+  margin-top: 3px;
+  color: #64748b;
+  font-size: 0.76rem;
+  font-weight: 700;
+  line-height: 1.35;
+}
+
 .tool-view--khmer-calendar {
   gap: 10px;
 }

@@ -180,6 +180,10 @@ function parseAccessRightText(text) {
   return sections;
 }
 
+function isWrongEntrySection(title) {
+  return title.includes("Post AP Wrong") || title.includes("Post AR Wrong");
+}
+
 function getSectionLabel(title) {
   if (title.includes("Request Fixed Asset")) {
     return "Request Fixed Asset";
@@ -242,6 +246,7 @@ export default function AcumaticaFlowTool() {
   const activeSection = sections.find((section) => section.id === activeSectionId) || sections[0];
   const filteredProcesses = activeSection.processes;
   const isPettyCash = activeSection.title.includes("Petty Cash");
+  const isWrongEntry = isWrongEntrySection(activeSection.title);
 
   return (
     <section className="acumatica-flow-tool" aria-labelledby="acumatica-flow-title">
@@ -272,39 +277,80 @@ export default function AcumaticaFlowTool() {
         ))}
       </div>
 
-      <div className="acumatica-flow-table-wrap">
-        <table className="acumatica-flow-table">
-          <thead>
-            <tr>
-              <th>No.</th>
-              <th>Stage</th>
-              <th>Module/Screen</th>
-              <th>Description</th>
-              <th>Action</th>
-              <th>Team</th>
-              <th>Remark</th>
-            </tr>
-          </thead>
-          <tbody>
-            {filteredProcesses.flatMap((process) =>
-              process.steps.map((step, index) => (
-                <tr
-                  className={`team-tone-${getTeamTone(step.team)}`}
-                  key={`${process.no}-${process.module}-${step.description}-${index}`}
-                >
-                  <td>{index === 0 ? process.no : ""}</td>
-                  <td>{index === 0 ? getProcessStage(activeSection.title, process.no) : ""}</td>
-                  <td>{index === 0 ? process.module : ""}</td>
-                  <td>{step.description}</td>
-                  <td>{step.action}</td>
-                  <td>{step.team}</td>
-                  <td>{step.user}</td>
-                </tr>
-              )),
-            )}
-          </tbody>
-        </table>
-      </div>
+      {isWrongEntry ? (
+        <div className="acumatica-flow-notes">
+          {filteredProcesses.map((process) => {
+            const leadStep = process.steps[0];
+            const key = `${process.no}-${process.module}`;
+
+            return (
+              <article className={`acumatica-flow-note tone-${getTeamTone(leadStep.team)}`} key={key}>
+                <header className="acumatica-flow-note-header">
+                  <div>
+                    <span className="acumatica-flow-note-no">{process.no}.</span>
+                    <h3>{process.module}</h3>
+                  </div>
+                  <div className="acumatica-flow-note-action">{leadStep.action}</div>
+                </header>
+
+                <p className="acumatica-flow-note-summary">{leadStep.description}</p>
+
+                {process.steps.length > 1 ? (
+                  <div className="acumatica-flow-note-list">
+                    {process.steps.slice(1).map((step, index) => (
+                      <div className="acumatica-flow-note-item" key={`${key}-${index}`}>
+                        <span className="acumatica-flow-note-bullet">-</span>
+                        <div>
+                          <p>{step.description}</p>
+                          <span>
+                            {step.action}
+                            {step.team ? ` • ${step.team}` : ""}
+                            {step.user ? ` • ${step.user}` : ""}
+                          </span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : null}
+              </article>
+            );
+          })}
+        </div>
+      ) : (
+        <div className="acumatica-flow-table-wrap">
+          <table className="acumatica-flow-table">
+            <thead>
+              <tr>
+                <th>No.</th>
+                <th>Stage</th>
+                <th>Module/Screen</th>
+                <th>Description</th>
+                <th>Action</th>
+                <th>Team</th>
+                <th>Remark</th>
+              </tr>
+            </thead>
+            <tbody>
+              {filteredProcesses.flatMap((process) =>
+                process.steps.map((step, index) => (
+                  <tr
+                    className={`team-tone-${getTeamTone(step.team)}`}
+                    key={`${process.no}-${process.module}-${step.description}-${index}`}
+                  >
+                    <td>{index === 0 ? process.no : ""}</td>
+                    <td>{index === 0 ? getProcessStage(activeSection.title, process.no) : ""}</td>
+                    <td>{index === 0 ? process.module : ""}</td>
+                    <td>{step.description}</td>
+                    <td>{step.action}</td>
+                    <td>{step.team}</td>
+                    <td>{step.user}</td>
+                  </tr>
+                )),
+              )}
+            </tbody>
+          </table>
+        </div>
+      )}
     </section>
   );
 }
