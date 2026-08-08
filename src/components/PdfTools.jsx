@@ -210,6 +210,7 @@ function isSupportedWordPdfFile(file) {
 
 const pdfToWordEndpointPath = "/.netlify/functions/pdf-to-word";
 const defaultWordFont = "Khmer UI";
+const khmerFallbackFonts = ["Khmer UI", "Khmer OS", "Noto Sans Khmer", "Arial Unicode MS", "Segoe UI"];
 
 function cleanWordText(value, maxLength = 12000) {
   return String(value || "")
@@ -288,6 +289,38 @@ function normalizeWordColor(value) {
   return /^[0-9a-f]{6}$/i.test(hex) ? `#${hex.toUpperCase()}` : null;
 }
 
+function hasKhmerCharacters(text) {
+  return /[\u1780-\u17ff]/.test(text || "");
+}
+
+function countReplacementGlyphs(text) {
+  return countMatches(text, /\uFFFD/g);
+}
+
+function isLikelyBadTextExtraction(text) {
+  const normalized = cleanWordText(text, 5000);
+
+  if (!normalized) {
+    return true;
+  }
+
+  const replacementGlyphs = countReplacementGlyphs(normalized);
+  const khmerChars = countMatches(normalized, /[\u1780-\u17ff]/g);
+  const latinChars = countMatches(normalized, /[A-Za-z]/g);
+  const totalLetters = khmerChars + latinChars;
+  const badRatio = replacementGlyphs / Math.max(1, normalized.length);
+
+  if (replacementGlyphs >= 3 || badRatio > 0.03) {
+    return true;
+  }
+
+  if (hasKhmerCharacters(normalized) && khmerChars < 4 && totalLetters > 20) {
+    return true;
+  }
+
+  return false;
+}
+
 function createPageImageParagraph(dataUrl, pageWidthPx, pageHeightPx) {
   const maxWidthPx = 720;
   const scale = Math.min(1, maxWidthPx / Math.max(1, pageWidthPx));
@@ -310,8 +343,9 @@ function createPageImageParagraph(dataUrl, pageWidthPx, pageHeightPx) {
 }
 
 function createTextParagraphRuns(textContent) {
+  const items = textContent?.items || [];
   const text = cleanWordText(
-    (textContent?.items || []).map((item) => item?.str || "").join(" "),
+    items.map((item) => item?.str || "").join(" "),
     5000,
   );
 
@@ -319,7 +353,7 @@ function createTextParagraphRuns(textContent) {
     return null;
   }
 
-  return [createWordTextRun(text, { size: 14 })];
+  return [createWordTextRun(text, { size: 14, font: hasKhmerCharacters(text) ? khmerFallbackFonts[0] : defaultWordFont })];
 }
 
 async function buildEditableWordDocument(file) {
@@ -354,13 +388,13 @@ async function buildEditableWordDocument(file) {
           disableCombineTextItems: false,
           normalizeWhitespace: false,
         });
-        pageRuns = createTextParagraphRuns(textContent);
+        const rawText = cleanWordText(
+          (textContent?.items || []).map((item) => item?.str || "").join(" "),
+          5000,
+        );
+        pageRuns = isLikelyBadTextExtraction(rawText) ? null : createTextParagraphRuns(textContent);
       } catch {
         pageRuns = null;
-      }
-
-      if (!pageRuns || !pageRuns.length) {
-        pageRuns = await ocrPdfPageToRuns(canvas.toDataURL("image/png"));
       }
 
       if (pageNumber > 1) {
@@ -375,9 +409,7 @@ async function buildEditableWordDocument(file) {
           }),
         );
       } else {
-        children.push(new Paragraph({
-          children: [createWordTextRun("No readable text was detected in this page.", { size: 14 })],
-        }));
+        children.push(createPageImageParagraph(canvas.toDataURL("image/png"), canvas.width, canvas.height));
       }
 
       page.cleanup();
@@ -445,30 +477,6 @@ async function renderPdfPagesForWord(file, { maxPages = Infinity, onProgress } =
   }
 
   return pages;
-}
-
-async function ocrPdfPageToRuns(imageDataUrl) {
-  const { createWorker } = await import("tesseract.js");
-  const worker = await createWorker("khm+eng", 1, {
-    logger: () => {},
-  });
-
-  try {
-    await worker.setParameters({
-      preserve_interword_spaces: "1",
-    });
-
-    const { data } = await worker.recognize(imageDataUrl);
-    const cleanText = normalizeOcrText(data.text || "");
-
-    if (!cleanText) {
-      return null;
-    }
-
-    return splitParagraphs(cleanText).map((paragraph) => [paragraph]);
-  } finally {
-    await worker.terminate();
-  }
 }
 
 function getPdfToWordEndpoint() {
@@ -1275,4 +1283,3 @@ export default function PdfTools() {
     </section>
   );
 }
-
