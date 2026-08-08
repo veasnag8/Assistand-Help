@@ -113,28 +113,28 @@ V. Petty Cash
 		- Select Detail Account: Petty Cash	Save	F.D (VCL)	
 		- Remove Hold by Senior	Remove Hold	F.D Senior	
 		- Release by Finance Manager or Supervisor	Release	F.D (VCL)	
-VI. Post AP Wrong					
-1	AP Bill Released - Amount Incorrect	Debit Adj to reduce or reverse the wrong amount	Create Debit Adj	F.D (VCL)	
-		- Example: AP Bill = $1,000; correct amount = $800; Debit Adjustment = $200	Apply Debit Adj to AP Bill	Finance Team	
-2	AP Bill Released - Entire Bill Wrong	Debit Adj for full bill amount	Create Debit Adj	F.D (VCL)	
-		- Apply Debit Adj to the original AP Bill and release it	Apply / Release	F.D (VCL)	
-		- Create a new AP Bill with correct information	Create New AP Bill	F.D (VCL)	
-3	AP Bill Paid - Wrong Entry	Void payment first, then reverse the bill	Void Payment and Release	F.D (VCL)	
-		- Create Debit Adj and apply it to the original AP Bill	Create / Apply Debit Adj	F.D (VCL)	
-		- Create a new AP Bill if needed	Create New AP Bill	F.D (VCL)	
-4	AP Credit Adj. - Vendor Charges More	Use Credit Adj when vendor adds extra charge	Create Credit Adjustment	F.D (VCL)	
-		- Example: AP Bill = $1,000; Freight = $50; Total AP = $1,050	Apply Credit Adj to AP Bill	Finance Team	
-VII. Post AR Wrong					
-1	AR Invoice Released - Amount Over	Credit Memo to reduce customer balance	Create Credit Memo	F.D (VCL)	
-		- Example: AR Invoice = $1,000; correct amount = $800; Credit Memo = $200	Apply Credit Memo to AR Invoice	Finance Team	
-2	AR Invoice Released - Entire Invoice Wrong	Credit Memo for full invoice amount	Create Credit Memo	F.D (VCL)	
-		- Apply credit memo to the original invoice and release it	Apply / Release	F.D (VCL)	
-		- Create a new AR Invoice with correct information	Create New AR Invoice	F.D (VCL)	
-3	AR Invoice Paid - Wrong Entry	Void payment first, then reverse the invoice	Void Payment and Release	F.D (VCL)	
-		- Create Credit Memo and apply it to the invoice	Create / Apply Credit Memo	F.D (VCL)	
-		- Create a new AR Invoice if needed	Create New AR Invoice	F.D (VCL)	
-4	AR Debit Memo - Customer Owes More	Use Debit Memo when customer must pay more	Create Debit Memo	F.D (VCL)	
-		- Example: AR Invoice = $1,000; Freight missing = $50; Total = $1,050	Apply Debit Memo to AR Invoice	Finance Team	`;
+VI. កែតម្រូវ AP ខុស					
+1	AP Bill បាន Released រួចហើយ - ចំនួនទឹកប្រាក់ខុស	ត្រូវបង្កើត Debit Adj ដើម្បីកាត់បន្ថយ ឬបញ្ច្រាសចំនួនដែលខុស	បង្កើត Debit Adj	F.D (VCL)	
+		- ឧទាហរណ៍: AP Bill = $1,000; ចំនួនត្រឹមត្រូវ = $800; Debit Adjustment = $200	Apply Debit Adj ទៅ AP Bill	Finance Team	
+2	AP Bill ខុសទាំងស្រុង	បង្កើត Debit Adj ស្មើនឹងចំនួន Bill ទាំងមូល	បង្កើត Debit Adj	F.D (VCL)	
+		- Apply Debit Adj ទៅ AP Bill ដើម ហើយ Release	Apply / Release	F.D (VCL)	
+		- បង្កើត AP Bill ថ្មីដែលមានព័ត៌មានត្រឹមត្រូវ	បង្កើត AP Bill ថ្មី	F.D (VCL)	
+3	AP Bill បាន Paid រួចហើយ	ត្រូវ Void Payment និង Release ជាមុនសិន	Void Payment និង Release	F.D (VCL)	
+		- បន្ទាប់មកបង្កើត Debit Adj ហើយ Apply ទៅ AP Bill ដើម	បង្កើត / Apply Debit Adj	F.D (VCL)	
+		- បង្កើត AP Bill ថ្មី ប្រសិនបើចាំបាច់	បង្កើត AP Bill ថ្មី	F.D (VCL)	
+4	Credit Adj. (AP) - Vendor គិតថ្លៃបន្ថែម	ប្រើ Credit Adj នៅពេល Vendor គិតថ្លៃបន្ថែម	បង្កើត Credit Adjustment	F.D (VCL)	
+		- ឧទាហរណ៍: AP Bill = $1,000; Freight = $50; Total AP = $1,050	Apply Credit Adj ទៅ AP Bill	Finance Team	
+VII. កែតម្រូវ AR ខុស					
+1	AR Invoice បាន Released រួចហើយ - Amount លើស	ត្រូវបង្កើត Credit Memo ដើម្បីកាត់បន្ថយបំណុលរបស់ Customer	បង្កើត Credit Memo	F.D (VCL)	
+		- ឧទាហរណ៍: AR Invoice = $1,000; តម្លៃត្រឹមត្រូវ = $800; Credit Memo = $200	Apply Credit Memo ទៅ AR Invoice	Finance Team	
+2	AR Invoice ខុសទាំងស្រុង	បង្កើត Credit Memo ស្មើនឹង Invoice ទាំងមូល	បង្កើត Credit Memo	F.D (VCL)	
+		- Apply Credit Memo ទៅ Invoice ដើម ហើយ Release	Apply / Release	F.D (VCL)	
+		- បង្កើត AR Invoice ថ្មីដែលត្រឹមត្រូវ	បង្កើត AR Invoice ថ្មី	F.D (VCL)	
+3	Customer បានបង់ប្រាក់រួចហើយ	ត្រូវ Void Payment និង Release ជាមុនសិន	Void Payment និង Release	F.D (VCL)	
+		- បន្ទាប់មកបង្កើត Credit Memo ហើយ Apply ទៅ Invoice	បង្កើត / Apply Credit Memo	F.D (VCL)	
+		- បង្កើត AR Invoice ថ្មី ប្រសិនបើចាំបាច់	បង្កើត AR Invoice ថ្មី	F.D (VCL)	
+4	Debit Memo (AR) - Customer ត្រូវបង់បន្ថែម	ប្រើ Debit Memo នៅពេលត្រូវការបន្ថែមបំណុលឱ្យ Customer	បង្កើត Debit Memo	F.D (VCL)	
+		- ឧទាហរណ៍: AR Invoice = $1,000; Freight ខ្វះ = $50; Total = $1,050	Apply Debit Memo ទៅ AR Invoice	Finance Team	`;
 
 function parseAccessRightText(text) {
   const sections = [];
