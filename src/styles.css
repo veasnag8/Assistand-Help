@@ -855,12 +855,14 @@ img {
   display: grid;
   gap: 12px;
   padding: 2px 2px 8px;
+  justify-items: center;
 }
 
 .acumatica-flow-note {
   display: grid;
   gap: 12px;
   overflow: hidden;
+  width: min(100%, 920px);
   border: 1px solid rgba(9, 16, 71, 0.1);
   border-radius: 20px;
   background:
