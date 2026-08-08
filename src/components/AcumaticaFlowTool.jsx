@@ -113,7 +113,7 @@ V. Petty Cash
 		- Select Detail Account: Petty Cash	Save	F.D (VCL)	
 		- Remove Hold by Senior	Remove Hold	F.D Senior	
 		- Release by Finance Manager or Supervisor	Release	F.D (VCL)	
-VI. Post AP Wrong / Post AR Wrong					
+VI. Post AP Wrong					
 1	AP Bill Released - Amount Incorrect	Debit Adj to reduce or reverse the wrong amount	Create Debit Adj	F.D (VCL)	
 		- Example: AP Bill = $1,000; correct amount = $800; Debit Adjustment = $200	Apply Debit Adj to AP Bill	Finance Team	
 2	AP Bill Released - Entire Bill Wrong	Debit Adj for full bill amount	Create Debit Adj	F.D (VCL)	
@@ -122,17 +122,18 @@ VI. Post AP Wrong / Post AR Wrong
 3	AP Bill Paid - Wrong Entry	Void payment first, then reverse the bill	Void Payment and Release	F.D (VCL)	
 		- Create Debit Adj and apply it to the original AP Bill	Create / Apply Debit Adj	F.D (VCL)	
 		- Create a new AP Bill if needed	Create New AP Bill	F.D (VCL)	
-4	AR Invoice Released - Amount Over	Credit Memo to reduce customer balance	Create Credit Memo	F.D (VCL)	
+4	AP Credit Adj. - Vendor Charges More	Use Credit Adj when vendor adds extra charge	Create Credit Adjustment	F.D (VCL)	
+		- Example: AP Bill = $1,000; Freight = $50; Total AP = $1,050	Apply Credit Adj to AP Bill	Finance Team	
+VII. Post AR Wrong					
+1	AR Invoice Released - Amount Over	Credit Memo to reduce customer balance	Create Credit Memo	F.D (VCL)	
 		- Example: AR Invoice = $1,000; correct amount = $800; Credit Memo = $200	Apply Credit Memo to AR Invoice	Finance Team	
-5	AR Invoice Released - Entire Invoice Wrong	Credit Memo for full invoice amount	Create Credit Memo	F.D (VCL)	
+2	AR Invoice Released - Entire Invoice Wrong	Credit Memo for full invoice amount	Create Credit Memo	F.D (VCL)	
 		- Apply credit memo to the original invoice and release it	Apply / Release	F.D (VCL)	
 		- Create a new AR Invoice with correct information	Create New AR Invoice	F.D (VCL)	
-6	AR Invoice Paid - Wrong Entry	Void payment first, then reverse the invoice	Void Payment and Release	F.D (VCL)	
+3	AR Invoice Paid - Wrong Entry	Void payment first, then reverse the invoice	Void Payment and Release	F.D (VCL)	
 		- Create Credit Memo and apply it to the invoice	Create / Apply Credit Memo	F.D (VCL)	
 		- Create a new AR Invoice if needed	Create New AR Invoice	F.D (VCL)	
-7	AP Credit Adj. - Vendor Charges More	Use Credit Adj when vendor adds extra charge	Create Credit Adjustment	F.D (VCL)	
-		- Example: AP Bill = $1,000; Freight = $50; Total AP = $1,050	Apply Credit Adj to AP Bill	Finance Team	
-8	AR Debit Memo - Customer Owes More	Use Debit Memo when customer must pay more	Create Debit Memo	F.D (VCL)	
+4	AR Debit Memo - Customer Owes More	Use Debit Memo when customer must pay more	Create Debit Memo	F.D (VCL)	
 		- Example: AR Invoice = $1,000; Freight missing = $50; Total = $1,050	Apply Debit Memo to AR Invoice	Finance Team	`;
 
 function parseAccessRightText(text) {
@@ -182,6 +183,14 @@ function parseAccessRightText(text) {
 function getSectionLabel(title) {
   if (title.includes("Request Fixed Asset")) {
     return "Request Fixed Asset";
+  }
+
+  if (title.includes("Post AP Wrong")) {
+    return "Post AP Wrong";
+  }
+
+  if (title.includes("Post AR Wrong")) {
+    return "Post AR Wrong";
   }
 
   return title.replace(/^[IVX]+\.\s*/, "");
