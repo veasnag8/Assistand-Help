@@ -188,8 +188,9 @@ function isWrongEntrySection(title) {
 
 function getWrongEntryContent(title) {
   if (title === "Post AP Wrong") {
-    return `Post AP Wrong
-1. បើ AP Bill បាន Released រួចហើយ
+    return {
+      title: "Post AP Wrong",
+      body: `1. បើ AP Bill បាន Released រួចហើយ
      ករណី៖ ចំនួនទឹកប្រាក់ខុស (Amount Incorrect)
      ត្រូវបង្កើត Debit Adj ដើម្បីកាត់បន្ថយ ឬបញ្ច្រាស (Reverse) ចំនួនដែលខុស។
 
@@ -216,11 +217,13 @@ function getWrongEntryContent(title) {
   - ទើបបង្កើត Debit Adjustment។
   - Apply Debit Adjustment ទៅ AP Bill។
   - Release Debit Adjustment។
-  - បង្កើត AP Bill ថ្មី ប្រសិនបើចាំបាច់។`;
+  - បង្កើត AP Bill ថ្មី ប្រសិនបើចាំបាច់។`,
+    };
   }
 
-  return `Post AR Wrong
-1. បើ AR Invoice បាន Released រួចហើយ
+  return {
+    title: "Post AR Wrong",
+    body: `1. បើ AR Invoice បាន Released រួចហើយ
   - ករណី៖ Amount លើស
   - ត្រូវបង្កើត Credit Memo ដើម្បីកាត់បន្ថយបំណុលរបស់ Customer។
 
@@ -246,7 +249,8 @@ function getWrongEntryContent(title) {
   - Void Payment និង Release ជាមុនសិន។
   - រួចបង្កើត Credit Memo។
   - Apply Credit Memo ទៅ Invoice។
-  - បង្កើត Invoice ថ្មី ប្រសិនបើចាំបាច់។`;
+  - បង្កើត Invoice ថ្មី ប្រសិនបើចាំបាច់។`,
+  };
 }
 
 function getSectionLabel(title) {
@@ -344,8 +348,12 @@ export default function AcumaticaFlowTool() {
 
       {isWrongEntry ? (
         <div className="acumatica-flow-notes">
-          <article className="acumatica-flow-note">
-            <pre className="acumatica-flow-note-text">{getWrongEntryContent(activeSection.title)}</pre>
+          <article className={`acumatica-flow-note ${activeSection.title === "Post AP Wrong" ? "is-ap" : "is-ar"}`}>
+            <div className="acumatica-flow-note-topline">
+              <span className="acumatica-flow-note-kicker">{activeSection.title === "Post AP Wrong" ? "AP" : "AR"}</span>
+              <h2>{getWrongEntryContent(activeSection.title).title}</h2>
+            </div>
+            <pre className="acumatica-flow-note-text">{getWrongEntryContent(activeSection.title).body}</pre>
           </article>
         </div>
       ) : (

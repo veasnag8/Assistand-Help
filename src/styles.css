@@ -854,27 +854,82 @@ img {
 .acumatica-flow-notes {
   display: grid;
   gap: 12px;
+  padding: 2px 2px 8px;
 }
 
 .acumatica-flow-note {
   display: grid;
-  gap: 10px;
+  gap: 12px;
+  overflow: hidden;
   border: 1px solid rgba(9, 16, 71, 0.1);
-  border-radius: 14px;
-  background: #fff;
-  box-shadow: 0 14px 28px rgba(39, 45, 88, 0.08);
-  padding: 14px 16px;
+  border-radius: 20px;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(248, 250, 255, 0.94)),
+    #fff;
+  box-shadow: 0 18px 38px rgba(39, 45, 88, 0.12);
+  padding: 18px 18px 20px;
   font-family: "Manrope", "Noto Sans Khmer", "Segoe UI", sans-serif;
+  position: relative;
 }
 
 .acumatica-flow-note-text {
   margin: 0;
-  color: #091047;
+  color: #0b143d;
   white-space: pre-wrap;
   word-break: break-word;
   font-family: "Manrope", "Noto Sans Khmer", "Segoe UI", sans-serif;
-  font-size: 0.94rem;
-  line-height: 1.65;
+  font-size: 0.96rem;
+  line-height: 1.72;
+  letter-spacing: 0.01em;
+}
+
+.acumatica-flow-note::before {
+  content: "";
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 10px;
+  background: linear-gradient(180deg, #2563eb, #7c3aed);
+}
+
+.acumatica-flow-note.is-ap::before {
+  background: linear-gradient(180deg, #2563eb, #06b6d4);
+}
+
+.acumatica-flow-note.is-ar::before {
+  background: linear-gradient(180deg, #f97316, #ef4444);
+}
+
+.acumatica-flow-note-topline {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.acumatica-flow-note-kicker {
+  display: inline-flex;
+  align-items: center;
+  border-radius: 999px;
+  background: rgba(37, 99, 235, 0.1);
+  color: #1d4ed8;
+  padding: 6px 10px;
+  font-size: 0.72rem;
+  font-weight: 900;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.acumatica-flow-note.is-ar .acumatica-flow-note-kicker {
+  background: rgba(249, 115, 22, 0.12);
+  color: #c2410c;
+}
+
+.acumatica-flow-note-topline h2 {
+  margin: 0;
+  color: #091047;
+  font-size: 1.15rem;
+  line-height: 1.2;
+  font-weight: 900;
 }
 
 .tool-view--khmer-calendar {
