@@ -146,7 +146,9 @@ function parseAccessRightText(text) {
     const [no = "", module = "", description = "", action = "", team = "", user = ""] = cells;
 
     if (/^[IVX]+\./.test(no)) {
-      currentSection = { id: no.replace(".", "").toLowerCase(), title: no.trim(), processes: [] };
+      const normalizedId = no.startsWith("VI.") ? "post-ap-wrong" : no.startsWith("VII.") ? "post-ar-wrong" : no.replace(".", "").toLowerCase();
+      const normalizedTitle = no.startsWith("VI.") ? "Post AP Wrong" : no.startsWith("VII.") ? "Post AR Wrong" : no.trim();
+      currentSection = { id: normalizedId, title: normalizedTitle, processes: [] };
       sections.push(currentSection);
       currentProcess = null;
       return;
@@ -181,7 +183,70 @@ function parseAccessRightText(text) {
 }
 
 function isWrongEntrySection(title) {
-  return title.includes("Post AP Wrong") || title.includes("Post AR Wrong");
+  return title === "Post AP Wrong" || title === "Post AR Wrong";
+}
+
+function getWrongEntryContent(title) {
+  if (title === "Post AP Wrong") {
+    return `Post AP Wrong
+1. បើ AP Bill បាន Released រួចហើយ
+     ករណី៖ ចំនួនទឹកប្រាក់ខុស (Amount Incorrect)
+     ត្រូវបង្កើត Debit Adj ដើម្បីកាត់បន្ថយ ឬបញ្ច្រាស (Reverse) ចំនួនដែលខុស។
+
+ឧទាហរណ៍
+  - AP Bill = $1,000
+  - ចំនួនត្រឹមត្រូវ = $800
+  - បង្កើត Debit Adjustment = $200
+
+2. បើ AP Bill ខុសទាំងស្រុង
+    ជំហាន
+   - បង្កើត Debit Adjustment ស្មើនឹងចំនួន Bill ទាំងមូល។
+   - Apply Debit Adjustment ទៅ AP Bill ដើម។
+   - Release Debit Adjustment។
+   - បង្កើត AP Bill ថ្មីដែលមានព័ត៌មានត្រឹមត្រូវ។
+
+ឧទាហរណ៍
+   - AP Bill ខុស = $1,000
+   - Debit Adjustment = $1,000
+   - បង្កើត AP Bill ថ្មីដែលត្រឹមត្រូវ
+
+3. បើ AP Bill ត្រូវបានបង់ប្រាក់រួច (Paid)
+  ជំហាន
+  - Void Payment និង Release ជាមុនសិន។
+  - ទើបបង្កើត Debit Adjustment។
+  - Apply Debit Adjustment ទៅ AP Bill។
+  - Release Debit Adjustment។
+  - បង្កើត AP Bill ថ្មី ប្រសិនបើចាំបាច់។`;
+  }
+
+  return `Post AR Wrong
+1. បើ AR Invoice បាន Released រួចហើយ
+  - ករណី៖ Amount លើស
+  - ត្រូវបង្កើត Credit Memo ដើម្បីកាត់បន្ថយបំណុលរបស់ Customer។
+
+ឧទាហរណ៍
+  - AR Invoice = $1,000
+  - តម្លៃត្រឹមត្រូវ = $800
+  - បង្កើត Credit Memo = $200
+
+2. បើ AR Invoice ខុសទាំងស្រុង
+ជំហាន
+  - បង្កើត Credit Memo ស្មើនឹង Invoice ទាំងមូល។
+  - Apply ទៅ Invoice ដើម។
+  - Release។
+  - បង្កើត AR Invoice ថ្មីដែលត្រឹមត្រូវ។
+
+ឧទាហរណ៍
+  - Invoice ខុស = $1,000
+  - Credit Memo = $1,000
+  - បង្កើត Invoice ថ្មី
+
+3. បើ Customer បានបង់ប្រាក់រួច
+ជំហាន
+  - Void Payment និង Release ជាមុនសិន។
+  - រួចបង្កើត Credit Memo។
+  - Apply Credit Memo ទៅ Invoice។
+  - បង្កើត Invoice ថ្មី ប្រសិនបើចាំបាច់។`;
 }
 
 function getSectionLabel(title) {
@@ -279,42 +344,9 @@ export default function AcumaticaFlowTool() {
 
       {isWrongEntry ? (
         <div className="acumatica-flow-notes">
-          {filteredProcesses.map((process) => {
-            const leadStep = process.steps[0];
-            const key = `${process.no}-${process.module}`;
-
-            return (
-              <article className={`acumatica-flow-note tone-${getTeamTone(leadStep.team)}`} key={key}>
-                <header className="acumatica-flow-note-header">
-                  <div>
-                    <span className="acumatica-flow-note-no">{process.no}.</span>
-                    <h3>{process.module}</h3>
-                  </div>
-                  <div className="acumatica-flow-note-action">{leadStep.action}</div>
-                </header>
-
-                <p className="acumatica-flow-note-summary">{leadStep.description}</p>
-
-                {process.steps.length > 1 ? (
-                  <div className="acumatica-flow-note-list">
-                    {process.steps.slice(1).map((step, index) => (
-                      <div className="acumatica-flow-note-item" key={`${key}-${index}`}>
-                        <span className="acumatica-flow-note-bullet">-</span>
-                        <div>
-                          <p>{step.description}</p>
-                          <span>
-                            {step.action}
-                            {step.team ? ` • ${step.team}` : ""}
-                            {step.user ? ` • ${step.user}` : ""}
-                          </span>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                ) : null}
-              </article>
-            );
-          })}
+          <article className="acumatica-flow-note">
+            <pre className="acumatica-flow-note-text">{getWrongEntryContent(activeSection.title)}</pre>
+          </article>
         </div>
       ) : (
         <div className="acumatica-flow-table-wrap">
