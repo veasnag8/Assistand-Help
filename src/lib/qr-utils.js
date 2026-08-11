@@ -22,6 +22,7 @@ export const DEFAULT_BADGE_POSITION = {
 export const defaultQrDetails = {
   accountName: "",
   accountNumber: "",
+  accountNumber2: "",
   currencyLabel: "USD $",
   badgeText: "$",
   badgeScale: 1,
@@ -77,6 +78,10 @@ function formatAccountName(text) {
 function drawCurrencyText(context, currencyLabel, centerX, baselineY) {
   const normalizedLabel = (currencyLabel || "USD $").trim();
 
+  if (normalizedLabel === "Non") {
+    return;
+  }
+
   if (normalizedLabel === KHR_CURRENCY_LABEL) {
     const code = "KHR";
     const symbol = KHMER_RIEL_SYMBOL;
@@ -109,6 +114,33 @@ function drawCurrencyText(context, currencyLabel, centerX, baselineY) {
     weight: 700,
     family: "Georgia",
     color: BRAND_RED,
+  });
+}
+
+function drawDualAccountLines(context, accountNumber1, accountNumber2) {
+  const firstLine = `${accountNumber1 || "000 0000 000 000"} ${KHMER_RIEL_SYMBOL}`;
+  const secondLine = `${accountNumber2 || "000 0000 000 000"} $`;
+
+  context.fillStyle = "#111111";
+  context.textAlign = "center";
+  context.textBaseline = "alphabetic";
+
+  drawFittedText(context, firstLine, OUTPUT_WIDTH / 2, 724, {
+    maxWidth: OUTPUT_WIDTH - 60,
+    fontSize: 40,
+    minFontSize: 26,
+    weight: 700,
+    family: "Arial",
+    color: "#111111",
+  });
+
+  drawFittedText(context, secondLine, OUTPUT_WIDTH / 2, 784, {
+    maxWidth: OUTPUT_WIDTH - 60,
+    fontSize: 40,
+    minFontSize: 26,
+    weight: 700,
+    family: "Arial",
+    color: "#111111",
   });
 }
 
@@ -209,6 +241,7 @@ export function renderQrLayout(canvas, settings, options = {}) {
     rotation = 0,
     accountName,
     accountNumber,
+    accountNumber2,
     currencyLabel,
     badgeText,
     badgeScale = 1,
@@ -317,16 +350,22 @@ export function renderQrLayout(canvas, settings, options = {}) {
     color: "#1a1a1a",
   });
 
-  drawFittedText(context, accountNumber || "000 0000 000 000", OUTPUT_WIDTH / 2, 736, {
-    maxWidth: OUTPUT_WIDTH - 60,
-    fontSize: 56,
-    minFontSize: 34,
-    weight: 700,
-    family: "Arial",
-    color: "#111111",
-  });
+  const normalizedCurrency = (currencyLabel || "USD $").trim();
 
-  drawCurrencyText(context, currencyLabel, OUTPUT_WIDTH / 2, 846);
+  if (normalizedCurrency === "Non") {
+    drawDualAccountLines(context, accountNumber, accountNumber2);
+  } else {
+    drawFittedText(context, accountNumber || "000 0000 000 000", OUTPUT_WIDTH / 2, 736, {
+      maxWidth: OUTPUT_WIDTH - 60,
+      fontSize: 56,
+      minFontSize: 34,
+      weight: 700,
+      family: "Arial",
+      color: "#111111",
+    });
+
+    drawCurrencyText(context, currencyLabel, OUTPUT_WIDTH / 2, 846);
+  }
 
   if (showGuide) {
     context.strokeStyle = "rgba(150, 150, 150, 0.28)";

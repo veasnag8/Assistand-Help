@@ -36,6 +36,7 @@ const KHR_CURRENCY_LABEL = `KHR ${KHMER_RIEL_SYMBOL}`;
 const currencyOptions = [
   { value: "USD $", label: "USD $" },
   { value: KHR_CURRENCY_LABEL, label: KHR_CURRENCY_LABEL },
+  { value: "Non", label: "Non" },
 ];
 
 const badgeOptions = [
@@ -204,6 +205,8 @@ export default function QrStudio() {
       [field]:
         field === "accountNumber"
           ? formatAccountNumber(value)
+          : field === "accountNumber2"
+            ? formatAccountNumber(value)
           : field === "accountName"
             ? formatAccountName(value)
             : value,
@@ -258,12 +261,12 @@ export default function QrStudio() {
 
     renderQrLayout(
       exportCanvas,
-      {
-        sourceImage,
-        zoom,
-        rotation,
-        crop,
-        ...details,
+          {
+            sourceImage,
+            zoom,
+            rotation,
+            crop,
+            ...details,
       },
       { showGuide: false },
     );
@@ -444,6 +447,20 @@ export default function QrStudio() {
                 />
               </div>
             ))}
+
+            {details.currencyLabel === "Non" ? (
+              <div className="field">
+                <label htmlFor="accountNumber2">Account number 2</label>
+                <input
+                  id="accountNumber2"
+                  value={details.accountNumber2}
+                  placeholder="000 0000 000 000"
+                  inputMode="numeric"
+                  maxLength={16}
+                  onChange={(event) => updateDetail("accountNumber2", event.target.value)}
+                />
+              </div>
+            ) : null}
 
             <div className="field">
               <label htmlFor="currencyLabel">Currency text</label>
