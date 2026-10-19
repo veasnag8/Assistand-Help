@@ -1,13 +1,40 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import {
+  DEFAULT_NUMBERING_CATEGORIES,
   categoryKey,
   generateNumberingRows,
+  migrateLegacyCategories,
   normalizeCategory,
   parseBranches,
   parseYears,
   validateCategory,
 } from "./acumatica-numbering.js";
+
+const EXPECTED_MAPPINGS = [
+  ["AP", "APBILL"], ["AR", "ARINVOICE"], ["CM", "CATRAN"], ["CR", "CARECON"],
+  ["CT", "CATRANSFER"], ["DO", "SOSHIPMENT"], ["GL", "BATCH"], ["IR", "INRECEIPT"],
+  ["IS", "INISSUE"], ["JE", "JEBATCH"], ["JV", "JVADJUST"], ["LC", "POLANDCOST"],
+  ["PI", "PIID"], ["PM", "APPAYMENT"], ["PMO", "PAYMENTORD"], ["PO", "POORDER"],
+  ["PR", "PORECEIPT"], ["RC", "ARPAYMENT"], ["RN", "RQITEM"], ["RQ", "RQREQUISIT"],
+  ["RS", "INREQREF"], ["SO", "SOORDER"],
+];
+
+test("provides the 22 exact default mappings with blank descriptions", () => {
+  assert.deepEqual(DEFAULT_NUMBERING_CATEGORIES.map(({ code, numberingId }) => [code, numberingId]), EXPECTED_MAPPINGS);
+  assert.equal(DEFAULT_NUMBERING_CATEGORIES.length, 22);
+  assert.ok(DEFAULT_NUMBERING_CATEGORIES.every((item) => item.description === "" && item.enabled));
+});
+
+test("migrates legacy defaults while retaining custom categories and status", () => {
+  const migrated = migrateLegacyCategories([
+    { id: "ap-apbill", code: "AP", numberingId: "APBILL", description: "Accounts Payable bills", enabled: false },
+    { id: "custom", code: "ZZ", numberingId: "CUSTOM", description: "Keep me", enabled: true },
+  ]);
+  assert.equal(migrated.length, 23);
+  assert.deepEqual(migrated[0], { id: "ap-apbill", code: "AP", numberingId: "APBILL", description: "", enabled: false });
+  assert.ok(migrated.some((item) => item.code === "ZZ" && item.description === "Keep me"));
+});
 
 test("parses branch lists and inclusive year ranges without duplicates", () => {
   assert.deepEqual(parseBranches("AP, pp AP"), ["AP", "PP"]);

@@ -5,19 +5,23 @@ import {
   DEFAULT_NUMBERING_CATEGORIES,
   categoryKey,
   generateNumberingRows,
+  migrateLegacyCategories,
   normalizeCategory,
   parseBranches,
   parseYears,
   validateCategory,
 } from "../lib/acumatica-numbering";
 
-const STORAGE_KEY = "assistand-help.acumatica-numbering-categories.v1";
+const STORAGE_KEY = "assistand-help.acumatica-numbering-categories.v2";
+const LEGACY_STORAGE_KEY = "assistand-help.acumatica-numbering-categories.v1";
 const OUTPUT_HEADERS = ["Branch", "Start Number", "End Number", "Start Date", "Last Number", "Warning Number", "Numbering Step", "Numbering ID"];
 
 function loadCategories() {
   try {
     const saved = JSON.parse(localStorage.getItem(STORAGE_KEY));
     if (Array.isArray(saved)) return saved.map((item) => normalizeCategory(item));
+    const legacy = JSON.parse(localStorage.getItem(LEGACY_STORAGE_KEY));
+    if (Array.isArray(legacy)) return migrateLegacyCategories(legacy);
   } catch { /* Fall back to defaults when saved data is malformed. */ }
   return DEFAULT_NUMBERING_CATEGORIES;
 }

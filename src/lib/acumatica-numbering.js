@@ -1,8 +1,58 @@
 export const DEFAULT_NUMBERING_CATEGORIES = [
-  { id: "ap-apbill", code: "AP", numberingId: "APBILL", description: "Accounts Payable bills", enabled: true },
-  { id: "ar-arinvoice", code: "AR", numberingId: "ARINVOICE", description: "Accounts Receivable invoices", enabled: true },
-  { id: "cm-catran", code: "CM", numberingId: "CATRAN", description: "Cash Management transactions", enabled: true },
-];
+  ["AP", "APBILL"],
+  ["AR", "ARINVOICE"],
+  ["CM", "CATRAN"],
+  ["CR", "CARECON"],
+  ["CT", "CATRANSFER"],
+  ["DO", "SOSHIPMENT"],
+  ["GL", "BATCH"],
+  ["IR", "INRECEIPT"],
+  ["IS", "INISSUE"],
+  ["JE", "JEBATCH"],
+  ["JV", "JVADJUST"],
+  ["LC", "POLANDCOST"],
+  ["PI", "PIID"],
+  ["PM", "APPAYMENT"],
+  ["PMO", "PAYMENTORD"],
+  ["PO", "POORDER"],
+  ["PR", "PORECEIPT"],
+  ["RC", "ARPAYMENT"],
+  ["RN", "RQITEM"],
+  ["RQ", "RQREQUISIT"],
+  ["RS", "INREQREF"],
+  ["SO", "SOORDER"],
+].map(([code, numberingId]) => ({
+  id: `${code.toLowerCase()}-${numberingId.toLowerCase()}`,
+  code,
+  numberingId,
+  description: "",
+  enabled: true,
+}));
+
+const LEGACY_DEFAULT_DESCRIPTIONS = new Set([
+  "Accounts Payable bills",
+  "Accounts Receivable invoices",
+  "Cash Management transactions",
+]);
+
+export function migrateLegacyCategories(savedCategories) {
+  const normalized = Array.isArray(savedCategories)
+    ? savedCategories.map((item) => normalizeCategory(item))
+    : [];
+  const savedByKey = new Map(normalized.map((item) => [categoryKey(item), item]));
+  const requiredKeys = new Set(DEFAULT_NUMBERING_CATEGORIES.map(categoryKey));
+  const required = DEFAULT_NUMBERING_CATEGORIES.map((item) => {
+    const saved = savedByKey.get(categoryKey(item));
+    if (!saved) return item;
+    return {
+      ...item,
+      enabled: saved.enabled,
+      description: LEGACY_DEFAULT_DESCRIPTIONS.has(saved.description) ? "" : saved.description,
+    };
+  });
+  const custom = normalized.filter((item) => !requiredKeys.has(categoryKey(item)));
+  return [...required, ...custom];
+}
 
 const CODE_PATTERN = /^[A-Z0-9]{1,10}$/;
 
