@@ -20,20 +20,20 @@ const EXPECTED_MAPPINGS = [
   ["RS", "INREQREF"], ["SO", "SOORDER"],
 ];
 
-test("provides the 22 exact default mappings with blank descriptions", () => {
+test("provides the 22 exact default mappings", () => {
   assert.deepEqual(DEFAULT_NUMBERING_CATEGORIES.map(({ code, numberingId }) => [code, numberingId]), EXPECTED_MAPPINGS);
   assert.equal(DEFAULT_NUMBERING_CATEGORIES.length, 22);
-  assert.ok(DEFAULT_NUMBERING_CATEGORIES.every((item) => item.description === "" && item.enabled));
+  assert.ok(DEFAULT_NUMBERING_CATEGORIES.every((item) => !("description" in item) && item.enabled));
 });
 
 test("migrates legacy defaults while retaining custom categories and status", () => {
   const migrated = migrateLegacyCategories([
     { id: "ap-apbill", code: "AP", numberingId: "APBILL", description: "Accounts Payable bills", enabled: false },
-    { id: "custom", code: "ZZ", numberingId: "CUSTOM", description: "Keep me", enabled: true },
+    { id: "custom", code: "ZZ", numberingId: "CUSTOM", enabled: true },
   ]);
   assert.equal(migrated.length, 23);
-  assert.deepEqual(migrated[0], { id: "ap-apbill", code: "AP", numberingId: "APBILL", description: "", enabled: false });
-  assert.ok(migrated.some((item) => item.code === "ZZ" && item.description === "Keep me"));
+  assert.deepEqual(migrated[0], { id: "ap-apbill", code: "AP", numberingId: "APBILL", enabled: false });
+  assert.ok(migrated.some((item) => item.code === "ZZ" && item.numberingId === "CUSTOM"));
 });
 
 test("parses branch lists and inclusive year ranges without duplicates", () => {
@@ -64,7 +64,7 @@ test("generates exact Acumatica numbering format for every combination", () => {
 
 test("normalizes imported category columns and validates category keys", () => {
   const category = normalizeCategory({ "Numbering Code": " cm ", "Numbering ID": " catran ", Enabled: "Disabled" }, "row-1");
-  assert.deepEqual(category, { id: "row-1", code: "CM", numberingId: "CATRAN", description: "", enabled: false });
+  assert.deepEqual(category, { id: "row-1", code: "CM", numberingId: "CATRAN", enabled: false });
   assert.equal(categoryKey(category), "CM\u0000CATRAN");
   assert.equal(validateCategory(category), "");
   assert.match(validateCategory({ code: "BAD CODE", numberingId: "OK" }), /Numbering Code/);

@@ -25,15 +25,8 @@ export const DEFAULT_NUMBERING_CATEGORIES = [
   id: `${code.toLowerCase()}-${numberingId.toLowerCase()}`,
   code,
   numberingId,
-  description: "",
   enabled: true,
 }));
-
-const LEGACY_DEFAULT_DESCRIPTIONS = new Set([
-  "Accounts Payable bills",
-  "Accounts Receivable invoices",
-  "Cash Management transactions",
-]);
 
 export function migrateLegacyCategories(savedCategories) {
   const normalized = Array.isArray(savedCategories)
@@ -47,7 +40,6 @@ export function migrateLegacyCategories(savedCategories) {
     return {
       ...item,
       enabled: saved.enabled,
-      description: LEGACY_DEFAULT_DESCRIPTIONS.has(saved.description) ? "" : saved.description,
     };
   });
   const custom = normalized.filter((item) => !requiredKeys.has(categoryKey(item)));
@@ -61,7 +53,6 @@ export function normalizeCategory(category, fallbackId = crypto.randomUUID()) {
     id: String(category.id || fallbackId),
     code: String(category.code ?? category["Numbering Code"] ?? "").trim().toUpperCase(),
     numberingId: String(category.numberingId ?? category["Numbering ID"] ?? "").trim().toUpperCase(),
-    description: String(category.description ?? category.Description ?? "").trim(),
     enabled: parseEnabled(category.enabled ?? category.Enabled ?? category.Status),
   };
 }
