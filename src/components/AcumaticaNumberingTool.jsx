@@ -72,6 +72,13 @@ function downloadWorkbook(rows, filename, sheetName, headers) {
   XLSX.writeFile(workbook, filename);
 }
 
+function getNumberingSheetName(rows) {
+  const years = [...new Set(rows.map((row) => String(row["Start Date"] || "").slice(-4)).filter(Boolean))].sort();
+  if (!years.length) return "Numbering";
+  const yearLabel = years.length === 1 ? years[0] : `${years[0]}-${years.at(-1)}`;
+  return `Numbering ${yearLabel}`;
+}
+
 function CategoryModal({ initial, onClose, onSave }) {
   const [draft, setDraft] = useState(initial || { code: "", numberingId: "", enabled: true });
   const [error, setError] = useState("");
@@ -183,7 +190,7 @@ export default function AcumaticaNumberingTool() {
       </section>
 
       <section className="numbering-section">
-        <div className="numbering-section-heading"><div><p className="eyebrow">Output</p><h2>Generated Numbering</h2><p>{rows.length ? `${rows.length} rows ready to export` : "Generate rows to preview them here"}</p></div><button className="button secondary" disabled={!rows.length} onClick={() => downloadWorkbook(rows, "acumatica-numbering-system.xlsx", "Numbering", OUTPUT_HEADERS)}><Download size={16} /> Export Excel</button></div>
+        <div className="numbering-section-heading"><div><p className="eyebrow">Output</p><h2>Generated Numbering</h2><p>{rows.length ? `${rows.length} rows ready to export` : "Generate rows to preview them here"}</p></div><button className="button secondary" disabled={!rows.length} onClick={() => downloadWorkbook(rows, "acumatica-numbering-system.xlsx", getNumberingSheetName(rows), OUTPUT_HEADERS)}><Download size={16} /> Export Excel</button></div>
         <div className="numbering-table-wrap"><table className="numbering-table numbering-output-table"><thead><tr>{OUTPUT_HEADERS.map((header) => <th key={header}>{header}</th>)}</tr></thead><tbody>{outputPageRows.map((row) => <tr key={`${row.Branch}-${row["Start Date"]}-${row["Numbering ID"]}-${row["Start Number"]}`}>{OUTPUT_HEADERS.map((header) => <td key={header}>{row[header]}</td>)}</tr>)}{!rows.length ? <tr><td colSpan={OUTPUT_HEADERS.length} className="numbering-empty">No numbering rows generated yet.</td></tr> : null}</tbody></table></div>
         {rows.length ? <div className="numbering-pagination"><p>Showing {(outputPage - 1) * OUTPUT_PAGE_SIZE + 1}-{Math.min(outputPage * OUTPUT_PAGE_SIZE, rows.length)} of {rows.length}. Excel export includes all rows.</p><div><button className="button ghost" type="button" disabled={outputPage === 1} onClick={() => setOutputPage((page) => page - 1)}><ChevronLeft size={16} /> Previous</button><span>Page {outputPage} of {outputPageCount}</span><button className="button ghost" type="button" disabled={outputPage === outputPageCount} onClick={() => setOutputPage((page) => page + 1)}>Next <ChevronRight size={16} /></button></div></div> : null}
       </section>
