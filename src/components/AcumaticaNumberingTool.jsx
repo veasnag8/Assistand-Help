@@ -94,7 +94,7 @@ function getNumberingSheetName(rows) {
 function downloadNumberingWorkbook(rows, summaryRows) {
   const workbook = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(workbook, createStyledWorksheet(rows, OUTPUT_HEADERS), getNumberingSheetName(rows));
-  XLSX.utils.book_append_sheet(workbook, createStyledWorksheet(summaryRows, SUMMARY_HEADERS), "Summary");
+  XLSX.utils.book_append_sheet(workbook, createStyledWorksheet(summaryRows, SUMMARY_HEADERS), "Contract");
   XLSX.writeFile(workbook, "acumatica-numbering-system.xlsx");
 }
 
