@@ -46,6 +46,8 @@ export function migrateLegacyCategories(savedCategories) {
 }
 
 const CODE_PATTERN = /^[A-Z0-9]{1,10}$/;
+const NUMBERING_CODE_PATTERN = /^[A-Z0-9]{1,7}$/;
+const BRANCH_PATTERN = /^[A-Z0-9]{1,7}$/;
 
 export function normalizeCategory(category, fallbackId = crypto.randomUUID()) {
   return {
@@ -63,7 +65,7 @@ export function parseEnabled(value) {
 }
 
 export function validateCategory(category) {
-  if (!CODE_PATTERN.test(category.code)) return "Numbering Code must contain 1-10 letters or numbers.";
+  if (!NUMBERING_CODE_PATTERN.test(category.code)) return "Numbering Code must contain 1-7 letters or numbers.";
   if (!CODE_PATTERN.test(category.numberingId)) return "Numbering ID must contain 1-10 letters or numbers.";
   return "";
 }
@@ -74,9 +76,9 @@ export function categoryKey(category) {
 
 export function parseBranches(value) {
   const branches = uniqueTokens(value);
-  const invalid = branches.filter((branch) => !CODE_PATTERN.test(branch));
+  const invalid = branches.filter((branch) => !BRANCH_PATTERN.test(branch));
   if (!branches.length) throw new Error("Enter at least one Branch code.");
-  if (invalid.length) throw new Error(`Invalid Branch code${invalid.length > 1 ? "s" : ""}: ${invalid.join(", ")}. Use 1-10 letters or numbers.`);
+  if (invalid.length) throw new Error(`Invalid BranchID${invalid.length > 1 ? "s" : ""}: ${invalid.join(", ")}. Use 1-7 letters or numbers.`);
   return branches;
 }
 
@@ -114,13 +116,14 @@ export function generateNumberingRows(branches, years, categories) {
       const suffix = String(year).slice(-2);
       for (const category of categories.filter((item) => item.enabled)) {
         const prefix = `${branch}-${category.code}${suffix}`;
+        const sequenceWidth = 8 - category.code.length;
         const row = {
           Branch: branch,
-          "Start Number": `${prefix}000000`,
-          "End Number": `${prefix}999999`,
+          "Start Number": `${prefix}${"0".repeat(sequenceWidth)}`,
+          "End Number": `${prefix}${"9".repeat(sequenceWidth)}`,
           "Start Date": `01-01-${year}`,
-          "Last Number": `${prefix}000000`,
-          "Warning Number": `${prefix}999990`,
+          "Last Number": `${prefix}${"0".repeat(sequenceWidth)}`,
+          "Warning Number": `${prefix}${"9".repeat(sequenceWidth - 1)}0`,
           "Numbering Step": 1,
           "Numbering ID": category.numberingId,
         };
@@ -138,13 +141,14 @@ export function generateNumberingRows(branches, years, categories) {
 export function generateSummaryRows(branches, years) {
   return branches.flatMap((branch) => years.map((year) => {
     const prefix = `${branch}${String(year).slice(-2)}`;
+    const sequenceWidth = 8 - branch.length;
     return {
       Branch: branch,
-      "Start Number": `${prefix}000000`,
-      "End Number": `${prefix}999999`,
+      "Start Number": `${prefix}${"0".repeat(sequenceWidth)}`,
+      "End Number": `${prefix}${"9".repeat(sequenceWidth)}`,
       "Start Date": `01-01-${year}`,
-      "Last Number": `${prefix}000000`,
-      "Warning Number": `${prefix}999990`,
+      "Last Number": `${prefix}${"0".repeat(sequenceWidth)}`,
+      "Warning Number": `${prefix}${"9".repeat(sequenceWidth - 1)}0`,
       "Numbering Step": 1,
     };
   }));

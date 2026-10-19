@@ -67,12 +67,22 @@ test("generates exact Acumatica numbering format for every combination", () => {
   assert.equal(rows.at(-1)["Start Number"], "PP-AR28000000");
 });
 
+test("keeps the numbering portion after the hyphen at 10 characters", () => {
+  const rows = generateNumberingRows(["AL", "SDCC"], [2027], [{ code: "PMO", numberingId: "PAYMENTORD", enabled: true }]);
+  assert.equal(rows[0]["Start Number"], "AL-PMO2700000");
+  assert.equal(rows[0]["End Number"], "AL-PMO2799999");
+  assert.equal(rows[0]["Warning Number"], "AL-PMO2799990");
+  assert.equal(rows[0]["Start Number"].length, 13);
+  assert.equal(rows[1]["Start Number"].length, 15);
+});
+
 test("generates one summary row per branch and year without a numbering ID", () => {
   const rows = generateSummaryRows(["AL", "SCAB"], [2027]);
   assert.deepEqual(rows, [
     { Branch: "AL", "Start Number": "AL27000000", "End Number": "AL27999999", "Start Date": "01-01-2027", "Last Number": "AL27000000", "Warning Number": "AL27999990", "Numbering Step": 1 },
-    { Branch: "SCAB", "Start Number": "SCAB27000000", "End Number": "SCAB27999999", "Start Date": "01-01-2027", "Last Number": "SCAB27000000", "Warning Number": "SCAB27999990", "Numbering Step": 1 },
+    { Branch: "SCAB", "Start Number": "SCAB270000", "End Number": "SCAB279999", "Start Date": "01-01-2027", "Last Number": "SCAB270000", "Warning Number": "SCAB279990", "Numbering Step": 1 },
   ]);
+  assert.ok(rows.every((row) => row["Start Number"].length === 10));
   assert.ok(rows.every((row) => !("Numbering ID" in row)));
 });
 
