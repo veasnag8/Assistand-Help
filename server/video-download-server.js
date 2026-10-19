@@ -299,7 +299,9 @@ function getYtDlpJavaScriptArgs(platform) {
   const configuredRemoteComponents = cleanText(process.env.YTDLP_REMOTE_COMPONENTS, 1000);
   const nodeMajorVersion = Number(process.versions.node.split(".")[0]);
   const canUseNodeSolver = nodeMajorVersion >= 22;
-  const requestedRuntime = configuredRuntimes || (platform === "YouTube" ? "node" : "");
+  const requestedRuntime = platform === "YouTube" && canUseNodeSolver
+    ? "node"
+    : configuredRuntimes || (platform === "YouTube" ? "node" : "");
 
   if (platform === "YouTube" && requestedRuntime === "node" && !canUseNodeSolver) {
     throw new Error("YouTube downloads require Node.js 22 or newer for JavaScript challenge solving.");
@@ -326,7 +328,7 @@ function getEffectiveYtDlpJavaScriptRuntime() {
   const configuredRuntimes = cleanText(process.env.YTDLP_JS_RUNTIMES, 1000);
   const nodeMajorVersion = Number(process.versions.node.split(".")[0]);
 
-  if ((!configuredRuntimes || configuredRuntimes === "node") && nodeMajorVersion >= 22) {
+  if (nodeMajorVersion >= 22) {
     return `node:${process.execPath}`;
   }
 
@@ -1122,8 +1124,10 @@ async function routeRequest(request, response) {
     sendJson(response, 200, {
       cookies: getYtDlpCookieStatus(),
       jsRuntimes: getEffectiveYtDlpJavaScriptRuntime(),
+      nodeVersion: process.version,
       ok: true,
       remoteComponents: cleanText(process.env.YTDLP_REMOTE_COMPONENTS, 1000) || "ejs:github",
+      revision: cleanText(process.env.RENDER_GIT_COMMIT, 100),
       service: "AISupport local video downloader",
       telegramBot: {
         enabled: Boolean(telegramBotToken && telegramPollingEnabled),
