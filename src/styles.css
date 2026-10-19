@@ -5625,6 +5625,10 @@ button.khmer-calendar-cell:hover {
 .numbering-table tbody tr:hover { background: rgba(33,115,70,.035); }
 .numbering-table code { border-radius: 6px; background: #edf5f0; color: #17603a; padding: 4px 6px; font-size: .74rem; }
 .numbering-output-table td { font-variant-numeric: tabular-nums; }
+.numbering-pagination { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 12px 18px; background: rgba(33,115,70,.035); }
+.numbering-pagination p { margin: 0; color: var(--muted); font-size: .76rem; font-weight: 700; }
+.numbering-pagination > div { display: flex; align-items: center; gap: 10px; }
+.numbering-pagination span { color: #315748; font-size: .76rem; font-weight: 800; white-space: nowrap; }
 .numbering-switch { display: inline-flex; align-items: center; gap: 6px; font-weight: 750; }
 .numbering-switch input,
 .numbering-check input { accent-color: #217346; }
@@ -5646,6 +5650,8 @@ button.khmer-calendar-cell:hover {
   .numbering-toolbar { grid-template-columns: 1fr; }
   .numbering-actions { width: 100%; }
   .numbering-actions .button { flex: 1; }
+  .numbering-pagination { align-items: stretch; flex-direction: column; }
+  .numbering-pagination > div { justify-content: space-between; }
 }
 
 @media print {

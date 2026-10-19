@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Download, FileUp, Pencil, Plus, Search, Trash2, X } from "lucide-react";
+import { ChevronLeft, ChevronRight, Download, FileUp, Pencil, Plus, Search, Trash2, X } from "lucide-react";
 import * as XLSX from "xlsx-js-style";
 import {
   DEFAULT_NUMBERING_CATEGORIES,
@@ -15,6 +15,7 @@ import {
 const STORAGE_KEY = "assistand-help.acumatica-numbering-categories.v2";
 const LEGACY_STORAGE_KEY = "assistand-help.acumatica-numbering-categories.v1";
 const OUTPUT_HEADERS = ["Branch", "Start Number", "End Number", "Start Date", "Last Number", "Warning Number", "Numbering Step", "Numbering ID"];
+const OUTPUT_PAGE_SIZE = 100;
 
 function loadCategories() {
   try {
@@ -105,6 +106,7 @@ export default function AcumaticaNumberingTool() {
   const [statusFilter, setStatusFilter] = useState("all");
   const [modalCategory, setModalCategory] = useState(undefined);
   const [rows, setRows] = useState([]);
+  const [outputPage, setOutputPage] = useState(1);
   const [message, setMessage] = useState("");
   const importRef = useRef(null);
 
@@ -113,6 +115,8 @@ export default function AcumaticaNumberingTool() {
     const matchesText = `${item.code} ${item.numberingId} ${item.description}`.toLowerCase().includes(query.toLowerCase());
     return matchesText && (statusFilter === "all" || (statusFilter === "enabled") === item.enabled);
   }), [categories, query, statusFilter]);
+  const outputPageCount = Math.max(1, Math.ceil(rows.length / OUTPUT_PAGE_SIZE));
+  const outputPageRows = rows.slice((outputPage - 1) * OUTPUT_PAGE_SIZE, outputPage * OUTPUT_PAGE_SIZE);
 
   function saveCategory(category) {
     const duplicate = categories.some((item) => item.id !== category.id && categoryKey(item) === categoryKey(category));
@@ -159,8 +163,9 @@ export default function AcumaticaNumberingTool() {
       if (!enabled.length) throw new Error("Enable at least one category before generating.");
       const generated = generateNumberingRows(parseBranches(branchesInput), parseYears(yearsInput), enabled);
       setRows(generated);
+      setOutputPage(1);
       setMessage(`${generated.length} unique numbering row${generated.length === 1 ? "" : "s"} generated.`);
-    } catch (error) { setRows([]); setMessage(error.message); }
+    } catch (error) { setRows([]); setOutputPage(1); setMessage(error.message); }
   }
 
   return (
@@ -179,7 +184,8 @@ export default function AcumaticaNumberingTool() {
 
       <section className="numbering-section">
         <div className="numbering-section-heading"><div><p className="eyebrow">Output</p><h2>Generated Numbering</h2><p>{rows.length ? `${rows.length} rows ready to export` : "Generate rows to preview them here"}</p></div><button className="button secondary" disabled={!rows.length} onClick={() => downloadWorkbook(rows, "acumatica-numbering-system.xlsx", "Numbering", OUTPUT_HEADERS)}><Download size={16} /> Export Excel</button></div>
-        <div className="numbering-table-wrap"><table className="numbering-table numbering-output-table"><thead><tr>{OUTPUT_HEADERS.map((header) => <th key={header}>{header}</th>)}</tr></thead><tbody>{rows.slice(0, 200).map((row) => <tr key={`${row.Branch}-${row["Start Date"]}-${row["Numbering ID"]}-${row["Start Number"]}`}>{OUTPUT_HEADERS.map((header) => <td key={header}>{row[header]}</td>)}</tr>)}{!rows.length ? <tr><td colSpan={OUTPUT_HEADERS.length} className="numbering-empty">No numbering rows generated yet.</td></tr> : null}</tbody></table></div>{rows.length > 200 ? <p className="numbering-message">Showing the first 200 rows. Excel export includes all {rows.length} rows.</p> : null}
+        <div className="numbering-table-wrap"><table className="numbering-table numbering-output-table"><thead><tr>{OUTPUT_HEADERS.map((header) => <th key={header}>{header}</th>)}</tr></thead><tbody>{outputPageRows.map((row) => <tr key={`${row.Branch}-${row["Start Date"]}-${row["Numbering ID"]}-${row["Start Number"]}`}>{OUTPUT_HEADERS.map((header) => <td key={header}>{row[header]}</td>)}</tr>)}{!rows.length ? <tr><td colSpan={OUTPUT_HEADERS.length} className="numbering-empty">No numbering rows generated yet.</td></tr> : null}</tbody></table></div>
+        {rows.length ? <div className="numbering-pagination"><p>Showing {(outputPage - 1) * OUTPUT_PAGE_SIZE + 1}-{Math.min(outputPage * OUTPUT_PAGE_SIZE, rows.length)} of {rows.length}. Excel export includes all rows.</p><div><button className="button ghost" type="button" disabled={outputPage === 1} onClick={() => setOutputPage((page) => page - 1)}><ChevronLeft size={16} /> Previous</button><span>Page {outputPage} of {outputPageCount}</span><button className="button ghost" type="button" disabled={outputPage === outputPageCount} onClick={() => setOutputPage((page) => page + 1)}>Next <ChevronRight size={16} /></button></div></div> : null}
       </section>
       {modalCategory !== undefined ? <CategoryModal initial={modalCategory} onClose={() => setModalCategory(undefined)} onSave={saveCategory} /> : null}
     </section>
