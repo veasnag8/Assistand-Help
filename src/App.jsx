@@ -595,6 +595,15 @@ function Dashboard({ onOpen }) {
 
         <div className="dashboard-icon-actions">
           <button
+            className="dashboard-icon-button video-download-shortcut-button"
+            type="button"
+            onClick={() => onOpen("video-download")}
+            aria-label="Open Video Download"
+            title="Video Download"
+          >
+            <HardDriveDownload size={22} strokeWidth={2.2} />
+          </button>
+          <button
             className="dashboard-icon-button calendar-shortcut-button"
             type="button"
             onClick={() => onOpen("khmer-calendar")}
@@ -625,7 +634,7 @@ function Dashboard({ onOpen }) {
       ) : null}
 
       <div className="category-grid">
-        {categories.filter((category) => category.id !== "khmer-calendar").map((category) => (
+        {categories.filter((category) => !["khmer-calendar", "video-download"].includes(category.id)).map((category) => (
           <CategoryCard
             key={category.id}
             category={category}

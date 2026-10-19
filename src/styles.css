@@ -230,6 +230,10 @@ img {
   border: 2px solid #ef4444;
 }
 
+.video-download-shortcut-button {
+  border: 2px solid #ef4444;
+}
+
 .dashboard-icon-button:focus-visible,
 .access-icon-button:focus-visible {
   outline: 4px solid rgba(239, 68, 68, 0.22);
