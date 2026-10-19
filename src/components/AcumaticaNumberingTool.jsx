@@ -13,8 +13,9 @@ import {
   validateCategory,
 } from "../lib/acumatica-numbering";
 
-const STORAGE_KEY = "assistand-help.acumatica-numbering-categories.v3";
+const STORAGE_KEY = "assistand-help.acumatica-numbering-categories.v4";
 const PREVIOUS_STORAGE_KEYS = [
+  "assistand-help.acumatica-numbering-categories.v3",
   "assistand-help.acumatica-numbering-categories.v2",
   "assistand-help.acumatica-numbering-categories.v1",
 ];

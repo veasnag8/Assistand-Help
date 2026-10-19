@@ -1,7 +1,6 @@
 export const DEFAULT_NUMBERING_CATEGORIES = [
   ["AP", "APBILL"],
   ["AR", "ARINVOICE"],
-  ["CM", "CATRAN"],
   ["CR", "CARECON"],
   ["CT", "CATRANSFER"],
   ["DO", "SOSHIPMENT"],
@@ -41,7 +40,7 @@ export function migrateLegacyCategories(savedCategories) {
       enabled: saved.enabled,
     };
   });
-  const retiredKeys = new Set(["PI\u0000PIID"]);
+  const retiredKeys = new Set(["PI\u0000PIID", "CM\u0000CATRAN"]);
   const custom = normalized.filter((item) => !requiredKeys.has(categoryKey(item)) && !retiredKeys.has(categoryKey(item)));
   return [...required, ...custom];
 }
