@@ -22,6 +22,7 @@ import {
   X,
 } from "lucide-react";
 import AcumaticaFlowTool from "./components/AcumaticaFlowTool";
+import AcumaticaNumberingTool from "./components/AcumaticaNumberingTool";
 import CommentTool from "./components/CommentTool";
 import HangmanTool from "./components/HangmanTool";
 import KhmerCalendarTool from "./components/KhmerCalendarTool";
@@ -93,6 +94,15 @@ const categories = [
     icon: Workflow,
     logo: acumaticaLogo,
     tone: "slate",
+    enabled: true,
+  },
+  {
+    id: "acumatica-numbering",
+    title: "Acumatica Numbering",
+    tabTitle: "Numbering Generator",
+    description: "Generate and export numbering sequences by branch, year, and category.",
+    icon: FileSpreadsheet,
+    tone: "excel",
     enabled: true,
   },
   {
@@ -698,7 +708,8 @@ function ToolView({ activeId, onBack }) {
       {activeId === "video-download" ? <VideoDownloadTool /> : null}
       {activeId === "khmer-calendar" ? <KhmerCalendarTool /> : null}
       {activeId === "acumatica-flow" ? <AcumaticaFlowTool /> : null}
-      {activeId !== "timer" && activeId !== "qr" && activeId !== "pdf" && activeId !== "image" && activeId !== "logo-cut" && activeId !== "scan-text" && activeId !== "sna-gpt" && activeId !== "comment" && activeId !== "hangman" && activeId !== "video-download" && activeId !== "khmer-calendar" && activeId !== "acumatica-flow" ? (
+      {activeId === "acumatica-numbering" ? <AcumaticaNumberingTool /> : null}
+      {activeId !== "timer" && activeId !== "qr" && activeId !== "pdf" && activeId !== "image" && activeId !== "logo-cut" && activeId !== "scan-text" && activeId !== "sna-gpt" && activeId !== "comment" && activeId !== "hangman" && activeId !== "video-download" && activeId !== "khmer-calendar" && activeId !== "acumatica-flow" && activeId !== "acumatica-numbering" ? (
         <PlaceholderTool category={category} />
       ) : null}
     </section>

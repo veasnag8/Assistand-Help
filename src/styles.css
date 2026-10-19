@@ -5569,6 +5569,85 @@ button.khmer-calendar-cell:hover {
   }
 }
 
+.numbering-tool {
+  display: grid;
+  gap: 18px;
+  color: #163145;
+}
+
+.numbering-hero,
+.numbering-section,
+.numbering-generator-card {
+  border: 1px solid rgba(22, 49, 69, 0.1);
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.82);
+  box-shadow: 0 14px 35px rgba(22, 49, 69, 0.06);
+}
+
+.numbering-hero {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  padding: 22px 24px;
+  background: linear-gradient(135deg, rgba(33, 115, 70, 0.12), rgba(255, 255, 255, 0.9));
+}
+
+.numbering-hero h1,
+.numbering-section h2,
+.numbering-modal h2 { margin: 0; color: #102f22; }
+.numbering-hero p,
+.numbering-section-heading p { margin: 4px 0 0; color: var(--muted); }
+.numbering-hero > span { flex: 0 0 auto; border-radius: 999px; background: #217346; color: white; padding: 8px 12px; font-size: 0.78rem; font-weight: 800; }
+.numbering-generator-card { padding: 18px; }
+.numbering-inputs { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)) auto; gap: 12px; align-items: end; }
+.numbering-inputs label,
+.numbering-modal label { display: grid; gap: 6px; color: #163145; font-size: 0.78rem; font-weight: 800; }
+.numbering-inputs label span { color: var(--muted); font-size: 0.68rem; font-weight: 600; }
+.numbering-inputs input,
+.numbering-modal input,
+.numbering-toolbar input,
+.numbering-toolbar select { width: 100%; min-height: 40px; border: 1px solid rgba(22,49,69,.15); border-radius: 10px; background: #fff; padding: 0 11px; color: #163145; font: inherit; }
+.numbering-message { margin: 12px 0 0; color: #217346; font-size: .8rem; font-weight: 750; }
+.numbering-section { min-width: 0; overflow: hidden; }
+.numbering-section-heading { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 18px; border-bottom: 1px solid rgba(22,49,69,.09); }
+.numbering-actions,
+.numbering-row-actions { display: flex; align-items: center; gap: 7px; flex-wrap: wrap; }
+.numbering-toolbar { display: grid; grid-template-columns: minmax(240px, 1fr) 160px auto auto; gap: 8px; padding: 12px 18px; background: rgba(33,115,70,.035); }
+.numbering-search { position: relative; display: flex; align-items: center; }
+.numbering-search svg { position: absolute; left: 11px; color: var(--muted); }
+.numbering-search input { padding-left: 36px; }
+.numbering-table-wrap { width: 100%; overflow: auto; }
+.numbering-table { width: 100%; border-collapse: collapse; font-size: .78rem; white-space: nowrap; }
+.numbering-table th { background: #f3f8f5; color: #315748; font-size: .68rem; letter-spacing: .04em; text-align: left; text-transform: uppercase; }
+.numbering-table th,
+.numbering-table td { padding: 11px 13px; border-bottom: 1px solid rgba(22,49,69,.08); vertical-align: middle; }
+.numbering-table tbody tr:hover { background: rgba(33,115,70,.035); }
+.numbering-table code { border-radius: 6px; background: #edf5f0; color: #17603a; padding: 4px 6px; font-size: .74rem; }
+.numbering-output-table td { font-variant-numeric: tabular-nums; }
+.numbering-switch { display: inline-flex; align-items: center; gap: 6px; font-weight: 750; }
+.numbering-switch input,
+.numbering-check input { accent-color: #217346; }
+.numbering-row-actions button { width: 32px; height: 32px; display: inline-grid; place-items: center; border: 1px solid rgba(22,49,69,.12); border-radius: 8px; background: white; color: #315748; }
+.numbering-row-actions button.danger { color: #c24141; }
+.numbering-empty { height: 90px; color: var(--muted); text-align: center; }
+.numbering-modal-backdrop { position: fixed; z-index: 1200; inset: 0; display: grid; place-items: center; padding: 18px; background: rgba(8,27,20,.5); backdrop-filter: blur(5px); }
+.numbering-modal { width: min(100%, 480px); display: grid; gap: 14px; border-radius: 18px; background: #fff; padding: 20px; box-shadow: 0 28px 80px rgba(0,0,0,.22); }
+.numbering-modal header,
+.numbering-modal footer { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.numbering-modal footer { justify-content: flex-end; }
+.numbering-modal .numbering-check { display: flex; align-items: center; }
+.numbering-error { margin: 0; border-radius: 9px; background: #fff1f1; color: #b42318; padding: 9px 11px; font-size: .78rem; font-weight: 750; }
+
+@media (max-width: 800px) {
+  .numbering-hero,
+  .numbering-section-heading { align-items: flex-start; flex-direction: column; }
+  .numbering-inputs,
+  .numbering-toolbar { grid-template-columns: 1fr; }
+  .numbering-actions { width: 100%; }
+  .numbering-actions .button { flex: 1; }
+}
+
 @media print {
   body {
     background: #fff;

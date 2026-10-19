@@ -1,0 +1,96 @@
+export const DEFAULT_NUMBERING_CATEGORIES = [
+  { id: "ap-apbill", code: "AP", numberingId: "APBILL", description: "Accounts Payable bills", enabled: true },
+  { id: "ar-arinvoice", code: "AR", numberingId: "ARINVOICE", description: "Accounts Receivable invoices", enabled: true },
+  { id: "cm-catran", code: "CM", numberingId: "CATRAN", description: "Cash Management transactions", enabled: true },
+];
+
+const CODE_PATTERN = /^[A-Z0-9]{1,10}$/;
+
+export function normalizeCategory(category, fallbackId = crypto.randomUUID()) {
+  return {
+    id: String(category.id || fallbackId),
+    code: String(category.code ?? category["Numbering Code"] ?? "").trim().toUpperCase(),
+    numberingId: String(category.numberingId ?? category["Numbering ID"] ?? "").trim().toUpperCase(),
+    description: String(category.description ?? category.Description ?? "").trim(),
+    enabled: parseEnabled(category.enabled ?? category.Enabled ?? category.Status),
+  };
+}
+
+export function parseEnabled(value) {
+  if (typeof value === "boolean") return value;
+  if (value === undefined || value === null || value === "") return true;
+  return !["false", "disabled", "no", "0", "inactive"].includes(String(value).trim().toLowerCase());
+}
+
+export function validateCategory(category) {
+  if (!CODE_PATTERN.test(category.code)) return "Numbering Code must contain 1-10 letters or numbers.";
+  if (!CODE_PATTERN.test(category.numberingId)) return "Numbering ID must contain 1-10 letters or numbers.";
+  return "";
+}
+
+export function categoryKey(category) {
+  return `${category.code}\u0000${category.numberingId}`;
+}
+
+export function parseBranches(value) {
+  const branches = uniqueTokens(value);
+  const invalid = branches.filter((branch) => !CODE_PATTERN.test(branch));
+  if (!branches.length) throw new Error("Enter at least one Branch code.");
+  if (invalid.length) throw new Error(`Invalid Branch code${invalid.length > 1 ? "s" : ""}: ${invalid.join(", ")}. Use 1-10 letters or numbers.`);
+  return branches;
+}
+
+export function parseYears(value) {
+  const input = String(value || "").trim();
+  if (!input) throw new Error("Enter at least one year.");
+  const years = [];
+  for (const part of input.split(/[,;\n]+/).map((item) => item.trim()).filter(Boolean)) {
+    const range = part.match(/^(\d{4})\s*-\s*(\d{4})$/);
+    if (range) {
+      const start = Number(range[1]);
+      const end = Number(range[2]);
+      if (end < start || end - start > 99) throw new Error(`Invalid year range: ${part}.`);
+      for (let year = start; year <= end; year += 1) years.push(year);
+    } else if (/^\d{4}$/.test(part)) {
+      years.push(Number(part));
+    } else {
+      throw new Error(`Invalid year value: ${part}. Use 2027-2028 or 2027, 2028.`);
+    }
+  }
+  const result = [...new Set(years)];
+  if (result.some((year) => year < 2000 || year > 2099)) throw new Error("Years must be between 2000 and 2099.");
+  return result.sort((a, b) => a - b);
+}
+
+function uniqueTokens(value) {
+  return [...new Set(String(value || "").split(/[,;\s]+/).map((item) => item.trim().toUpperCase()).filter(Boolean))];
+}
+
+export function generateNumberingRows(branches, years, categories) {
+  const rows = [];
+  const seen = new Set();
+  for (const branch of branches) {
+    for (const year of years) {
+      const suffix = String(year).slice(-2);
+      for (const category of categories.filter((item) => item.enabled)) {
+        const prefix = `${branch}-${category.code}${suffix}`;
+        const row = {
+          Branch: branch,
+          "Start Number": `${prefix}000000`,
+          "End Number": `${prefix}999999`,
+          "Start Date": `01-01-${year}`,
+          "Last Number": `${prefix}000000`,
+          "Warning Number": `${prefix}999990`,
+          "Numbering Step": 1,
+          "Numbering ID": category.numberingId,
+        };
+        const key = `${branch}|${year}|${categoryKey(category)}`;
+        if (!seen.has(key)) {
+          seen.add(key);
+          rows.push(row);
+        }
+      }
+    }
+  }
+  return rows;
+}
