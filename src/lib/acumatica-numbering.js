@@ -135,3 +135,18 @@ export function generateNumberingRows(branches, years, categories) {
   }
   return rows;
 }
+
+export function generateSummaryRows(branches, years) {
+  return branches.flatMap((branch) => years.map((year) => {
+    const prefix = `${branch}${String(year).slice(-2)}`;
+    return {
+      Branch: branch,
+      "Start Number": `${prefix}000000`,
+      "End Number": `${prefix}999999`,
+      "Start Date": `01-01-${year}`,
+      "Last Number": `${prefix}000000`,
+      "Warning Number": `${prefix}999990`,
+      "Numbering Step": 1,
+    };
+  }));
+}

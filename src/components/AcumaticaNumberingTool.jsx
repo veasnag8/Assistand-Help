@@ -5,6 +5,7 @@ import {
   DEFAULT_NUMBERING_CATEGORIES,
   categoryKey,
   generateNumberingRows,
+  generateSummaryRows,
   migrateLegacyCategories,
   normalizeCategory,
   parseBranches,
@@ -18,6 +19,7 @@ const PREVIOUS_STORAGE_KEYS = [
   "assistand-help.acumatica-numbering-categories.v1",
 ];
 const OUTPUT_HEADERS = ["Branch", "Start Number", "End Number", "Start Date", "Last Number", "Warning Number", "Numbering Step", "Numbering ID"];
+const SUMMARY_HEADERS = OUTPUT_HEADERS.filter((header) => header !== "Numbering ID");
 const OUTPUT_PAGE_SIZE = 100;
 
 function loadCategories() {
@@ -32,7 +34,7 @@ function loadCategories() {
   return DEFAULT_NUMBERING_CATEGORIES;
 }
 
-function downloadWorkbook(rows, filename, sheetName, headers) {
+function createStyledWorksheet(rows, headers) {
   const worksheet = XLSX.utils.json_to_sheet(rows, { header: headers });
   const range = XLSX.utils.decode_range(worksheet["!ref"]);
   const thinBorder = {
@@ -72,8 +74,12 @@ function downloadWorkbook(rows, filename, sheetName, headers) {
     const longestValue = rows.reduce((longest, row) => Math.max(longest, String(row[header] ?? "").length), header.length);
     return { wch: Math.min(Math.max(longestValue + 3, 12), 28) };
   });
+  return worksheet;
+}
+
+function downloadWorkbook(rows, filename, sheetName, headers) {
   const workbook = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(workbook, worksheet, sheetName);
+  XLSX.utils.book_append_sheet(workbook, createStyledWorksheet(rows, headers), sheetName);
   XLSX.writeFile(workbook, filename);
 }
 
@@ -82,6 +88,13 @@ function getNumberingSheetName(rows) {
   if (!years.length) return "Numbering";
   const yearLabel = years.length === 1 ? years[0] : `${years[0]}-${years.at(-1)}`;
   return `Numbering ${yearLabel}`;
+}
+
+function downloadNumberingWorkbook(rows, summaryRows) {
+  const workbook = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(workbook, createStyledWorksheet(rows, OUTPUT_HEADERS), getNumberingSheetName(rows));
+  XLSX.utils.book_append_sheet(workbook, createStyledWorksheet(summaryRows, SUMMARY_HEADERS), "Summary");
+  XLSX.writeFile(workbook, "acumatica-numbering-system.xlsx");
 }
 
 function CategoryModal({ initial, onClose, onSave }) {
@@ -118,6 +131,7 @@ export default function AcumaticaNumberingTool() {
   const [categoryManagerOpen, setCategoryManagerOpen] = useState(false);
   const [modalCategory, setModalCategory] = useState(undefined);
   const [rows, setRows] = useState([]);
+  const [summaryRows, setSummaryRows] = useState([]);
   const [outputPage, setOutputPage] = useState(1);
   const [message, setMessage] = useState("");
   const importRef = useRef(null);
@@ -174,11 +188,14 @@ export default function AcumaticaNumberingTool() {
     try {
       const enabled = categories.filter((item) => item.enabled);
       if (!enabled.length) throw new Error("Enable at least one category before generating.");
-      const generated = generateNumberingRows(parseBranches(branchesInput), parseYears(yearsInput), enabled);
+      const branches = parseBranches(branchesInput);
+      const years = parseYears(yearsInput);
+      const generated = generateNumberingRows(branches, years, enabled);
       setRows(generated);
+      setSummaryRows(generateSummaryRows(branches, years));
       setOutputPage(1);
       setMessage(`${generated.length} unique numbering row${generated.length === 1 ? "" : "s"} generated.`);
-    } catch (error) { setRows([]); setOutputPage(1); setMessage(error.message); }
+    } catch (error) { setRows([]); setSummaryRows([]); setOutputPage(1); setMessage(error.message); }
   }
 
   return (
@@ -195,7 +212,7 @@ export default function AcumaticaNumberingTool() {
       </section>
 
       <section className="numbering-section">
-        <div className="numbering-section-heading"><div><p className="eyebrow">Output</p><h2>Generated Numbering</h2><p>{rows.length ? `${rows.length} rows ready to export` : "Generate rows to preview them here"}</p></div><button className="button secondary" disabled={!rows.length} onClick={() => downloadWorkbook(rows, "acumatica-numbering-system.xlsx", getNumberingSheetName(rows), OUTPUT_HEADERS)}><Download size={16} /> Export Excel</button></div>
+        <div className="numbering-section-heading"><div><p className="eyebrow">Output</p><h2>Generated Numbering</h2><p>{rows.length ? `${rows.length} rows ready to export` : "Generate rows to preview them here"}</p></div><button className="button secondary" disabled={!rows.length} onClick={() => downloadNumberingWorkbook(rows, summaryRows)}><Download size={16} /> Export Excel</button></div>
         <div className="numbering-table-wrap"><table className="numbering-table numbering-output-table"><thead><tr>{OUTPUT_HEADERS.map((header) => <th key={header}>{header}</th>)}</tr></thead><tbody>{outputPageRows.map((row) => <tr key={`${row.Branch}-${row["Start Date"]}-${row["Numbering ID"]}-${row["Start Number"]}`}>{OUTPUT_HEADERS.map((header) => <td key={header}>{row[header]}</td>)}</tr>)}{!rows.length ? <tr><td colSpan={OUTPUT_HEADERS.length} className="numbering-empty">No numbering rows generated yet.</td></tr> : null}</tbody></table></div>
         {rows.length ? <div className="numbering-pagination"><p>Showing {(outputPage - 1) * OUTPUT_PAGE_SIZE + 1}-{Math.min(outputPage * OUTPUT_PAGE_SIZE, rows.length)} of {rows.length}. Excel export includes all rows.</p><div><button className="button ghost" type="button" disabled={outputPage === 1} onClick={() => setOutputPage((page) => page - 1)}><ChevronLeft size={16} /> Previous</button><span>Page {outputPage} of {outputPageCount}</span><button className="button ghost" type="button" disabled={outputPage === outputPageCount} onClick={() => setOutputPage((page) => page + 1)}>Next <ChevronRight size={16} /></button></div></div> : null}
       </section>

@@ -4,6 +4,7 @@ import {
   DEFAULT_NUMBERING_CATEGORIES,
   categoryKey,
   generateNumberingRows,
+  generateSummaryRows,
   migrateLegacyCategories,
   normalizeCategory,
   parseBranches,
@@ -62,6 +63,15 @@ test("generates exact Acumatica numbering format for every combination", () => {
     "Numbering ID": "APBILL",
   });
   assert.equal(rows.at(-1)["Start Number"], "PP-AR28000000");
+});
+
+test("generates one summary row per branch and year without a numbering ID", () => {
+  const rows = generateSummaryRows(["AL", "SCAB"], [2027]);
+  assert.deepEqual(rows, [
+    { Branch: "AL", "Start Number": "AL27000000", "End Number": "AL27999999", "Start Date": "01-01-2027", "Last Number": "AL27000000", "Warning Number": "AL27999990", "Numbering Step": 1 },
+    { Branch: "SCAB", "Start Number": "SCAB27000000", "End Number": "SCAB27999999", "Start Date": "01-01-2027", "Last Number": "SCAB27000000", "Warning Number": "SCAB27999990", "Numbering Step": 1 },
+  ]);
+  assert.ok(rows.every((row) => !("Numbering ID" in row)));
 });
 
 test("normalizes imported category columns and validates category keys", () => {
