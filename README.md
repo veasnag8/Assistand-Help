@@ -50,11 +50,9 @@ VITE_VIDEO_SERVER_URL=https://your-node-video-backend.example.com
 ```
 
 On the Node video backend host, YouTube may require a JavaScript runtime and
-signed-in cookies. The video server passes Deno to yt-dlp by default for
-YouTube and enables yt-dlp's recommended remote EJS challenge component by
-default. `deno-bin` is installed with npm so Render can resolve the runtime from
-`node_modules/.bin`. For local development, set this in `.env` and restart
-`npm run dev:all`:
+signed-in cookies. The video server passes its Node 22+ executable path to
+yt-dlp and enables yt-dlp's recommended remote EJS challenge component by
+default. For local development, set this in `.env` and restart `npm run dev:all`:
 
 ```bash
 YTDLP_COOKIES_FROM_BROWSER=chrome
@@ -70,7 +68,7 @@ YTDLP_COOKIES_BASE64=base64_encoded_cookies_txt
 On Render, the YouTube-related backend variables should include:
 
 ```bash
-YTDLP_JS_RUNTIMES=deno
+YTDLP_JS_RUNTIMES=node
 YTDLP_REMOTE_COMPONENTS=ejs:github
 YTDLP_COOKIES_BASE64=base64_encoded_cookies_txt
 ```

@@ -3,12 +3,12 @@ services:
     name: aisupport-video-server
     env: node
     plan: free
-    buildCommand: npm install && python -m pip install --user -U yt-dlp
+    buildCommand: npm install && python -m pip install --user -U "yt-dlp[default]"
     startCommand: npm run dev:video
     healthCheckPath: /health
     envVars:
       - key: NODE_VERSION
-        value: "20"
+        value: "22"
       - key: VIDEO_SERVER_HOST
         value: 0.0.0.0
       - key: VIDEO_SERVER_PORT
@@ -22,7 +22,7 @@ services:
       - key: RENDER_WAKE_PING_INTERVAL_MS
         value: "600000"
       - key: YTDLP_JS_RUNTIMES
-        value: deno
+        value: node
       - key: YTDLP_REMOTE_COMPONENTS
         value: ejs:github
       - key: YTDLP_COOKIES_BASE64

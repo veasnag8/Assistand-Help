@@ -299,10 +299,15 @@ function getYtDlpJavaScriptArgs(platform) {
   const configuredRemoteComponents = cleanText(process.env.YTDLP_REMOTE_COMPONENTS, 1000);
   const nodeMajorVersion = Number(process.versions.node.split(".")[0]);
   const canUseNodeSolver = nodeMajorVersion >= 22;
-  const normalizedRuntimes = configuredRuntimes === "node" && !canUseNodeSolver
-    ? "deno"
-    : configuredRuntimes;
-  const runtimes = normalizedRuntimes || (platform === "YouTube" ? "deno" : "");
+  const requestedRuntime = configuredRuntimes || (platform === "YouTube" ? "node" : "");
+
+  if (platform === "YouTube" && requestedRuntime === "node" && !canUseNodeSolver) {
+    throw new Error("YouTube downloads require Node.js 22 or newer for JavaScript challenge solving.");
+  }
+
+  const runtimes = requestedRuntime === "node" && canUseNodeSolver
+    ? `node:${process.execPath}`
+    : requestedRuntime;
   const remoteComponents = configuredRemoteComponents || (platform === "YouTube" ? "ejs:github" : "");
   const args = [];
 
@@ -321,11 +326,15 @@ function getEffectiveYtDlpJavaScriptRuntime() {
   const configuredRuntimes = cleanText(process.env.YTDLP_JS_RUNTIMES, 1000);
   const nodeMajorVersion = Number(process.versions.node.split(".")[0]);
 
-  if (configuredRuntimes === "node" && nodeMajorVersion < 22) {
-    return "deno";
+  if ((!configuredRuntimes || configuredRuntimes === "node") && nodeMajorVersion >= 22) {
+    return `node:${process.execPath}`;
   }
 
-  return configuredRuntimes || "deno";
+  return configuredRuntimes || "unavailable (Node 22+ required)";
+}
+
+function hasExpiredYouTubeCookies(error) {
+  return /account cookies are no longer valid|cookies.*(?:expired|rotated)/i.test(error?.message || "");
 }
 
 function runProcess(command, args, options = {}) {
@@ -885,7 +894,8 @@ async function prepareDownload(downloadRequest, jobId, job) {
   await mkdir(jobDirectory, { recursive: true });
 
   const outputTemplate = path.join(jobDirectory, "%(title).180B-%(id)s.%(ext)s");
-  const args = [
+  const authArgs = getYtDlpAuthArgs();
+  const baseArgs = [
     ...ytDlp.args,
     "--newline",
     "--no-playlist",
@@ -894,7 +904,6 @@ async function prepareDownload(downloadRequest, jobId, job) {
     "--no-mtime",
     "--force-overwrites",
     ...getYtDlpJavaScriptArgs(downloadRequest.platform),
-    ...getYtDlpAuthArgs(),
     "--write-thumbnail",
     "--convert-thumbnails",
     "jpg",
@@ -906,9 +915,27 @@ async function prepareDownload(downloadRequest, jobId, job) {
     downloadRequest.mediaUrl.href,
   ];
 
-  await runProcess(ytDlp.command, args, {
-    onOutput: (text) => parseYtDlpProgress(text, job, downloadRequest.format),
-  });
+  try {
+    await runProcess(ytDlp.command, [...baseArgs.slice(0, -1), ...authArgs, baseArgs.at(-1)], {
+      onOutput: (text) => parseYtDlpProgress(text, job, downloadRequest.format),
+    });
+  } catch (error) {
+    if (downloadRequest.platform !== "YouTube" || !authArgs.length || !hasExpiredYouTubeCookies(error)) {
+      throw error;
+    }
+
+    setJobProgress(job, 5, "Retrying without expired YouTube cookies");
+
+    try {
+      await runProcess(ytDlp.command, baseArgs, {
+        onOutput: (text) => parseYtDlpProgress(text, job, downloadRequest.format),
+      });
+    } catch {
+      throw new Error(
+        "YouTube cookies expired. Export fresh YouTube cookies from a closed private/incognito session, update YTDLP_COOKIES_BASE64 on the server, and retry.",
+      );
+    }
+  }
 
   setJobProgress(job, 98, "Preparing file");
 
