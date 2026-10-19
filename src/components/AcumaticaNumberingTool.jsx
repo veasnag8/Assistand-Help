@@ -174,7 +174,7 @@ export default function AcumaticaNumberingTool() {
     <section className="numbering-tool">
       <header className="numbering-hero"><div><p className="eyebrow">Acumatica</p><h1>Numbering System Generator</h1><p>Generate import-ready numbering sequences for every branch, year, and enabled category.</p></div><span>Step fixed at 1</span></header>
       <div className="numbering-generator-card">
-        <div className="numbering-inputs"><label>BranchID <span>Separate multiple Branch IDs with commas or spaces</span><input value={branchesInput} onChange={(e) => setBranchesInput(e.target.value.toUpperCase())} placeholder="AP, PP, HO" /></label><label>Years <span>Range or comma-separated</span><input value={yearsInput} onChange={(e) => setYearsInput(e.target.value)} placeholder="2027-2028 or 2027, 2028" /></label><button className="button" type="button" onClick={generate}>Generate Numbering</button></div>
+        <div className="numbering-inputs"><label>BranchID <span>Separate multiple Branch IDs with commas or spaces</span><input value={branchesInput} onChange={(e) => setBranchesInput(e.target.value.toUpperCase())} placeholder="BranchID" /></label><label>Years <span>Range or comma-separated</span><input value={yearsInput} onChange={(e) => setYearsInput(e.target.value)} placeholder="2027-2028 or 2027, 2028" /></label><button className="button" type="button" onClick={generate}>Generate Numbering</button></div>
         {message ? <p className="numbering-message" role="status">{message}</p> : null}
       </div>
 
