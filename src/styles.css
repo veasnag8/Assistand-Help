@@ -5611,8 +5611,10 @@ button.khmer-calendar-cell:hover {
 .numbering-message { margin: 12px 0 0; color: #217346; font-size: .8rem; font-weight: 750; }
 .numbering-section { min-width: 0; overflow: hidden; }
 .numbering-section-heading { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 18px; border-bottom: 1px solid rgba(22,49,69,.09); }
+.numbering-section-heading.is-collapsed { border-bottom: 0; }
 .numbering-actions,
 .numbering-row-actions { display: flex; align-items: center; gap: 7px; flex-wrap: wrap; }
+.numbering-category-actions { justify-content: flex-end; padding: 12px 18px; border-bottom: 1px solid rgba(22,49,69,.08); }
 .numbering-toolbar { display: grid; grid-template-columns: minmax(240px, 1fr) 160px auto auto; gap: 8px; padding: 12px 18px; background: rgba(33,115,70,.035); }
 .numbering-search { position: relative; display: flex; align-items: center; }
 .numbering-search svg { position: absolute; left: 11px; color: var(--muted); }
