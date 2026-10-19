@@ -11,7 +11,6 @@ export const DEFAULT_NUMBERING_CATEGORIES = [
   ["JE", "JEBATCH"],
   ["JV", "JVADJUST"],
   ["LC", "POLANDCOST"],
-  ["PI", "PIID"],
   ["PM", "APPAYMENT"],
   ["PMO", "PAYMENTORD"],
   ["PO", "POORDER"],
@@ -42,7 +41,8 @@ export function migrateLegacyCategories(savedCategories) {
       enabled: saved.enabled,
     };
   });
-  const custom = normalized.filter((item) => !requiredKeys.has(categoryKey(item)));
+  const retiredKeys = new Set(["PI\u0000PIID"]);
+  const custom = normalized.filter((item) => !requiredKeys.has(categoryKey(item)) && !retiredKeys.has(categoryKey(item)));
   return [...required, ...custom];
 }
 
