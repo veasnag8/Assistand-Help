@@ -99,7 +99,7 @@ function CategoryModal({ initial, onClose, onSave }) {
 
 export default function AcumaticaNumberingTool() {
   const [categories, setCategories] = useState(loadCategories);
-  const [branchesInput, setBranchesInput] = useState("AP");
+  const [branchesInput, setBranchesInput] = useState("");
   const [yearsInput, setYearsInput] = useState("2027-2028");
   const [query, setQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
