@@ -195,7 +195,7 @@ export default function AcumaticaNumberingTool() {
       setRows(generated);
       setSummaryRows(generateSummaryRows(branches, years));
       setOutputPage(1);
-      setMessage(`${generated.length} unique numbering row${generated.length === 1 ? "" : "s"} generated.`);
+      setMessage(`${branches.length} BranchID${branches.length === 1 ? "" : "s"} • ${generated.length} unique numbering row${generated.length === 1 ? "" : "s"} generated.`);
     } catch (error) { setRows([]); setSummaryRows([]); setOutputPage(1); setMessage(error.message); }
   }
 
