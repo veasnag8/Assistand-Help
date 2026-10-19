@@ -1,5 +1,5 @@
 import { createReadStream, existsSync, readFileSync, writeFileSync } from "node:fs";
-import { mkdir, readdir, rm, stat } from "node:fs/promises";
+import { mkdir, readFile, readdir, rm, stat } from "node:fs/promises";
 import { createServer } from "node:http";
 import { tmpdir } from "node:os";
 import path from "node:path";
@@ -595,6 +595,24 @@ async function callTelegram(method, payload) {
   return result.result;
 }
 
+async function callTelegramUpload(method, formData) {
+  if (!telegramApiBaseUrl) {
+    return null;
+  }
+
+  const response = await fetch(`${telegramApiBaseUrl}/${method}`, {
+    body: formData,
+    method: "POST",
+  });
+  const result = await response.json().catch(() => ({}));
+
+  if (!response.ok || result.ok === false) {
+    throw new Error(result?.description || `Telegram ${method} failed.`);
+  }
+
+  return result.result;
+}
+
 async function sendTelegramMessage(chatId, text, extra = {}) {
   return callTelegram("sendMessage", {
     chat_id: chatId,
@@ -602,6 +620,61 @@ async function sendTelegramMessage(chatId, text, extra = {}) {
     text,
     ...extra,
   });
+}
+
+async function sendTelegramMediaFile(chatId, download, downloadRequest) {
+  const fileBuffer = await readFile(download.filePath);
+  const caption = `${downloadRequest.platform} ${downloadRequest.format.toUpperCase()} file is ready.`;
+  const filename = download.filename || (downloadRequest.format === "mp3" ? "download.mp3" : "download.mp4");
+  const file = new File([fileBuffer], filename, { type: download.contentType });
+  const attempts = downloadRequest.format === "mp3"
+    ? [
+      {
+        extra: { caption, title: filename },
+        fieldName: "audio",
+        method: "sendAudio",
+      },
+      {
+        extra: { caption },
+        fieldName: "document",
+        method: "sendDocument",
+      },
+    ]
+    : [
+      {
+        extra: { caption, supports_streaming: true },
+        fieldName: "video",
+        method: "sendVideo",
+      },
+      {
+        extra: { caption },
+        fieldName: "document",
+        method: "sendDocument",
+      },
+    ];
+  let lastError = null;
+
+  for (const attempt of attempts) {
+    const form = new FormData();
+
+    form.append("chat_id", String(chatId));
+
+    for (const [key, value] of Object.entries(attempt.extra)) {
+      if (value !== undefined && value !== null && value !== "") {
+        form.append(key, String(value));
+      }
+    }
+
+    form.append(attempt.fieldName, file, filename);
+
+    try {
+      return await callTelegramUpload(attempt.method, form);
+    } catch (error) {
+      lastError = error;
+    }
+  }
+
+  throw lastError || new Error("Could not send the downloaded file to Telegram.");
 }
 
 async function prepareTelegramDownload(chatId, payload) {
@@ -654,23 +727,23 @@ async function prepareTelegramDownload(chatId, payload) {
       return;
     }
 
-    const item = getResultItems(job.result)[0];
+    const download = downloads.get(jobId);
 
-    if (!item?.downloadUrl) {
-      await sendTelegramMessage(chatId, "The download finished but no file link was created.");
+    if (!download || !existsSync(download.filePath)) {
+      await sendTelegramMessage(chatId, "The download finished but the file could not be found.");
       return;
     }
 
-    await sendTelegramMessage(
-      chatId,
-      [
-        "Download is ready.",
-        item.filename ? `File: ${item.filename}` : "",
-        `Link: ${item.downloadUrl}`,
-        "",
-        "Links expire after about 1 hour.",
-      ].filter(Boolean).join("\n"),
-    );
+    await sendTelegramMessage(chatId, "Uploading the finished file to Telegram...");
+    await sendTelegramMediaFile(chatId, download, job.result || downloadRequest);
+
+    if (progressMessage?.message_id) {
+      await callTelegram("editMessageText", {
+        chat_id: chatId,
+        message_id: progressMessage.message_id,
+        text: `Completed ${downloadRequest.format.toUpperCase()} upload.`,
+      }).catch(() => {});
+    }
   } catch (error) {
     await sendTelegramMessage(chatId, error?.message || "Could not prepare the download.").catch(() => {});
   }
@@ -837,7 +910,7 @@ async function prepareDownload(downloadRequest, jobId, job) {
     onOutput: (text) => parseYtDlpProgress(text, job, downloadRequest.format),
   });
 
-  setJobProgress(job, 98, "Preparing file link");
+  setJobProgress(job, 98, "Preparing file");
 
   const downloadedFile = await findDownloadedFile(jobDirectory, downloadRequest.format);
   const previewImage = await findPreviewImage(jobDirectory);
@@ -865,6 +938,7 @@ async function prepareDownload(downloadRequest, jobId, job) {
     format: downloadRequest.format,
     items: [
       {
+        downloadId: jobId,
         downloadUrl: getPublicUrl(`/downloads/${jobId}`),
         filename,
         previewKind: previewImage ? "image" : downloadRequest.format === "mp4" ? "video" : "audio",
