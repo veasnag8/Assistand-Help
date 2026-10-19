@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Download, FileUp, Pencil, Plus, Search, Trash2, X } from "lucide-react";
-import * as XLSX from "xlsx";
+import * as XLSX from "xlsx-js-style";
 import {
   DEFAULT_NUMBERING_CATEGORIES,
   categoryKey,
@@ -28,7 +28,44 @@ function loadCategories() {
 
 function downloadWorkbook(rows, filename, sheetName, headers) {
   const worksheet = XLSX.utils.json_to_sheet(rows, { header: headers });
-  worksheet["!cols"] = headers.map((header) => ({ wch: Math.max(header.length + 2, 16) }));
+  const range = XLSX.utils.decode_range(worksheet["!ref"]);
+  const thinBorder = {
+    bottom: { color: { rgb: "D1D5DB" }, style: "thin" },
+    left: { color: { rgb: "D1D5DB" }, style: "thin" },
+    right: { color: { rgb: "D1D5DB" }, style: "thin" },
+    top: { color: { rgb: "D1D5DB" }, style: "thin" },
+  };
+
+  for (let row = range.s.r; row <= range.e.r; row += 1) {
+    for (let column = range.s.c; column <= range.e.c; column += 1) {
+      const address = XLSX.utils.encode_cell({ r: row, c: column });
+      const cell = worksheet[address];
+      if (!cell) continue;
+      cell.s = row === 0
+        ? {
+          alignment: { horizontal: "left", vertical: "center" },
+          border: thinBorder,
+          fill: { fgColor: { rgb: "000066" }, patternType: "solid" },
+          font: { bold: true, color: { rgb: "FFFFFF" } },
+        }
+        : {
+          alignment: {
+            horizontal: headers[column] === "Start Date" ? "center" : headers[column] === "Numbering Step" ? "right" : "left",
+            vertical: "center",
+          },
+          border: thinBorder,
+          fill: { fgColor: { rgb: "FFFFFF" }, patternType: "solid" },
+          font: { color: { rgb: "000000" } },
+        };
+    }
+  }
+
+  worksheet["!autofilter"] = { ref: XLSX.utils.encode_range(range) };
+  worksheet["!rows"] = Array.from({ length: range.e.r + 1 }, (_, index) => ({ hpt: index === 0 ? 22 : 18 }));
+  worksheet["!cols"] = headers.map((header) => {
+    const longestValue = rows.reduce((longest, row) => Math.max(longest, String(row[header] ?? "").length), header.length);
+    return { wch: Math.min(Math.max(longestValue + 3, 12), 28) };
+  });
   const workbook = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(workbook, worksheet, sheetName);
   XLSX.writeFile(workbook, filename);
