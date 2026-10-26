@@ -17,7 +17,7 @@ import {
   QrCode,
   ScanText as ScanTextIcon,
   Scissors,
-  Sparkles,
+  UserRoundCheck,
   Workflow,
   X,
 } from "lucide-react";
@@ -616,10 +616,10 @@ function Dashboard({ onOpen }) {
             className="dashboard-icon-button access-generator-button"
             type="button"
             onClick={() => setAccessModalOpen(true)}
-            aria-label="Generate user access information"
-            title="Generate user access information"
+            aria-label="User Access"
+            title="User Access"
           >
-            <Sparkles size={22} strokeWidth={2.2} />
+            <UserRoundCheck size={22} strokeWidth={2.2} />
           </button>
         </div>
       </header>
