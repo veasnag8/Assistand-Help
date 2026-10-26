@@ -5,7 +5,6 @@ import {
   CalendarDays,
   CheckSquare,
   ChevronRight,
-  Copy,
   Clock3,
   ExternalLink,
   Gamepad2,
@@ -270,47 +269,215 @@ function BrandLogo() {
   );
 }
 
-function escapeHtml(value) {
-  return String(value)
-    .replaceAll("&", "&amp;")
-    .replaceAll("<", "&lt;")
-    .replaceAll(">", "&gt;")
-    .replaceAll('"', "&quot;")
-    .replaceAll("'", "&#39;");
-}
+const financeAccessGroups = [
+  {
+    title: "AR Invoice",
+    tone: "rose",
+    permissions: ["View only", "Create", "Edit/Remove Hold", "Release"],
+  },
+  {
+    title: "AR Payment/Cash Sale",
+    tone: "blue",
+    permissions: ["View only", "Create", "Edit/Remove Hold", "Release"],
+  },
+  {
+    title: "AP Bill",
+    tone: "orange",
+    permissions: ["View only", "Create", "Edit/Remove Hold", "Release"],
+  },
+  {
+    title: "AP Payment",
+    tone: "amber",
+    permissions: ["View only", "Create", "Edit/Remove Hold", "Release"],
+  },
+  {
+    title: "Cash Purchase",
+    tone: "lavender",
+    permissions: ["View only", "Create", "Edit/Remove Hold", "Release"],
+  },
+  {
+    title: "GL",
+    tone: "green",
+    permissions: ["View only", "Create", "Edit/Remove Hold", "Release"],
+  },
+];
 
-function buildAccessInfoMarkdown({ user, username }) {
-  return `*System Access Information*
-=========================
-URL: https://acumatica.mam.com.kh:22888/MegaProduction/
-*Name: ${user}*
-Username Login: \`${username}\`
-Password: \`MAM@123456\`
+const financeAccessRoles = [
+  {
+    name: "AR Officer",
+    permissions: ["ar.view", "ar.create", "payment.view", "payment.create", "bill.view", "apPayment.view", "apPayment.create", "gl.view", "gl.create"],
+  },
+  {
+    name: "AP Officer",
+    permissions: ["bill.view", "bill.create", "apPayment.view", "apPayment.create", "cashPurchase.view", "cashPurchase.create", "gl.view", "gl.create"],
+  },
+  {
+    name: "Account Senior",
+    permissions: ["ar.view", "ar.create", "ar.edit", "payment.view", "payment.create", "payment.edit", "bill.view", "bill.create", "bill.edit", "apPayment.view", "apPayment.create", "apPayment.edit", "cashPurchase.view", "cashPurchase.create", "cashPurchase.edit", "gl.view", "gl.create", "gl.edit"],
+  },
+  {
+    name: "Account Supervisor",
+    permissions: ["ar.view", "ar.create", "ar.edit", "ar.release", "payment.view", "payment.create", "payment.edit", "payment.release", "bill.view", "bill.create", "bill.edit", "bill.release", "apPayment.view", "apPayment.create", "apPayment.edit", "apPayment.release", "cashPurchase.view", "cashPurchase.edit", "cashPurchase.release", "gl.view", "gl.create", "gl.edit", "gl.release"],
+  },
+  {
+    name: "Finance Manager",
+    permissions: ["ar.view", "ar.edit", "ar.release", "payment.view", "payment.edit", "payment.release", "bill.view", "bill.edit", "bill.release", "apPayment.view", "apPayment.edit", "apPayment.release", "cashPurchase.view", "cashPurchase.edit", "cashPurchase.release", "gl.view", "gl.edit", "gl.release"],
+  },
+];
 
-_Please change password after first login._`;
-}
+const siteAccessGroups = [
+  {
+    title: "AR Invoice",
+    tone: "rose",
+    permissions: ["View only", "Create", "Edit/Remove Hold", "Release"],
+  },
+  {
+    title: "Run Contract Billing",
+    tone: "lime",
+    permissions: ["Run Contract Billing"],
+  },
+  {
+    title: "AR Payment/Cash Sale",
+    tone: "blue",
+    permissions: ["View only", "Create", "Edit/Remove Hold", "Release"],
+  },
+  {
+    title: "Contract",
+    tone: "green",
+    permissions: ["View only", "Create", "Set Up", "Activate"],
+  },
+];
 
-function buildAccessInfoHtml({ user, username }) {
-  const safeUser = escapeHtml(user);
-  const safeUsername = escapeHtml(username);
+const siteAccessRoles = [
+  {
+    name: "Sale Invoice",
+    permissions: ["ar.view", "ar.create", "billing.run", "payment.view", "contract.view"],
+  },
+  {
+    name: "Sale Supervisor",
+    permissions: ["ar.view", "ar.edit", "ar.release", "payment.view", "contract.view"],
+  },
+  {
+    name: "Cash Officer",
+    permissions: ["ar.view", "payment.view", "payment.create", "contract.view"],
+  },
+  {
+    name: "Cash Supervisor",
+    permissions: ["ar.view", "payment.view", "payment.edit", "payment.release", "contract.view"],
+  },
+  {
+    name: "Project Invoice & Cash",
+    permissions: ["ar.view", "ar.create", "billing.run", "payment.view", "payment.create", "contract.view"],
+  },
+  {
+    name: "Project Invoice Release & Cash Create",
+    permissions: ["ar.view", "ar.edit", "ar.release", "payment.view", "payment.create", "contract.view"],
+  },
+  {
+    name: "Contract Officer",
+    permissions: ["ar.view", "payment.view", "contract.view", "contract.create", "contract.setup"],
+  },
+  {
+    name: "Project Manager",
+    permissions: ["ar.view", "ar.edit", "ar.release", "payment.view", "payment.edit", "payment.release", "contract.view", "contract.setup", "contract.activate"],
+  },
+];
 
-  return `<div><strong>System Access Information</strong><br>
-=========================<br>
-URL: https://acumatica.mam.com.kh:22888/MegaProduction/<br>
-<strong>Name: ${safeUser}</strong><br>
-Username Login: <code>${safeUsername}</code><br>
-Password: <code>MAM@123456</code><br>
-<br>
-<em>Please change password after first login.</em></div>`;
+function AccessRightsTable({ title, groups, roles }) {
+  const columns = groups.flatMap((group) =>
+    group.permissions.map((label) => ({
+      id: `${group.title}.${label}`,
+      label,
+      tone: group.tone,
+    })),
+  );
+  const rolePermissionKeys = groups.flatMap((group) => {
+    const prefix = group.title;
+    return group.permissions.map((permission) => {
+      const simplifiedPrefix = {
+        "AR Invoice": "ar",
+        "AR Payment/Cash Sale": "payment",
+        "AP Bill": "bill",
+        "AP Payment": "apPayment",
+        "Cash Purchase": "cashPurchase",
+        GL: "gl",
+        "Run Contract Billing": "billing",
+        Contract: "contract",
+      }[prefix];
+      const simplifiedPermission = {
+        "View only": "view",
+        Create: "create",
+        "Edit/Remove Hold": "edit",
+        Release: "release",
+        "Run Contract Billing": "run",
+        "Set Up": "setup",
+        Activate: "activate",
+      }[permission];
+      return `${simplifiedPrefix}.${simplifiedPermission}`;
+    });
+  });
+
+  return (
+    <section className="access-table-section" aria-label={title}>
+      <h3>{title}</h3>
+      <div className="access-table-scroll">
+        <table
+          className={`access-rights-table ${groups.length > 4 ? "access-rights-table--finance" : "access-rights-table--site"}`}
+        >
+          <thead>
+            <tr>
+              <th className="access-number-heading" rowSpan={2} scope="col">№</th>
+              <th className="access-role-heading" rowSpan={2} scope="col">Role ID</th>
+              {groups.map((group) => (
+                <th
+                  className={`access-group-heading tone-${group.tone}`}
+                  colSpan={group.permissions.length}
+                  key={group.title}
+                  scope="colgroup"
+                >
+                  {group.title}
+                </th>
+              ))}
+            </tr>
+            <tr>
+              {columns.map((column) => (
+                <th
+                  className={`access-permission-heading tone-${column.tone}`}
+                  key={column.id}
+                  scope="col"
+                >
+                  {column.label}
+                </th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {roles.map((role, roleIndex) => (
+              <tr key={role.name}>
+                <th scope="row" className="access-row-number">{roleIndex + 1}</th>
+                <th scope="row" className="access-row-role">{role.name}</th>
+                {rolePermissionKeys.map((permissionKey, columnIndex) => {
+                  const checked = role.permissions.includes(permissionKey);
+                  return (
+                    <td
+                      className="access-permission-cell"
+                      key={columns[columnIndex].id}
+                      aria-label={checked ? "Allowed" : "Not allowed"}
+                    >
+                      {checked ? <span aria-hidden="true">✓</span> : null}
+                    </td>
+                  );
+                })}
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </section>
+  );
 }
 
 function UserAccessModal({ onClose }) {
-  const [user, setUser] = useState("");
-  const [username, setUsername] = useState("");
-  const [copyStatus, setCopyStatus] = useState("");
-  const markdownResult = buildAccessInfoMarkdown({ user, username });
-  const htmlResult = buildAccessInfoHtml({ user, username });
-
   useEffect(() => {
     function handleEscape(event) {
       if (event.key === "Escape") {
@@ -350,65 +517,17 @@ function UserAccessModal({ onClose }) {
         onMouseDown={(event) => event.stopPropagation()}
       >
         <header className="access-modal-header">
-          <div>
-            <p className="eyebrow">User Access</p>
-            <h2 id="access-modal-title">Generate Login Info</h2>
+          <div className="access-title">
+            <h2 id="access-modal-title">Acumatica User Access Right Update</h2>
+            <p>Date: 09/01/2025</p>
           </div>
           <button className="access-icon-button" type="button" onClick={onClose} aria-label="Close">
             <X size={18} strokeWidth={2.4} />
           </button>
         </header>
-
-        <label className="access-field" htmlFor="access-user-input">
-          <span>Name</span>
-          <input
-            id="access-user-input"
-            type="text"
-            value={user}
-            onChange={(event) => {
-              setUser(event.target.value);
-              setCopyStatus("");
-            }}
-            placeholder="Input Name"
-            autoFocus
-          />
-        </label>
-
-        <label className="access-field" htmlFor="access-username-input">
-          <span>Username Login</span>
-          <input
-            id="access-username-input"
-            type="text"
-            value={username}
-            onChange={(event) => {
-              setUsername(event.target.value);
-              setCopyStatus("");
-            }}
-            placeholder="M-00XXX"
-          />
-        </label>
-
-        <div className="access-result">
-          <strong>System Access Information</strong>
-          <span>=========================</span>
-          <span>URL: https://acumatica.mam.com.kh:22888/MegaProduction/</span>
-          <strong>Name: {user}</strong>
-          <span>
-            Username Login: <code>{username}</code>
-          </span>
-          <span>
-            Password: <code>MAM@123456</code>
-          </span>
-          <em>Please change password after first login.</em>
-        </div>
-
-        <footer className="access-modal-actions">
-          <span>{copyStatus}</span>
-          <button className="button primary" type="button" onClick={copyResult}>
-            <Copy size={16} strokeWidth={2.2} />
-            <span>Copy</span>
-          </button>
-        </footer>
+        <AccessRightsTable title="Finance Division" groups={financeAccessGroups} roles={financeAccessRoles} />
+        <AccessRightsTable title="Site Group Night Market" groups={siteAccessGroups} roles={siteAccessRoles} />
+        <p className="access-effective-note">Note: This access right is effective from the sign date.</p>
       </section>
     </div>
   );

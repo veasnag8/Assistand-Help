@@ -251,32 +251,47 @@ img {
 }
 
 .access-modal {
-  width: min(100%, 520px);
+  width: min(1600px, 96vw);
+  max-height: 94vh;
   display: grid;
-  gap: 16px;
+  align-content: start;
+  gap: 14px;
+  overflow: auto;
   border: 1px solid rgba(9, 16, 71, 0.1);
-  border-radius: 18px;
+  border-radius: 12px;
   background: rgba(255, 255, 255, 0.98);
   box-shadow: 0 28px 70px rgba(9, 16, 71, 0.22);
-  padding: 18px;
+  padding: 18px 20px;
 }
 
 .access-modal-header {
   display: flex;
-  align-items: flex-start;
+  align-items: center;
   justify-content: space-between;
   gap: 16px;
 }
 
-.access-modal-header h2,
-.access-modal-header p {
+.access-title {
+  flex: 1;
+  text-align: center;
+}
+
+.access-title h2,
+.access-title p {
   margin: 0;
 }
 
-.access-modal-header h2 {
+.access-title h2 {
   color: #070d49;
-  font-size: 1.35rem;
+  font-size: clamp(1.2rem, 2vw, 1.8rem);
   line-height: 1.15;
+  font-weight: 900;
+}
+
+.access-title p {
+  margin-top: 5px;
+  color: #343a50;
+  font-size: 0.8rem;
 }
 
 .access-icon-button {
@@ -297,77 +312,138 @@ img {
   color: #b91c1c;
 }
 
-.access-field {
-  display: grid;
-  gap: 7px;
+.access-table-section {
+  min-width: 0;
 }
 
-.access-field span {
-  color: #323b68;
-  font-size: 0.82rem;
+.access-table-section h3 {
+  margin: 2px 0 0;
+  color: #111;
+  font-size: 0.9rem;
   font-weight: 900;
 }
 
-.access-field input {
-  width: 100%;
-  min-height: 44px;
-  border: 1px solid rgba(9, 16, 71, 0.14);
-  border-radius: 12px;
-  background: #fff;
-  padding: 0 12px;
-  outline: 0;
-}
-
-.access-field input:focus {
-  border-color: #2563eb;
-  box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.12);
-}
-
-.access-result {
-  min-height: 168px;
-  display: grid;
-  align-content: start;
-  gap: 2px;
+.access-table-scroll {
   overflow-x: auto;
-  margin: 0;
-  border: 1px solid rgba(33, 77, 112, 0.18);
-  border-radius: 14px;
-  background: #2f5d88;
-  color: #fff;
-  padding: 14px 16px;
-  font-family: "Cascadia Code", "Consolas", "SFMono-Regular", monospace;
-  font-size: 0.86rem;
-  line-height: 1.45;
+  border: 1px solid #454545;
+}
+
+.access-rights-table {
+  width: 100%;
+  border-collapse: collapse;
+  color: #111;
+  font-family: Arial, "Segoe UI", sans-serif;
+  font-size: 10px;
+  table-layout: fixed;
+}
+
+.access-rights-table--finance {
+  min-width: 1420px;
+}
+
+.access-rights-table--site {
+  min-width: 980px;
+}
+
+.access-rights-table th,
+.access-rights-table td {
+  border: 1px solid #555;
+  text-align: center;
+  vertical-align: middle;
+  padding: 3px 2px;
+}
+
+.access-number-heading,
+.access-row-number {
+  width: 34px;
+}
+
+.access-role-heading,
+.access-row-role {
+  width: 200px;
+}
+
+.access-number-heading,
+.access-role-heading {
+  background: #c7c7c7;
+  font-size: 11px;
+}
+
+.access-group-heading {
+  height: 27px;
+  font-size: 11px;
+  font-weight: 900;
+}
+
+.access-permission-heading {
+  min-width: 44px;
+  height: 42px;
+  line-height: 1.15;
   overflow-wrap: anywhere;
 }
 
-.access-result strong {
+.access-permission-heading.tone-rose,
+.access-group-heading.tone-rose {
+  background: #d99496;
+}
+
+.access-permission-heading.tone-blue,
+.access-group-heading.tone-blue {
+  background: #8bc6d8;
+}
+
+.access-permission-heading.tone-orange,
+.access-group-heading.tone-orange {
+  background: #f39a4b;
+}
+
+.access-permission-heading.tone-amber,
+.access-group-heading.tone-amber {
+  background: #e87811;
+}
+
+.access-permission-heading.tone-lavender,
+.access-group-heading.tone-lavender {
+  background: #b9a8cf;
+}
+
+.access-permission-heading.tone-green,
+.access-group-heading.tone-green {
+  background: #7d9b48;
+}
+
+.access-permission-heading.tone-lime,
+.access-group-heading.tone-lime {
+  background: #d4e99a;
+}
+
+.access-rights-table tbody tr {
+  height: 27px;
+}
+
+.access-row-number,
+.access-row-role {
+  background: #fff;
+  font-size: 11px;
+}
+
+.access-row-role {
+  text-align: left !important;
+  padding-left: 9px !important;
+  font-weight: 700;
+}
+
+.access-permission-cell {
+  min-width: 44px;
+  height: 27px;
+  font-size: 15px;
   font-weight: 900;
 }
 
-.access-result code {
-  border-radius: 4px;
-  background: rgba(255, 255, 255, 0.13);
-  padding: 1px 4px;
-  font: inherit;
-}
-
-.access-result em {
-  margin-top: 18px;
-}
-
-.access-modal-actions {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-}
-
-.access-modal-actions > span {
-  min-height: 20px;
-  color: #2563eb;
-  font-size: 0.82rem;
-  font-weight: 800;
+.access-effective-note {
+  margin: -8px 0 0;
+  color: #222;
+  font-size: 0.78rem;
 }
 
 .password-modal-backdrop {
