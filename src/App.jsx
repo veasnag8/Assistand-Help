@@ -6,6 +6,8 @@ import {
   CheckSquare,
   ChevronRight,
   Clock3,
+  ClipboardCheck,
+  Copy,
   ExternalLink,
   Gamepad2,
   HardDriveDownload,
@@ -16,7 +18,7 @@ import {
   QrCode,
   ScanText as ScanTextIcon,
   Scissors,
-  UserRoundCheck,
+  UserRoundPlus,
   Workflow,
   X,
 } from "lucide-react";
@@ -477,7 +479,41 @@ function AccessRightsTable({ title, groups, roles }) {
   );
 }
 
-function UserAccessModal({ onClose }) {
+function escapeHtml(value) {
+  return String(value)
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#39;");
+}
+
+function buildAccessInfoMarkdown({ user, username }) {
+  return `*System Access Information*
+=========================
+URL: https://acumatica.mam.com.kh:22888/MegaProduction/
+*Name: ${user}*
+Username Login: \`${username}\`
+Password: \`MAM@123456\`
+
+_Please change password after first login._`;
+}
+
+function buildAccessInfoHtml({ user, username }) {
+  const safeUser = escapeHtml(user);
+  const safeUsername = escapeHtml(username);
+
+  return `<div><strong>System Access Information</strong><br>
+=========================<br>
+URL: https://acumatica.mam.com.kh:22888/MegaProduction/<br>
+<strong>Name: ${safeUser}</strong><br>
+Username Login: <code>${safeUsername}</code><br>
+Password: <code>MAM@123456</code><br>
+<br>
+<em>Please change password after first login.</em></div>`;
+}
+
+function AccessRightsModal({ onClose }) {
   useEffect(() => {
     function handleEscape(event) {
       if (event.key === "Escape") {
@@ -528,6 +564,116 @@ function UserAccessModal({ onClose }) {
         <AccessRightsTable title="Finance Division" groups={financeAccessGroups} roles={financeAccessRoles} />
         <AccessRightsTable title="Site Group Night Market" groups={siteAccessGroups} roles={siteAccessRoles} />
         <p className="access-effective-note">Note: This access right is effective from the sign date.</p>
+      </section>
+    </div>
+  );
+}
+
+function GenerateUserModal({ onClose }) {
+  const [user, setUser] = useState("");
+  const [username, setUsername] = useState("");
+  const [copyStatus, setCopyStatus] = useState("");
+  const markdownResult = buildAccessInfoMarkdown({ user, username });
+  const htmlResult = buildAccessInfoHtml({ user, username });
+
+  useEffect(() => {
+    function handleEscape(event) {
+      if (event.key === "Escape") {
+        onClose();
+      }
+    }
+
+    window.addEventListener("keydown", handleEscape);
+    return () => window.removeEventListener("keydown", handleEscape);
+  }, [onClose]);
+
+  async function copyResult() {
+    try {
+      if (window.ClipboardItem) {
+        await navigator.clipboard.write([
+          new ClipboardItem({
+            "text/html": new Blob([htmlResult], { type: "text/html" }),
+            "text/plain": new Blob([markdownResult], { type: "text/plain" }),
+          }),
+        ]);
+      } else {
+        await navigator.clipboard.writeText(markdownResult);
+      }
+      setCopyStatus("Copied.");
+    } catch {
+      setCopyStatus("Could not copy.");
+    }
+  }
+
+  return (
+    <div className="access-modal-backdrop" role="presentation" onMouseDown={onClose}>
+      <section
+        className="generate-user-modal"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="generate-user-modal-title"
+        onMouseDown={(event) => event.stopPropagation()}
+      >
+        <header className="access-modal-header">
+          <div>
+            <p className="eyebrow">Generate User</p>
+            <h2 id="generate-user-modal-title">Generate Login Info</h2>
+          </div>
+          <button className="access-icon-button" type="button" onClick={onClose} aria-label="Close">
+            <X size={18} strokeWidth={2.4} />
+          </button>
+        </header>
+
+        <label className="access-field" htmlFor="access-user-input">
+          <span>Name</span>
+          <input
+            id="access-user-input"
+            type="text"
+            value={user}
+            onChange={(event) => {
+              setUser(event.target.value);
+              setCopyStatus("");
+            }}
+            placeholder="Input Name"
+            autoFocus
+          />
+        </label>
+
+        <label className="access-field" htmlFor="access-username-input">
+          <span>Username Login</span>
+          <input
+            id="access-username-input"
+            type="text"
+            value={username}
+            onChange={(event) => {
+              setUsername(event.target.value);
+              setCopyStatus("");
+            }}
+            placeholder="M-00XXX"
+          />
+        </label>
+
+        <div className="access-result">
+          <strong>System Access Information</strong>
+          <span>=========================</span>
+          <span>URL: https://acumatica.mam.com.kh:22888/MegaProduction/</span>
+          <strong>Name: {user}</strong>
+          <span>
+            Username Login: <code>{username}</code>
+          </span>
+          <span>
+            Password: <code>MAM@123456</code>
+          </span>
+          <em>Please change password after first login.</em>
+        </div>
+
+        <footer className="access-modal-actions">
+          <span>{copyStatus}</span>
+          <button className="button primary" type="button" onClick={copyResult}>
+            <Copy size={16} strokeWidth={2.2} />
+            <span>Copy</span>
+          </button>
+        </footer>
       </section>
     </div>
   );
@@ -658,6 +804,7 @@ function CategoryCard({ category, onOpen, onProtectedOpen }) {
 
 function Dashboard({ onOpen }) {
   const [accessModalOpen, setAccessModalOpen] = useState(false);
+  const [generateUserModalOpen, setGenerateUserModalOpen] = useState(false);
   const [passwordModal, setPasswordModal] = useState(null);
   const [passwordError, setPasswordError] = useState("");
   const [passwordAttempts, setPasswordAttempts] = useState(0);
@@ -732,18 +879,30 @@ function Dashboard({ onOpen }) {
             <CalendarDays size={22} strokeWidth={2.2} />
           </button>
           <button
+            className="dashboard-icon-button generate-user-shortcut-button"
+            type="button"
+            onClick={() => setGenerateUserModalOpen(true)}
+            aria-label="Generate User"
+            title="Generate User"
+          >
+            <UserRoundPlus size={22} strokeWidth={2.2} />
+          </button>
+          <button
             className="dashboard-icon-button access-generator-button"
             type="button"
             onClick={() => setAccessModalOpen(true)}
-            aria-label="User Access"
-            title="User Access"
+            aria-label="User Access Rights"
+            title="User Access Rights"
           >
-            <UserRoundCheck size={22} strokeWidth={2.2} />
+            <ClipboardCheck size={22} strokeWidth={2.2} />
           </button>
         </div>
       </header>
 
-      {accessModalOpen ? <UserAccessModal onClose={() => setAccessModalOpen(false)} /> : null}
+      {accessModalOpen ? <AccessRightsModal onClose={() => setAccessModalOpen(false)} /> : null}
+      {generateUserModalOpen ? (
+        <GenerateUserModal onClose={() => setGenerateUserModalOpen(false)} />
+      ) : null}
       {passwordModal ? (
         <PasswordModal
           error={passwordError}
