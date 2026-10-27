@@ -1143,7 +1143,7 @@ function FloatingBot({ mood, gesture, onOpen, preferences, onPreferencesChange }
       return undefined;
     }
 
-    const gestures = ["hello", "surprised", "thinking", "sad", "success", "error"];
+    const gestures = ["wave", "react", "thinking", "sad", "celebrate", "dance", "error"];
     let gestureIndex = 0;
     let timeoutId;
 
@@ -1158,7 +1158,7 @@ function FloatingBot({ mood, gesture, onOpen, preferences, onPreferencesChange }
       timeoutId = window.setTimeout(() => {
         setAutoGesture("");
         timeoutId = window.setTimeout(playNextGesture, 4600);
-      }, 1350);
+      }, 1900);
     }
 
     timeoutId = window.setTimeout(playNextGesture, 2800);

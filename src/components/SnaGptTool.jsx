@@ -31,6 +31,8 @@ import {
   formatFileSize,
   getClipboardImageFile,
 } from "../lib/ocr-utils";
+import botIdle from "../image/bot-idle.png";
+import botIdleBlink from "../image/bot-idle-blink.png";
 import botHello from "../image/bot-hello.png";
 import botSurprised from "../image/bot-surprised.png";
 import botThinking from "../image/bot-thinking.png";
@@ -40,6 +42,7 @@ import botError from "../image/bot-error.png";
 import snaGptLogo from "../image/sna-gpt.png";
 
 const botReactionImages = {
+  idle: botIdle,
   hello: botHello,
   surprised: botSurprised,
   thinking: botThinking,
@@ -1227,16 +1230,21 @@ export function BotAvatar({
     celebrate: "success",
     dance: "success",
     react: "surprised",
-  }[gesture] || gesture;
-  const pose = botReactionImages[reaction]
+  }[gesture] || gesture || mood;
+  const hasReactionPose = Boolean(botReactionImages[reaction]);
+  const pose = hasReactionPose
     ? reaction
     : mood === "thinking" || mood === "listening"
       ? "thinking"
-      : "hello";
+      : "idle";
+  const poseClass = hasReactionPose && mood !== pose ? ` is-${pose}` : "";
+  const gestureClass = gesture && gesture !== pose && gesture !== mood
+    ? ` is-${gesture}`
+    : "";
 
   return (
     <button
-      className={`sna-bot-avatar ${className} is-${mood} is-${pose}${gesture ? ` is-${gesture}` : ""}`}
+      className={`sna-bot-avatar ${className} is-${mood}${poseClass}${gestureClass}`}
       type="button"
       onClick={onClick}
       onKeyDown={onKeyDown}
@@ -1248,13 +1256,25 @@ export function BotAvatar({
       aria-label="SNA GPT assistant. Drag to move or click to open chat."
       title="Drag to move · Click to open SNA GPT"
     >
-      <img
-        className="sna-bot-art"
-        src={botReactionImages[pose]}
-        alt=""
+      <span
+        className={`sna-bot-motion is-${mood}${poseClass}${gestureClass}`}
         aria-hidden="true"
-        draggable="false"
-      />
+      >
+        <img
+          className="sna-bot-art"
+          src={botReactionImages[pose]}
+          alt=""
+          draggable="false"
+        />
+        {pose === "idle" ? (
+          <img
+            className="sna-bot-art sna-bot-blink-art"
+            src={botIdleBlink}
+            alt=""
+            draggable="false"
+          />
+        ) : null}
+      </span>
     </button>
   );
 }
