@@ -144,7 +144,7 @@ const adjustmentReasonCodes = [
 ];
 
 const normalReasonCodes = [
-  { variance: "Receipt to AP", reasonCode: "DRECEIPT" },
+  { variance: "Receipt to AP (Unbill)", reasonCode: "DRECEIPT" },
 ];
 
 function parseAccessRightText(text) {
