@@ -261,7 +261,7 @@ img {
   grid-template-columns: minmax(0, 1fr);
   align-content: start;
   gap: 14px;
-  overflow: auto;
+  overflow: hidden;
   overscroll-behavior: contain;
   border: 1px solid rgba(9, 16, 71, 0.1);
   border-radius: 12px;
@@ -5803,6 +5803,76 @@ button.khmer-calendar-cell:hover {
 @media (max-width: 760px) {
   .hangman-letter-grid {
     grid-template-columns: repeat(6, minmax(0, 1fr));
+  }
+}
+
+@media (max-height: 900px) {
+  .access-modal {
+    gap: 8px;
+    padding: 10px 14px;
+  }
+
+  .access-title h2 {
+    font-size: clamp(1.05rem, 2vw, 1.5rem);
+  }
+
+  .access-rights-table {
+    font-size: 9px;
+  }
+
+  .access-rights-table th,
+  .access-rights-table td {
+    padding: 1px;
+  }
+
+  .access-group-heading {
+    height: 21px;
+  }
+
+  .access-permission-heading {
+    height: 32px;
+  }
+
+  .access-rights-table tbody tr,
+  .access-permission-cell {
+    height: 19px;
+  }
+}
+
+@media (max-height: 620px) {
+  .access-modal {
+    gap: 5px;
+    padding: 6px 10px;
+  }
+
+  .access-title h2 {
+    font-size: 1rem;
+  }
+
+  .access-title p {
+    margin-top: 2px;
+    font-size: 0.7rem;
+  }
+
+  .access-rights-table {
+    font-size: 8px;
+  }
+
+  .access-group-heading {
+    height: 17px;
+  }
+
+  .access-permission-heading {
+    height: 25px;
+  }
+
+  .access-rights-table tbody tr,
+  .access-permission-cell {
+    height: 15px;
+  }
+
+  .access-effective-note {
+    font-size: 0.68rem;
   }
 }
 
