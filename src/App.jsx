@@ -307,7 +307,7 @@ const financeAccessGroups = [
 const financeAccessRoles = [
   {
     name: "AR Officer",
-    permissions: ["ar.view", "ar.create", "payment.view", "payment.create", "bill.view", "apPayment.view", "apPayment.create", "gl.view", "gl.create"],
+    permissions: ["ar.view", "ar.create", "payment.view", "payment.create", "gl.view", "gl.create"],
   },
   {
     name: "AP Officer",
@@ -319,7 +319,7 @@ const financeAccessRoles = [
   },
   {
     name: "Account Supervisor",
-    permissions: ["ar.view", "ar.create", "ar.edit", "ar.release", "payment.view", "payment.create", "payment.edit", "payment.release", "bill.view", "bill.create", "bill.edit", "bill.release", "apPayment.view", "apPayment.create", "apPayment.edit", "apPayment.release", "cashPurchase.view", "cashPurchase.edit", "cashPurchase.release", "gl.view", "gl.create", "gl.edit", "gl.release"],
+    permissions: ["ar.view", "ar.create", "ar.edit", "ar.release", "payment.view", "payment.release", "bill.view", "bill.create", "bill.edit", "bill.release", "apPayment.view", "apPayment.create", "apPayment.edit", "cashPurchase.view", "cashPurchase.release", "gl.view", "gl.create", "gl.edit"],
   },
   {
     name: "Finance Manager",
