@@ -240,8 +240,8 @@ function getHashParams() {
 
 function updateBrowserTab(category) {
   const title = category
-    ? `${category.tabTitle || category.title} - Assistand Help`
-    : "Assistand Help - Main Categories";
+    ? `${category.tabTitle || category.title} - Assistant Help`
+    : "Assistant Help - Main Categories";
   const color = category ? toneColors[category.tone] || "#2563eb" : "#f7b500";
   const label = category ? (category.tabTitle || category.title).slice(0, 2) : "AH";
   const favicon = `
@@ -856,7 +856,7 @@ function Dashboard({ onOpen }) {
         <BrandLogo />
 
         <div className="dashboard-title-block">
-          <h1 id="dashboard-title">Assistand Help</h1>
+          <h1 id="dashboard-title">Assistant Help</h1>
           <p>Main Categories</p>
         </div>
 
