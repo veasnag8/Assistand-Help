@@ -422,6 +422,7 @@ function AccessRightsTable({ title, groups, roles }) {
   return (
     <section className="access-table-section" aria-label={title}>
       <h3>{title}</h3>
+      <p className="access-table-hint">Swipe horizontally to view all permissions.</p>
       <div className="access-table-scroll">
         <table
           className={`access-rights-table ${groups.length > 4 ? "access-rights-table--finance" : "access-rights-table--site"}`}
