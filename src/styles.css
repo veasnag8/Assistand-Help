@@ -1045,6 +1045,38 @@ img {
   color: #334155;
 }
 
+.acumatica-reason-code-wrap {
+  width: min(100%, 720px);
+  overflow-x: auto;
+  border: 1px solid rgba(9, 16, 71, 0.1);
+  border-radius: 8px;
+  background: #fff;
+  box-shadow: 0 14px 28px rgba(39, 45, 88, 0.08);
+}
+
+.acumatica-reason-code-table {
+  width: 100%;
+  border-collapse: collapse;
+  color: #091047;
+  font-size: 0.9rem;
+}
+
+.acumatica-reason-code-table th,
+.acumatica-reason-code-table td {
+  padding: 10px 14px;
+  border-bottom: 1px solid rgba(15, 23, 42, 0.12);
+  text-align: left;
+}
+
+.acumatica-reason-code-table th {
+  background: #a8d58a;
+  font-weight: 900;
+}
+
+.acumatica-reason-code-table tbody tr:last-child td {
+  border-bottom: 0;
+}
+
 .acumatica-flow-notes {
   display: grid;
   gap: 12px;

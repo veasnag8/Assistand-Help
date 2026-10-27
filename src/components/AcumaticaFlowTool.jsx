@@ -136,6 +136,13 @@ VII. កែតម្រូវ AR ខុស
 4	Debit Memo (AR) - Customer ត្រូវបង់បន្ថែម	ប្រើ Debit Memo នៅពេលត្រូវការបន្ថែមបំណុលឱ្យ Customer	បង្កើត Debit Memo	F.D (VCL)	
 		- ឧទាហរណ៍: AR Invoice = $1,000; Freight ខ្វះ = $50; Total = $1,050	Apply Debit Memo ទៅ AR Invoice	Finance Team	`;
 
+const adjustmentReasonCodes = [
+  { variance: "Purchase Receipt", reasonCode: "PRADJSUT" },
+  { variance: "Transfer", reasonCode: "STOCKVARIANCE" },
+  { variance: "Issue", reasonCode: "BOQ" },
+  { variance: "Sale", reasonCode: "SALE" },
+];
+
 function parseAccessRightText(text) {
   const sections = [];
   let currentSection = null;
@@ -310,12 +317,16 @@ function getProcessStage(sectionTitle, processNo) {
 }
 
 export default function AcumaticaFlowTool() {
-  const sections = useMemo(() => parseAccessRightText(accessRightText), []);
+  const sections = useMemo(() => [
+    ...parseAccessRightText(accessRightText),
+    { id: "adjus-reason-code", title: "Adjus reason code", processes: [] },
+  ], []);
   const [activeSectionId, setActiveSectionId] = useState(sections[0]?.id || "");
   const activeSection = sections.find((section) => section.id === activeSectionId) || sections[0];
   const filteredProcesses = activeSection.processes;
   const isPettyCash = activeSection.title.includes("Petty Cash");
   const isWrongEntry = isWrongEntrySection(activeSection.title);
+  const isReasonCodeSection = activeSection.id === "adjus-reason-code";
 
   return (
     <section className="acumatica-flow-tool" aria-labelledby="acumatica-flow-title">
@@ -346,7 +357,26 @@ export default function AcumaticaFlowTool() {
         ))}
       </div>
 
-      {isWrongEntry ? (
+      {isReasonCodeSection ? (
+        <div className="acumatica-reason-code-wrap">
+          <table className="acumatica-reason-code-table">
+            <thead>
+              <tr>
+                <th scope="col">Transaction</th>
+                <th scope="col">Reason Code</th>
+              </tr>
+            </thead>
+            <tbody>
+              {adjustmentReasonCodes.map(({ variance, reasonCode }) => (
+                <tr key={variance}>
+                  <td>{variance}</td>
+                  <td>{reasonCode}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      ) : isWrongEntry ? (
         <div className="acumatica-flow-notes">
           <article className={`acumatica-flow-note ${activeSection.title === "Post AP Wrong" ? "is-ap" : "is-ar"}`}>
             <div className="acumatica-flow-note-topline">
