@@ -1288,6 +1288,9 @@ function FloatingBot({ mood, gesture, onOpen, preferences, onPreferencesChange }
         onContextMenu={handleContextMenu}
       />
       <span className="sna-bot-caption">Click to chat · Drag to move</span>
+      <span className="sna-bot-greeting" role="status">
+        Hello! Can I help you?
+      </span>
       {contextMenu ? (
         <div
           className={`sna-bot-context-menu${settingsOpen ? " is-settings-open" : ""}`}

@@ -1260,20 +1260,31 @@ export function BotAvatar({
         className={`sna-bot-motion is-${mood}${poseClass}${gestureClass}`}
         aria-hidden="true"
       >
-        <img
-          className="sna-bot-art"
-          src={botReactionImages[pose]}
-          alt=""
-          draggable="false"
-        />
-        {pose === "idle" ? (
+        <span className={`sna-bot-action${poseClass}${gestureClass}`}>
+          {Object.entries(botReactionImages)
+            .filter(([name]) => name !== "idle")
+            .map(([name, src]) => (
+              <img
+                key={name}
+                className={`sna-bot-art is-${name}${pose === name ? " is-active" : ""}`}
+                src={src}
+                alt=""
+                draggable="false"
+              />
+            ))}
           <img
-            className="sna-bot-art sna-bot-blink-art"
+            className={`sna-bot-art is-idle${pose === "idle" ? " is-active" : ""}`}
+            src={botIdle}
+            alt=""
+            draggable="false"
+          />
+          <img
+            className={`sna-bot-art sna-bot-blink-art${pose === "idle" ? " is-active" : ""}`}
             src={botIdleBlink}
             alt=""
             draggable="false"
           />
-        ) : null}
+        </span>
       </span>
     </button>
   );
