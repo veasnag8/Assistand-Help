@@ -517,6 +517,10 @@ img {
   height: 27px;
 }
 
+.access-rights-table tbody tr:hover > * {
+  background-color: #e8f1ff;
+}
+
 .access-row-number,
 .access-row-role {
   background: #fff;
