@@ -268,7 +268,11 @@ function decodeCookiesBase64(value) {
   return text;
 }
 
-function getYtDlpAuthArgs() {
+function getYtDlpAuthArgs(platform) {
+  if (platform !== "YouTube") {
+    return [];
+  }
+
   const cookiesPath = cleanText(process.env.YTDLP_COOKIES_PATH, 1000);
   const cookiesFromBrowser = cleanText(process.env.YTDLP_COOKIES_FROM_BROWSER, 200);
   const cookiesBase64 = cleanText(process.env.YTDLP_COOKIES_BASE64, 500000);
@@ -896,7 +900,7 @@ async function prepareDownload(downloadRequest, jobId, job) {
   await mkdir(jobDirectory, { recursive: true });
 
   const outputTemplate = path.join(jobDirectory, "%(title).180B-%(id)s.%(ext)s");
-  const authArgs = getYtDlpAuthArgs();
+  const authArgs = getYtDlpAuthArgs(downloadRequest.platform);
   const baseArgs = [
     ...ytDlp.args,
     "--newline",
