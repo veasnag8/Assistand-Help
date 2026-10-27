@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   ArrowLeft,
   BotMessageSquare,
@@ -11,6 +11,8 @@ import {
   ExternalLink,
   Gamepad2,
   HardDriveDownload,
+  Eye,
+  EyeOff,
   FileText,
   FileImage,
   FileSpreadsheet,
@@ -18,6 +20,7 @@ import {
   QrCode,
   ScanText as ScanTextIcon,
   Scissors,
+  Settings,
   UserRoundPlus,
   Workflow,
   X,
@@ -32,7 +35,7 @@ import LogoCutTool from "./components/LogoCutTool";
 import PdfTools from "./components/PdfTools";
 import QrStudio from "./components/QrStudio";
 import ScanTextTool from "./components/ScanTextTool";
-import SnaGptTool from "./components/SnaGptTool";
+import SnaGptTool, { BotAvatar } from "./components/SnaGptTool";
 import VideoDownloadTool from "./components/VideoDownloadTool";
 import acumaticaLogo from "./image/acumatica-logo-transparent.png";
 import mamLogo from "./image/mam-logo.png";
@@ -41,6 +44,28 @@ import snaGptLogo from "./image/sna-gpt.png";
 const protectedActionPassword = "MAM@2026";
 const protectedPasswordMessage = "Password is not correct.";
 const protectedPasswordMaxAttempts = 3;
+const botPositionStorageKey = "sna-gpt-bot-position-v1";
+const botPreferencesStorageKey = "sna-gpt-bot-preferences-v1";
+const defaultBotPreferences = { color: "#5685f5", size: 100, hidden: false };
+const getBotHueRotation = (color) => {
+  const hex = /^#[\da-f]{6}$/i.test(color) ? color.slice(1) : "5685f5";
+  const [red, green, blue] = [0, 2, 4].map(
+    (offset) => Number.parseInt(hex.slice(offset, offset + 2), 16) / 255,
+  );
+  const max = Math.max(red, green, blue);
+  const min = Math.min(red, green, blue);
+  const delta = max - min;
+  let hue = 0;
+
+  if (delta) {
+    if (max === red) hue = ((green - blue) / delta) % 6;
+    else if (max === green) hue = (blue - red) / delta + 2;
+    else hue = (red - green) / delta + 4;
+    hue *= 60;
+  }
+
+  return `${Math.round((hue + 360) % 360 - 222)}deg`;
+};
 const categories = [
   {
     id: "sql-script-update",
@@ -165,7 +190,7 @@ const categories = [
     id: "video-download",
     title: "Video Download",
     tabTitle: "Video Download",
-    description: "Download authorized Facebook, YouTube, and TikTok media.",
+    description: "Download authorized Facebook media.",
     icon: HardDriveDownload,
     tone: "teal",
     enabled: true,
@@ -970,7 +995,7 @@ function PlaceholderTool({ category }) {
   );
 }
 
-function ToolView({ activeId, onBack }) {
+function ToolView({ activeId, onBack, onBotGesture, onBotMoodChange }) {
   const category = useMemo(
     () => getCategoryById(activeId) || categories[0],
     [activeId],
@@ -990,7 +1015,13 @@ function ToolView({ activeId, onBack }) {
       {activeId === "image" ? <ImageTools /> : null}
       {activeId === "logo-cut" ? <LogoCutTool /> : null}
       {activeId === "scan-text" ? <ScanTextTool /> : null}
-      {activeId === "sna-gpt" ? <SnaGptTool onBack={onBack} /> : null}
+      {activeId === "sna-gpt" ? (
+        <SnaGptTool
+          onBack={onBack}
+          onBotGesture={onBotGesture}
+          onBotMoodChange={onBotMoodChange}
+        />
+      ) : null}
       {activeId === "comment" ? <CommentTool /> : null}
       {activeId === "hangman" ? <HangmanTool /> : null}
       {activeId === "video-download" ? <VideoDownloadTool /> : null}
@@ -1004,11 +1035,376 @@ function ToolView({ activeId, onBack }) {
   );
 }
 
+function getDefaultBotPosition() {
+  const height = window.innerWidth <= 760 ? 100 : 145;
+
+  return {
+    x: 20,
+    y: Math.max(12, window.innerHeight - height - 90),
+  };
+}
+
+function clampBotPosition(position, size = 100) {
+  const compact = window.innerWidth <= 760;
+  const scale = size / 100;
+  const width = (compact ? 70 : 100) * scale;
+  const height = (compact ? 100 : 145) * scale;
+
+  return {
+    x: Math.min(Math.max(8, position.x), Math.max(8, window.innerWidth - width - 8)),
+    y: Math.min(Math.max(8, position.y), Math.max(8, window.innerHeight - height - 8)),
+  };
+}
+
+function loadBotPosition() {
+  try {
+    const stored = JSON.parse(window.localStorage.getItem(botPositionStorageKey) || "null");
+    if (Number.isFinite(stored?.x) && Number.isFinite(stored?.y)) {
+      return clampBotPosition(stored);
+    }
+  } catch {
+    return getDefaultBotPosition();
+  }
+
+  return getDefaultBotPosition();
+}
+
+function loadBotPreferences() {
+  try {
+    const stored = JSON.parse(window.localStorage.getItem(botPreferencesStorageKey) || "null");
+    return {
+      color: /^#[0-9a-f]{6}$/i.test(stored?.color) ? stored.color : defaultBotPreferences.color,
+      size: Number.isFinite(stored?.size)
+        ? Math.min(150, Math.max(60, stored.size))
+        : defaultBotPreferences.size,
+      hidden: stored?.hidden === true,
+    };
+  } catch {
+    return defaultBotPreferences;
+  }
+}
+
+function FloatingBot({ mood, gesture, onOpen, preferences, onPreferencesChange }) {
+  const [position, setPosition] = useState(() => clampBotPosition(loadBotPosition(), preferences.size));
+  const [autoGesture, setAutoGesture] = useState("");
+  const [contextMenu, setContextMenu] = useState(null);
+  const [settingsOpen, setSettingsOpen] = useState(false);
+  const pointerStartRef = useRef(null);
+  const didDragRef = useRef(false);
+  const contextMenuRef = useRef(null);
+
+  useEffect(() => {
+    window.localStorage.setItem(botPositionStorageKey, JSON.stringify(position));
+  }, [position]);
+
+  useEffect(() => {
+    setPosition((current) => clampBotPosition(current, preferences.size));
+  }, [preferences.size]);
+
+  useEffect(() => {
+    function handleResize() {
+      setPosition((current) => clampBotPosition(current, preferences.size));
+    }
+
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
+  }, [preferences.size]);
+
+  useEffect(() => {
+    if (!contextMenu) {
+      return undefined;
+    }
+
+    function handleOutsideClick(event) {
+      if (!contextMenuRef.current?.contains(event.target)) {
+        setContextMenu(null);
+        setSettingsOpen(false);
+      }
+    }
+
+    function handleEscape(event) {
+      if (event.key === "Escape") {
+        setContextMenu(null);
+        setSettingsOpen(false);
+      }
+    }
+
+    document.addEventListener("pointerdown", handleOutsideClick);
+    document.addEventListener("keydown", handleEscape);
+    return () => {
+      document.removeEventListener("pointerdown", handleOutsideClick);
+      document.removeEventListener("keydown", handleEscape);
+    };
+  }, [contextMenu]);
+
+  useEffect(() => {
+    if (mood !== "idle" || gesture || contextMenu) {
+      setAutoGesture("");
+      return undefined;
+    }
+
+    const gestures = ["hello", "surprised", "thinking", "sad", "success", "error"];
+    let gestureIndex = 0;
+    let timeoutId;
+
+    function playNextGesture() {
+      if (pointerStartRef.current) {
+        timeoutId = window.setTimeout(playNextGesture, 1200);
+        return;
+      }
+
+      setAutoGesture(gestures[gestureIndex % gestures.length]);
+      gestureIndex += 1;
+      timeoutId = window.setTimeout(() => {
+        setAutoGesture("");
+        timeoutId = window.setTimeout(playNextGesture, 4600);
+      }, 1350);
+    }
+
+    timeoutId = window.setTimeout(playNextGesture, 2800);
+    return () => window.clearTimeout(timeoutId);
+  }, [contextMenu, gesture, mood]);
+
+  function handlePointerDown(event) {
+    if (event.button !== 0 && event.pointerType !== "touch") {
+      return;
+    }
+
+    event.preventDefault();
+    event.currentTarget.setPointerCapture(event.pointerId);
+    pointerStartRef.current = {
+      pointerId: event.pointerId,
+      pointerX: event.clientX,
+      pointerY: event.clientY,
+      x: position.x,
+      y: position.y,
+    };
+    didDragRef.current = false;
+  }
+
+  function handlePointerMove(event) {
+    const start = pointerStartRef.current;
+    if (!start || start.pointerId !== event.pointerId) {
+      return;
+    }
+
+    const deltaX = event.clientX - start.pointerX;
+    const deltaY = event.clientY - start.pointerY;
+    if (Math.abs(deltaX) > 4 || Math.abs(deltaY) > 4) {
+      didDragRef.current = true;
+    }
+    setPosition(clampBotPosition(
+      { x: start.x + deltaX, y: start.y + deltaY },
+      preferences.size,
+    ));
+  }
+
+  function handlePointerUp(event) {
+    if (pointerStartRef.current?.pointerId === event.pointerId) {
+      pointerStartRef.current = null;
+    }
+  }
+
+  function handleClick() {
+    if (didDragRef.current) {
+      didDragRef.current = false;
+      return;
+    }
+
+    onOpen();
+  }
+
+  function handleKeyDown(event) {
+    const offsets = {
+      ArrowDown: [0, 12],
+      ArrowLeft: [-12, 0],
+      ArrowRight: [12, 0],
+      ArrowUp: [0, -12],
+    };
+    const offset = offsets[event.key];
+    if (!offset) {
+      return;
+    }
+
+    event.preventDefault();
+    setPosition((current) => clampBotPosition({
+      x: current.x + offset[0],
+      y: current.y + offset[1],
+    }, preferences.size));
+  }
+
+  function handleContextMenu(event) {
+    event.preventDefault();
+    const menuWidth = settingsOpen ? 270 : 190;
+    const menuHeight = settingsOpen ? 250 : 104;
+    setContextMenu({
+      x: Math.max(8, Math.min(event.clientX, window.innerWidth - menuWidth - 8)),
+      y: Math.max(8, Math.min(event.clientY, window.innerHeight - menuHeight - 8)),
+    });
+    setSettingsOpen(false);
+  }
+
+  function updatePreference(name, value) {
+    onPreferencesChange((current) => ({ ...current, [name]: value }));
+  }
+
+  if (preferences.hidden) {
+    return (
+      <button
+        className="sna-bot-show-button"
+        type="button"
+        onClick={() => updatePreference("hidden", false)}
+        aria-label="Show assistant bot"
+        title="Show assistant bot"
+      >
+        <Eye size={18} />
+      </button>
+    );
+  }
+
+  return (
+    <div
+      className="sna-bot-companion"
+      style={{
+        left: `${position.x}px`,
+        top: `${position.y}px`,
+        "--sna-bot-color": preferences.color,
+        "--sna-bot-hue": getBotHueRotation(preferences.color),
+        "--sna-bot-size": preferences.size / 100,
+        width: `${(window.innerWidth <= 760 ? 58 : 88) * preferences.size / 100}px`,
+        height: `${(window.innerWidth <= 760 ? 80 : 120) * preferences.size / 100}px`,
+      }}
+    >
+      <BotAvatar
+        className="is-companion"
+        gesture={gesture || autoGesture}
+        mood={mood}
+        onClick={handleClick}
+        onKeyDown={handleKeyDown}
+        onPointerDown={handlePointerDown}
+        onPointerMove={handlePointerMove}
+        onPointerUp={handlePointerUp}
+        onPointerCancel={handlePointerUp}
+        onContextMenu={handleContextMenu}
+      />
+      <span className="sna-bot-caption">Click to chat · Drag to move</span>
+      {contextMenu ? (
+        <div
+          className={`sna-bot-context-menu${settingsOpen ? " is-settings-open" : ""}`}
+          ref={contextMenuRef}
+          style={{ left: `${contextMenu.x}px`, top: `${contextMenu.y}px` }}
+          role="dialog"
+          aria-label={settingsOpen ? "Assistant bot settings" : "Assistant bot options"}
+        >
+          {settingsOpen ? (
+            <>
+              <div className="sna-bot-menu-heading">
+                <button
+                  type="button"
+                  className="sna-bot-menu-back"
+                  onClick={() => setSettingsOpen(false)}
+                  aria-label="Back to bot options"
+                >
+                  <ChevronRight size={16} />
+                </button>
+                <strong>Bot settings</strong>
+                <button
+                  type="button"
+                  className="sna-bot-menu-close"
+                  onClick={() => setContextMenu(null)}
+                  aria-label="Close bot settings"
+                >
+                  <X size={15} />
+                </button>
+              </div>
+              <label className="sna-bot-color-control">
+                <span>Bot color</span>
+                <input
+                  type="color"
+                  value={preferences.color}
+                  onChange={(event) => updatePreference("color", event.target.value)}
+                />
+              </label>
+              <label className="sna-bot-size-control">
+                <span>Size <strong>{preferences.size}%</strong></span>
+                <input
+                  type="range"
+                  min="60"
+                  max="150"
+                  step="5"
+                  value={preferences.size}
+                  onChange={(event) => updatePreference("size", Number(event.target.value))}
+                />
+                <span className="sna-bot-size-hints"><small>Small</small><small>Large</small></span>
+              </label>
+            </>
+          ) : (
+            <>
+              <button
+                type="button"
+                className="sna-bot-menu-item"
+                onClick={() => {
+                  updatePreference("hidden", true);
+                  setContextMenu(null);
+                }}
+              >
+                <EyeOff size={17} />
+                <span>Hide bot</span>
+              </button>
+              <button
+                type="button"
+                className="sna-bot-menu-item"
+                onClick={() => {
+                  setSettingsOpen(true);
+                  setContextMenu((current) => current && ({
+                    x: Math.max(8, Math.min(current.x, window.innerWidth - 258)),
+                    y: Math.max(8, Math.min(current.y, window.innerHeight - 258)),
+                  }));
+                }}
+              >
+                <Settings size={17} />
+                <span>Settings</span>
+                <ChevronRight size={15} />
+              </button>
+            </>
+          )}
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
 export default function App() {
   const [activeTool, setActiveTool] = useState(() => {
     const hashId = getHashToolId();
     return getOpenableCategoryById(hashId) ? hashId : null;
   });
+  const [botMood, setBotMood] = useState("idle");
+  const [botGesture, setBotGesture] = useState("");
+  const [botPreferences, setBotPreferences] = useState(loadBotPreferences);
+  const botGestureTimeoutRef = useRef(null);
+
+  const triggerBotGesture = useCallback((gesture) => {
+    window.clearTimeout(botGestureTimeoutRef.current);
+    setBotGesture(gesture);
+    botGestureTimeoutRef.current = window.setTimeout(() => setBotGesture(""), 1200);
+  }, []);
+
+  const updateBotMood = useCallback((mood) => {
+    setBotMood(mood);
+  }, []);
+
+  useEffect(() => () => window.clearTimeout(botGestureTimeoutRef.current), []);
+
+  useEffect(() => {
+    window.localStorage.setItem(botPreferencesStorageKey, JSON.stringify(botPreferences));
+  }, [botPreferences]);
+
+  useEffect(() => {
+    if (activeTool !== "sna-gpt") {
+      setBotMood("idle");
+    }
+  }, [activeTool]);
 
   useEffect(() => {
     function handleHashChange() {
@@ -1039,11 +1435,29 @@ export default function App() {
     <div className={`app-shell tool-${activeTool || "home"}`}>
       <main className={`app-layout${activeTool ? ` is-tool-view is-${activeTool}-view` : ""}`}>
         {activeTool ? (
-          <ToolView activeId={activeTool} onBack={() => setActiveTool(null)} />
+          <ToolView
+            activeId={activeTool}
+            onBack={() => setActiveTool(null)}
+            onBotGesture={triggerBotGesture}
+            onBotMoodChange={updateBotMood}
+          />
         ) : (
           <Dashboard onOpen={setActiveTool} />
         )}
       </main>
+      <FloatingBot
+        gesture={botGesture}
+        mood={botMood}
+        onOpen={() => {
+          if (activeTool === "sna-gpt") {
+            triggerBotGesture("wave");
+          } else {
+            setActiveTool("sna-gpt");
+          }
+        }}
+        preferences={botPreferences}
+        onPreferencesChange={setBotPreferences}
+      />
     </div>
   );
 }

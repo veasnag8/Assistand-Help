@@ -2856,6 +2856,591 @@ button.khmer-calendar-cell:hover {
   border-radius: inherit;
 }
 
+.sna-bot-avatar {
+  position: relative;
+  isolation: isolate;
+  flex: 0 0 auto;
+  overflow: visible;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  filter: drop-shadow(0 3px 1px rgba(25, 34, 79, 0.18));
+  padding: 0;
+  cursor: pointer;
+  image-rendering: pixelated;
+  touch-action: none;
+  user-select: none;
+  transition: transform 180ms ease;
+}
+
+.sna-bot-avatar:hover {
+  transform: translateY(-3px);
+}
+
+.sna-bot-avatar:focus-visible,
+.sna-bot-actions button:focus-visible,
+.sna-voice-button:focus-visible,
+.sna-message-actions button:focus-visible {
+  outline: 3px solid rgba(14, 165, 233, 0.55);
+  outline-offset: 2px;
+}
+
+.sna-bot-avatar.is-companion {
+  width: 100%;
+  height: 100%;
+  background: none;
+  filter: none;
+}
+
+.sna-bot-art {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  object-position: center;
+  user-select: none;
+  filter: hue-rotate(var(--sna-bot-hue, 0deg));
+}
+
+.sna-bot-avatar.is-companion.is-idle .sna-bot-art {
+  animation: sna-bot-float 2.2s ease-in-out infinite;
+}
+
+.sna-bot-avatar.is-companion.is-thinking .sna-bot-art {
+  animation: sna-bot-think 700ms steps(2, end) infinite alternate;
+}
+
+.sna-bot-avatar.is-companion.is-speaking .sna-bot-art {
+  animation: sna-bot-talk 180ms steps(2, end) infinite alternate;
+}
+
+.sna-bot-avatar.is-companion.is-wave .sna-bot-art {
+  animation: sna-bot-wave 260ms steps(2, end) 4 alternate;
+}
+
+.sna-bot-avatar.is-companion.is-celebrate .sna-bot-art,
+.sna-bot-avatar.is-companion.is-dance .sna-bot-art {
+  animation: sna-bot-dance 300ms steps(2, end) 4 alternate;
+}
+
+.sna-bot-avatar.is-companion.is-react .sna-bot-art {
+  animation: sna-bot-react 500ms steps(2, end) 1;
+}
+
+.sna-bot-avatar.is-companion.is-error .sna-bot-art {
+  animation: sna-bot-error 180ms steps(2, end) 5;
+}
+
+.sna-bot-expression,
+.sna-bot-label {
+  display: none;
+}
+
+.sna-bot-avatar.is-idle .sna-bot-expression.is-neutral,
+.sna-bot-avatar.is-idle .sna-bot-label.is-neutral,
+.sna-bot-avatar.is-hello .sna-bot-expression.is-hello,
+.sna-bot-avatar.is-hello .sna-bot-label.is-hello,
+.sna-bot-avatar.is-wave .sna-bot-expression.is-hello,
+.sna-bot-avatar.is-wave .sna-bot-label.is-hello,
+.sna-bot-avatar.is-surprised .sna-bot-expression.is-surprised,
+.sna-bot-avatar.is-surprised .sna-bot-label.is-surprised,
+.sna-bot-avatar.is-react .sna-bot-expression.is-surprised,
+.sna-bot-avatar.is-react .sna-bot-label.is-surprised,
+.sna-bot-avatar.is-thinking .sna-bot-expression.is-thinking,
+.sna-bot-avatar.is-thinking .sna-bot-label.is-thinking,
+.sna-bot-avatar.is-listening .sna-bot-expression.is-thinking,
+.sna-bot-avatar.is-listening .sna-bot-label.is-thinking,
+.sna-bot-avatar.is-sad .sna-bot-expression.is-sad,
+.sna-bot-avatar.is-sad .sna-bot-label.is-sad,
+.sna-bot-avatar.is-success .sna-bot-expression.is-success,
+.sna-bot-avatar.is-success .sna-bot-label.is-success,
+.sna-bot-avatar.is-celebrate .sna-bot-expression.is-success,
+.sna-bot-avatar.is-celebrate .sna-bot-label.is-success,
+.sna-bot-avatar.is-dance .sna-bot-expression.is-success,
+.sna-bot-avatar.is-dance .sna-bot-label.is-success,
+.sna-bot-avatar.is-error .sna-bot-expression.is-error,
+.sna-bot-avatar.is-error .sna-bot-label.is-error {
+  display: inline;
+}
+
+.sna-bot-avatar.is-hello .sna-bot-expression.is-neutral,
+.sna-bot-avatar.is-hello .sna-bot-label.is-neutral,
+.sna-bot-avatar.is-wave .sna-bot-expression.is-neutral,
+.sna-bot-avatar.is-wave .sna-bot-label.is-neutral,
+.sna-bot-avatar.is-surprised .sna-bot-expression.is-neutral,
+.sna-bot-avatar.is-surprised .sna-bot-label.is-neutral,
+.sna-bot-avatar.is-react .sna-bot-expression.is-neutral,
+.sna-bot-avatar.is-react .sna-bot-label.is-neutral,
+.sna-bot-avatar.is-thinking .sna-bot-expression.is-neutral,
+.sna-bot-avatar.is-thinking .sna-bot-label.is-neutral,
+.sna-bot-avatar.is-listening .sna-bot-expression.is-neutral,
+.sna-bot-avatar.is-listening .sna-bot-label.is-neutral,
+.sna-bot-avatar.is-sad .sna-bot-expression.is-neutral,
+.sna-bot-avatar.is-sad .sna-bot-label.is-neutral,
+.sna-bot-avatar.is-success .sna-bot-expression.is-neutral,
+.sna-bot-avatar.is-success .sna-bot-label.is-neutral,
+.sna-bot-avatar.is-celebrate .sna-bot-expression.is-neutral,
+.sna-bot-avatar.is-celebrate .sna-bot-label.is-neutral,
+.sna-bot-avatar.is-dance .sna-bot-expression.is-neutral,
+.sna-bot-avatar.is-dance .sna-bot-label.is-neutral,
+.sna-bot-avatar.is-error .sna-bot-expression.is-neutral,
+.sna-bot-avatar.is-error .sna-bot-label.is-neutral {
+  display: none;
+}
+
+.sna-bot-face {
+  fill: #62efff;
+}
+
+.sna-bot-face-fill {
+  fill: #62efff;
+}
+
+.sna-bot-label text {
+  fill: #62efff;
+  font-family: "Manrope", "Segoe UI", sans-serif;
+  font-size: 5.2px;
+  font-weight: 900;
+  text-anchor: middle;
+}
+
+.sna-bot-label.is-success text {
+  font-size: 4.1px;
+}
+
+.sna-bot-label.is-error text {
+  fill: #ff777f;
+  font-size: 4.8px;
+}
+
+.sna-bot-outline {
+  stroke: #162956;
+  stroke-linejoin: round;
+  stroke-width: 1.5;
+}
+
+.sna-bot-head-light,
+.sna-bot-body {
+  stroke: rgba(224, 240, 255, 0.7);
+  stroke-linejoin: round;
+  stroke-width: 0.8;
+}
+
+.sna-bot-glint,
+.sna-bot-body-glint {
+  fill: rgba(235, 248, 255, 0.78);
+}
+
+.sna-bot-screen {
+  stroke: #9ac8ef;
+  stroke-linejoin: round;
+  stroke-width: 1;
+}
+
+.sna-bot-chest {
+  stroke: #172958;
+  stroke-width: 1;
+}
+
+.sna-bot-shadow {
+  fill: rgba(15, 23, 42, 0.38);
+}
+
+.sna-bot-outline {
+  fill: #24449d;
+}
+
+.sna-bot-head-light,
+.sna-bot-body,
+.sna-bot-leg,
+.sna-bot-antenna {
+  fill: var(--sna-bot-color, #5685f5);
+}
+
+.sna-bot-screen {
+  fill: #111a4e;
+}
+
+.sna-bot-face {
+  fill: #62efff;
+}
+
+.sna-bot-ear-piece {
+  fill: var(--sna-bot-color, #5685f5);
+  opacity: 0.8;
+}
+
+.sna-bot-antenna-light {
+  fill: #6cf4ff;
+}
+
+.sna-bot-neck {
+  fill: #263f9a;
+}
+
+.sna-bot-body {
+  fill: var(--sna-bot-color, #5685f5);
+}
+
+.sna-bot-chest {
+  fill: #182b76;
+}
+
+.sna-bot-chest-light {
+  fill: #53f2ff;
+}
+
+.sna-bot-leg {
+  fill: var(--sna-bot-color, #5685f5);
+}
+
+.sna-bot-foot {
+  fill: #243f99;
+}
+
+.sna-bot-arm path {
+  fill: var(--sna-bot-color, #5685f5);
+  stroke: #24449d;
+  stroke-width: 2;
+}
+
+.sna-bot-arm-right {
+  transform-box: fill-box;
+  transform-origin: 50% 10%;
+}
+
+.sna-bot-avatar.is-companion .sna-bot-arm {
+  transform-box: fill-box;
+  transform-origin: 50% 10%;
+}
+
+.sna-bot-avatar.is-companion.is-idle .sna-bot-character {
+  animation: sna-bot-float 2.2s ease-in-out infinite;
+}
+
+.sna-bot-avatar.is-companion.is-thinking .sna-bot-head {
+  animation: sna-bot-think 700ms steps(2, end) infinite alternate;
+}
+
+.sna-bot-avatar.is-companion.is-speaking .sna-bot-face {
+  animation: sna-bot-talk 180ms steps(2, end) infinite alternate;
+}
+
+.sna-bot-avatar.is-companion.is-speaking .sna-bot-expression:not([style*="display: none"]) {
+  animation: sna-bot-talk 180ms steps(2, end) infinite alternate;
+}
+
+.sna-bot-avatar.is-companion.is-listening .sna-bot-antenna-light {
+  animation: sna-bot-listen 600ms steps(2, end) infinite alternate;
+}
+
+.sna-bot-avatar.is-companion.is-listening {
+  filter: drop-shadow(0 0 9px rgba(34, 211, 238, 0.42));
+}
+
+.sna-bot-avatar.is-companion.is-speaking {
+  filter: drop-shadow(0 0 8px rgba(59, 130, 246, 0.34));
+}
+
+.sna-bot-avatar.is-companion.is-wave .sna-bot-arm-right {
+  animation: sna-bot-wave 260ms steps(2, end) 4 alternate;
+}
+
+.sna-bot-avatar.is-companion.is-celebrate .sna-bot-arm {
+  animation: sna-bot-cheer 420ms steps(2, end) 2 alternate;
+}
+
+.sna-bot-avatar.is-companion.is-dance .sna-bot-character {
+  animation: sna-bot-dance 300ms steps(2, end) 4 alternate;
+}
+
+.sna-bot-avatar.is-companion.is-react .sna-bot-character {
+  animation: sna-bot-react 500ms steps(2, end) 1;
+}
+
+.sna-bot-avatar.is-companion.is-hello .sna-bot-arm-right,
+.sna-bot-avatar.is-companion.is-wave .sna-bot-arm-right {
+  transform: rotate(-48deg);
+}
+
+.sna-bot-avatar.is-companion.is-thinking .sna-bot-arm-left {
+  transform: rotate(28deg);
+}
+
+.sna-bot-avatar.is-companion.is-sad .sna-bot-arm {
+  transform: rotate(10deg);
+}
+
+.sna-bot-avatar.is-companion.is-success .sna-bot-arm,
+.sna-bot-avatar.is-companion.is-celebrate .sna-bot-arm {
+  transform: rotate(-52deg);
+}
+
+.sna-bot-avatar.is-companion.is-error .sna-bot-character {
+  animation: sna-bot-error 180ms steps(2, end) 5;
+}
+
+.sna-bot-companion {
+  position: fixed;
+  z-index: 1100;
+  display: grid;
+  justify-items: center;
+  gap: 2px;
+  pointer-events: none;
+  touch-action: none;
+}
+
+.sna-bot-companion::before {
+  position: absolute;
+  inset: 12px -10px 12px;
+  z-index: -1;
+  border-radius: 50%;
+  background: radial-gradient(ellipse, rgba(96, 165, 250, 0.18), rgba(103, 232, 249, 0.07) 48%, transparent 72%);
+  background: radial-gradient(
+    ellipse,
+    color-mix(in srgb, var(--sna-bot-color, #5685f5) 18%, transparent),
+    color-mix(in srgb, var(--sna-bot-color, #5685f5) 7%, transparent) 48%,
+    transparent 72%
+  );
+  content: "";
+  pointer-events: none;
+  animation: sna-bot-aura 3.2s ease-in-out infinite;
+}
+
+.sna-bot-companion .sna-bot-avatar {
+  pointer-events: auto;
+  cursor: grab;
+}
+
+.sna-bot-companion .sna-bot-avatar:active {
+  cursor: grabbing;
+}
+
+.sna-bot-context-menu {
+  position: fixed;
+  z-index: 1110;
+  width: 190px;
+  display: grid;
+  gap: 4px;
+  border: 1px solid rgba(37, 67, 133, 0.14);
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.98);
+  box-shadow: 0 16px 42px rgba(20, 35, 75, 0.2);
+  color: #172554;
+  padding: 6px;
+  pointer-events: auto;
+  animation: sna-bot-menu-in 140ms ease-out;
+}
+
+.sna-bot-context-menu.is-settings-open {
+  width: 250px;
+  gap: 12px;
+  padding: 12px;
+}
+
+.sna-bot-menu-item {
+  min-height: 38px;
+  display: grid;
+  grid-template-columns: 20px 1fr 16px;
+  align-items: center;
+  gap: 8px;
+  border: 0;
+  border-radius: 9px;
+  background: transparent;
+  color: inherit;
+  padding: 0 9px;
+  text-align: left;
+  font-size: 0.8rem;
+  font-weight: 750;
+}
+
+.sna-bot-menu-item:hover {
+  background: #eff6ff;
+  color: #1d4ed8;
+}
+
+.sna-bot-menu-heading {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: #172554;
+  font-size: 0.84rem;
+}
+
+.sna-bot-menu-heading strong {
+  flex: 1;
+}
+
+.sna-bot-menu-back,
+.sna-bot-menu-close {
+  width: 28px;
+  height: 28px;
+  display: inline-grid;
+  place-items: center;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: #52617d;
+  padding: 0;
+}
+
+.sna-bot-menu-back svg {
+  transform: rotate(180deg);
+}
+
+.sna-bot-menu-back:hover,
+.sna-bot-menu-close:hover {
+  background: #eff6ff;
+  color: #1d4ed8;
+}
+
+.sna-bot-color-control,
+.sna-bot-size-control {
+  display: grid;
+  gap: 8px;
+  color: #334155;
+  font-size: 0.76rem;
+  font-weight: 750;
+}
+
+.sna-bot-color-control {
+  grid-template-columns: 1fr 42px;
+  align-items: center;
+}
+
+.sna-bot-color-control input {
+  width: 42px;
+  height: 30px;
+  border: 1px solid rgba(37, 67, 133, 0.18);
+  border-radius: 8px;
+  background: #fff;
+  padding: 3px;
+}
+
+.sna-bot-size-control > span:first-child,
+.sna-bot-size-hints {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.sna-bot-size-control strong {
+  color: #1d4ed8;
+  font-variant-numeric: tabular-nums;
+}
+
+.sna-bot-size-control input {
+  width: 100%;
+  accent-color: #2563eb;
+}
+
+.sna-bot-size-hints small {
+  color: #73809a;
+  font-size: 0.66rem;
+  font-weight: 650;
+}
+
+.sna-bot-show-button {
+  position: fixed;
+  right: 18px;
+  bottom: 18px;
+  z-index: 1100;
+  width: 42px;
+  height: 42px;
+  display: inline-grid;
+  place-items: center;
+  border: 1px solid rgba(37, 67, 133, 0.16);
+  border-radius: 50%;
+  background: #fff;
+  color: #1d4ed8;
+  box-shadow: 0 8px 24px rgba(20, 35, 75, 0.18);
+}
+
+.sna-bot-show-button:hover {
+  background: #eff6ff;
+  transform: translateY(-2px);
+}
+
+.sna-bot-caption {
+  position: absolute;
+  bottom: -13px;
+  left: 50%;
+  border: 1px solid rgba(55, 105, 219, 0.12);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.94);
+  color: #24449d;
+  font-size: 0.62rem;
+  font-weight: 850;
+  padding: 4px 8px;
+  white-space: nowrap;
+  visibility: hidden;
+  opacity: 0;
+  transform: translate(-50%, 3px);
+  transition: opacity 160ms ease, transform 160ms ease, visibility 160ms ease;
+}
+
+.sna-bot-companion:hover .sna-bot-caption,
+.sna-bot-companion:focus-within .sna-bot-caption,
+.sna-bot-avatar.is-thinking + .sna-bot-caption,
+.sna-bot-avatar.is-speaking + .sna-bot-caption,
+.sna-bot-avatar.is-listening + .sna-bot-caption {
+  visibility: visible;
+  opacity: 1;
+  transform: translate(-50%, 0);
+}
+
+.sna-gpt-tool.is-dark-mode .sna-bot-caption {
+  border-color: rgba(148, 163, 184, 0.2);
+  background: rgba(30, 41, 59, 0.92);
+  color: #bfdbfe;
+}
+
+@keyframes sna-bot-float {
+  50% { transform: translateY(-5px); }
+}
+
+@keyframes sna-bot-wave {
+  to { transform: rotate(-48deg) translateY(-2px); }
+}
+
+@keyframes sna-bot-cheer {
+  to { transform: rotate(50deg) translateY(-3px); }
+}
+
+@keyframes sna-bot-dance {
+  to { transform: translateY(-4px) rotate(5deg); }
+}
+
+@keyframes sna-bot-react {
+  45% { transform: translateY(-4px); }
+}
+
+@keyframes sna-bot-think {
+  to { transform: translateY(-2px) rotate(2deg); }
+}
+
+@keyframes sna-bot-talk {
+  to { opacity: 0.55; }
+}
+
+@keyframes sna-bot-listen {
+  to { fill: #fff66b; }
+}
+
+@keyframes sna-bot-error {
+  25% { transform: translateX(-2px); }
+  75% { transform: translateX(2px); }
+}
+
+@keyframes sna-bot-aura {
+  50% { opacity: 0.62; transform: scale(1.05); }
+}
+
+@keyframes sna-bot-menu-in {
+  from { opacity: 0; transform: translateY(3px) scale(0.98); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
 .sna-brand-panel h1 {
   margin: 0;
   color: #070d49;
@@ -2951,6 +3536,31 @@ button.khmer-calendar-cell:hover {
   gap: 12px;
   border-bottom: 1px solid rgba(9, 16, 71, 0.08);
   padding: 8px 18px;
+}
+
+.sna-bot-actions {
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: 4px;
+}
+
+.sna-bot-actions button {
+  width: 32px;
+  height: 32px;
+  display: inline-grid;
+  place-items: center;
+  border: 1px solid rgba(9, 16, 71, 0.1);
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.88);
+  color: #194a5f;
+  padding: 0;
+  transition: background 160ms ease, transform 160ms ease;
+}
+
+.sna-bot-actions button:hover {
+  background: rgba(249, 115, 22, 0.1);
+  transform: translateY(-1px);
 }
 
 .sna-theme-toggle {
@@ -3144,7 +3754,7 @@ button.khmer-calendar-cell:hover {
   gap: 18px;
   overflow-x: hidden;
   overflow-y: auto;
-  padding: 20px 24px 82px;
+  padding: 20px 24px 82px 132px;
   scroll-behavior: smooth;
   scrollbar-gutter: stable;
 }
@@ -3156,6 +3766,10 @@ button.khmer-calendar-cell:hover {
   gap: 12px;
   align-items: start;
   margin: 0 auto;
+}
+
+.sna-message.is-assistant {
+  grid-template-columns: minmax(0, 1fr);
 }
 
 .sna-message.is-user {
@@ -3186,6 +3800,13 @@ button.khmer-calendar-cell:hover {
   box-shadow: 0 10px 18px rgba(39, 45, 88, 0.12);
 }
 
+.sna-message-avatar.sna-bot-avatar {
+  display: block;
+  background:
+    radial-gradient(circle at 50% 24%, rgba(255, 255, 255, 0.96), transparent 55%),
+    linear-gradient(145deg, #f8a04a, #16b8c5);
+}
+
 .sna-message-bubble {
   position: relative;
   width: fit-content;
@@ -3197,7 +3818,7 @@ button.khmer-calendar-cell:hover {
   background:
     linear-gradient(135deg, rgba(249, 115, 22, 0.07), rgba(255, 255, 255, 0.86)),
     #fff;
-  padding: 14px 46px 15px 16px;
+  padding: 14px 82px 15px 16px;
   box-shadow: 0 12px 24px rgba(39, 45, 88, 0.07);
 }
 
@@ -3338,8 +3959,13 @@ button.khmer-calendar-cell:hover {
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .sna-writing-cursor {
+  .sna-writing-cursor,
+  .sna-bot-avatar,
+  .sna-bot-avatar *,
+  .sna-bot-companion::before,
+  .sna-bot-actions button {
     animation: none;
+    transition: none;
   }
 }
 
@@ -3510,10 +4136,15 @@ button.khmer-calendar-cell:hover {
   color: #7ee787;
 }
 
-.sna-copy-button {
+.sna-message-actions {
   position: absolute;
   top: 11px;
   right: 11px;
+  display: inline-flex;
+  gap: 4px;
+}
+
+.sna-message-actions button {
   width: 30px;
   height: 30px;
   display: inline-grid;
@@ -3525,8 +4156,22 @@ button.khmer-calendar-cell:hover {
   padding: 0;
 }
 
-.sna-copy-button:hover {
+.sna-message-actions button:hover {
   color: var(--ink);
+}
+
+.sna-speak-button {
+  border: 1px solid rgba(9, 16, 71, 0.08);
+  border-radius: 9px;
+  background: rgba(255, 255, 255, 0.8);
+  color: var(--muted);
+}
+
+.sna-copy-button {
+  border: 1px solid rgba(9, 16, 71, 0.08);
+  border-radius: 9px;
+  background: rgba(255, 255, 255, 0.8);
+  color: var(--muted);
 }
 
 .sna-typing {
@@ -3619,7 +4264,7 @@ button.khmer-calendar-cell:hover {
 .sna-composer-row {
   min-width: 0;
   display: grid;
-  grid-template-columns: 34px minmax(0, 1fr) auto 34px;
+  grid-template-columns: 34px minmax(0, 1fr) 34px auto 34px;
   align-items: center;
   gap: 3px;
   border: 1px solid rgba(249, 115, 22, 0.34);
@@ -3728,6 +4373,34 @@ button.khmer-calendar-cell:hover {
   padding: 0;
 }
 
+.sna-voice-button {
+  width: 34px;
+  height: 34px;
+  display: inline-grid;
+  place-items: center;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  color: #e8eaed;
+  padding: 0;
+}
+
+.sna-voice-button:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.09);
+  color: #fff;
+}
+
+.sna-voice-button.is-listening {
+  background: rgba(239, 68, 68, 0.22);
+  color: #fca5a5;
+  animation: sna-pulse 950ms ease-in-out infinite;
+}
+
+.sna-voice-button:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
 .sna-send-button:hover:not(:disabled) {
   background: rgba(255, 255, 255, 0.09);
   color: #fff;
@@ -3794,7 +4467,9 @@ button.khmer-calendar-cell:hover {
 .sna-gpt-tool.is-dark-mode .sna-sidebar-toggle,
 .sna-gpt-tool.is-dark-mode .sna-chat-back,
 .sna-gpt-tool.is-dark-mode .sna-theme-toggle,
+.sna-gpt-tool.is-dark-mode .sna-bot-actions button,
 .sna-gpt-tool.is-dark-mode .sna-copy-button,
+.sna-gpt-tool.is-dark-mode .sna-speak-button,
 .sna-gpt-tool.is-dark-mode .sna-attach-button {
   border-color: rgba(148, 163, 184, 0.18);
   background: rgba(30, 41, 59, 0.86);
@@ -3805,7 +4480,9 @@ button.khmer-calendar-cell:hover {
 .sna-gpt-tool.is-dark-mode .sna-sidebar-toggle:hover,
 .sna-gpt-tool.is-dark-mode .sna-chat-back:hover,
 .sna-gpt-tool.is-dark-mode .sna-theme-toggle:hover,
+.sna-gpt-tool.is-dark-mode .sna-bot-actions button:hover,
 .sna-gpt-tool.is-dark-mode .sna-copy-button:hover,
+.sna-gpt-tool.is-dark-mode .sna-speak-button:hover,
 .sna-gpt-tool.is-dark-mode .sna-attach-button:hover {
   border-color: rgba(249, 115, 22, 0.32);
   background: rgba(249, 115, 22, 0.16);
@@ -5319,12 +5996,13 @@ button.khmer-calendar-cell:hover {
   }
 
   .sna-composer-row {
-    grid-template-columns: 32px minmax(0, 1fr) auto 32px;
+    grid-template-columns: 32px minmax(0, 1fr) 32px auto 32px;
     padding: 4px;
   }
 
   .sna-attach-button,
-  .sna-send-button {
+  .sna-send-button,
+  .sna-voice-button {
     width: 32px;
     height: 32px;
   }
@@ -5340,12 +6018,39 @@ button.khmer-calendar-cell:hover {
   }
 
   .sna-message-list {
-    padding: 12px 10px 82px;
+    padding: 12px 10px 82px 82px;
   }
 
   .sna-message,
   .sna-message.is-user {
     grid-template-columns: 32px minmax(0, 1fr);
+  }
+
+  .sna-message.is-assistant {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .sna-bot-companion {
+    z-index: 1100;
+  }
+
+  .sna-bot-avatar.is-companion {
+    width: 100%;
+    height: 100%;
+  }
+
+  .sna-bot-context-menu.is-settings-open {
+    width: min(250px, calc(100vw - 16px));
+  }
+
+  .sna-bot-show-button {
+    right: 12px;
+    bottom: 12px;
+  }
+
+  .sna-bot-caption {
+    font-size: 0.56rem;
+    padding: 3px 6px;
   }
 
   .sna-message.is-user .sna-message-avatar {

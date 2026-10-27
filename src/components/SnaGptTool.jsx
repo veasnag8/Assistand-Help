@@ -9,15 +9,21 @@ import {
   Copy,
   FileSpreadsheet,
   FileText,
+  Hand,
   Image as ImageIcon,
+  Mic,
+  Music2,
   Moon,
   Paperclip,
+  PartyPopper,
   RefreshCw,
   Send,
   Gauge,
   Sun,
   Trash2,
   UserRound,
+  Volume2,
+  VolumeX,
   X,
 } from "lucide-react";
 import { readFileAsDataUrl } from "../lib/file-utils";
@@ -25,8 +31,22 @@ import {
   formatFileSize,
   getClipboardImageFile,
 } from "../lib/ocr-utils";
+import botHello from "../image/bot-hello.png";
+import botSurprised from "../image/bot-surprised.png";
+import botThinking from "../image/bot-thinking.png";
+import botSad from "../image/bot-sad.png";
+import botSuccess from "../image/bot-success.png";
+import botError from "../image/bot-error.png";
 import snaGptLogo from "../image/sna-gpt.png";
 
+const botReactionImages = {
+  hello: botHello,
+  surprised: botSurprised,
+  thinking: botThinking,
+  sad: botSad,
+  success: botSuccess,
+  error: botError,
+};
 const snaGptEndpointPath = "/.netlify/functions/sna-gpt";
 const chatStorageKey = "sna-gpt-chat-v1";
 const sidebarStorageKey = "sna-gpt-sidebar-collapsed-v2";
@@ -1089,7 +1109,15 @@ function AnimatedMessageContent({ animate, content, messageId, onCopy, onDone, o
   );
 }
 
-function ChatMessage({ animate, message, onCopy, onDone, onStep }) {
+function ChatMessage({
+  animate,
+  message,
+  onCopy,
+  onDone,
+  onSpeak,
+  onStep,
+  speaking,
+}) {
   const isUser = message.role === "user";
   const attachments = message.attachments || [];
   const displayMessage = isUser
@@ -1101,13 +1129,11 @@ function ChatMessage({ animate, message, onCopy, onDone, onStep }) {
 
   return (
     <article className={`sna-message ${isUser ? "is-user" : "is-assistant"}`}>
-      <span className="sna-message-avatar" aria-hidden="true">
-        {isUser ? (
+      {isUser ? (
+        <span className="sna-message-avatar" aria-hidden="true">
           <UserRound size={20} strokeWidth={2.1} />
-        ) : (
-          <img src={snaGptLogo} alt="" />
-        )}
-      </span>
+        </span>
+      ) : null}
       <div className="sna-message-bubble">
         <div className="sna-message-top">
           <strong>{isUser ? "You" : "SNA GPT"}</strong>
@@ -1130,15 +1156,26 @@ function ChatMessage({ animate, message, onCopy, onDone, onStep }) {
           onStep={onStep}
         />
         {!isUser ? (
-          <button
-            className="sna-copy-button"
-            type="button"
-            onClick={() => onCopy(displayMessage.content)}
-            aria-label="Copy SNA GPT message"
-            title="Copy"
-          >
-            <Copy size={15} strokeWidth={2.2} />
-          </button>
+          <div className="sna-message-actions">
+            <button
+              className="sna-speak-button"
+              type="button"
+              onClick={() => onSpeak(message)}
+              aria-label={speaking ? "Stop voice playback" : "Read reply aloud"}
+              title={speaking ? "Stop voice playback" : "Read reply aloud"}
+            >
+              {speaking ? <VolumeX size={15} strokeWidth={2.2} /> : <Volume2 size={15} strokeWidth={2.2} />}
+            </button>
+            <button
+              className="sna-copy-button"
+              type="button"
+              onClick={() => onCopy(displayMessage.content)}
+              aria-label="Copy SNA GPT message"
+              title="Copy"
+            >
+              <Copy size={15} strokeWidth={2.2} />
+            </button>
+          </div>
         ) : null}
       </div>
     </article>
@@ -1173,7 +1210,56 @@ function AttachmentList({ attachments, onRemove }) {
   );
 }
 
-export default function SnaGptTool({ onBack }) {
+export function BotAvatar({
+  className = "",
+  mood = "idle",
+  gesture = "",
+  onClick,
+  onKeyDown,
+  onPointerDown,
+  onPointerMove,
+  onPointerUp,
+  onPointerCancel,
+  onContextMenu,
+}) {
+  const reaction = {
+    wave: "hello",
+    celebrate: "success",
+    dance: "success",
+    react: "surprised",
+  }[gesture] || gesture;
+  const pose = botReactionImages[reaction]
+    ? reaction
+    : mood === "thinking" || mood === "listening"
+      ? "thinking"
+      : "hello";
+
+  return (
+    <button
+      className={`sna-bot-avatar ${className} is-${mood} is-${pose}${gesture ? ` is-${gesture}` : ""}`}
+      type="button"
+      onClick={onClick}
+      onKeyDown={onKeyDown}
+      onPointerDown={onPointerDown}
+      onPointerMove={onPointerMove}
+      onPointerUp={onPointerUp}
+      onPointerCancel={onPointerCancel}
+      onContextMenu={onContextMenu}
+      aria-label="SNA GPT assistant. Drag to move or click to open chat."
+      title="Drag to move · Click to open SNA GPT"
+    >
+      <img
+        className="sna-bot-art"
+        src={botReactionImages[pose]}
+        alt=""
+        aria-hidden="true"
+        draggable="false"
+      />
+    </button>
+  );
+}
+
+export default function SnaGptTool({ onBack, onBotGesture, onBotMoodChange }) {
   const [messages, setMessages] = useState(loadStoredMessages);
   const [animatedMessageId, setAnimatedMessageId] = useState("");
   const [sidebarCollapsed, setSidebarCollapsed] = useState(loadSidebarCollapsed);
@@ -1189,18 +1275,32 @@ export default function SnaGptTool({ onBack }) {
   const [freeMode, setFreeMode] = useState(false);
   const [hideFreeModeNote, setHideFreeModeNote] = useState(false);
   const [usage, setUsage] = useState(loadStoredUsage);
+  const [voiceListening, setVoiceListening] = useState(false);
+  const [speakingMessageId, setSpeakingMessageId] = useState("");
   const fileInputRef = useRef(null);
   const responseModeRef = useRef(null);
   const scrollRef = useRef(null);
   const textareaRef = useRef(null);
   const requestRef = useRef(null);
+  const recognitionRef = useRef(null);
 
   const canSend = (draft.trim().length > 0 || attachments.length > 0) && !busy;
+  const botMood = voiceListening
+    ? "listening"
+    : busy
+      ? "thinking"
+      : speakingMessageId || animatedMessageId
+        ? "speaking"
+        : "idle";
   const latestAssistantMessage = useMemo(
     () => [...messages].reverse().find((message) => message.role === "assistant"),
     [messages],
   );
   const activeResponseMode = responseModes.find((mode) => mode.id === responseMode) || responseModes[1];
+
+  useEffect(() => {
+    onBotMoodChange?.(botMood);
+  }, [botMood, onBotMoodChange]);
 
   useEffect(() => {
     window.localStorage.setItem(
@@ -1276,7 +1376,102 @@ export default function SnaGptTool({ onBack }) {
     setAnimatedMessageId((current) => (current === messageId ? "" : current));
   }, []);
 
-  useEffect(() => () => requestRef.current?.abort(), []);
+  useEffect(() => () => {
+    requestRef.current?.abort();
+    recognitionRef.current?.stop();
+    window.speechSynthesis?.cancel();
+  }, []);
+
+  function triggerBotGesture(gesture) {
+    onBotGesture?.(gesture);
+  }
+
+  function startVoiceInput() {
+    if (voiceListening) {
+      recognitionRef.current?.stop();
+      return;
+    }
+
+    const SpeechRecognition =
+      window.SpeechRecognition || window.webkitSpeechRecognition;
+
+    if (!SpeechRecognition) {
+      setStatus("Voice input is not supported in this browser.");
+      return;
+    }
+
+    window.speechSynthesis?.cancel();
+    setSpeakingMessageId("");
+    const recognition = new SpeechRecognition();
+    recognition.lang = navigator.language || "en-US";
+    recognition.interimResults = false;
+    recognition.maxAlternatives = 1;
+    recognition.onresult = (event) => {
+      const transcript = Array.from(event.results)
+        .map((result) => result[0]?.transcript || "")
+        .join(" ")
+        .trim();
+
+      if (transcript) {
+        setDraft((current) => [current.trim(), transcript].filter(Boolean).join(" "));
+        setStatus("Voice input captured.");
+        textareaRef.current?.focus();
+      }
+    };
+    recognition.onerror = (event) => {
+      setVoiceListening(false);
+      setStatus(event.error === "not-allowed"
+        ? "Microphone permission denied."
+        : `Voice input failed: ${event.error}.`);
+    };
+    recognition.onend = () => {
+      setVoiceListening(false);
+      recognitionRef.current = null;
+    };
+
+    recognitionRef.current = recognition;
+
+    try {
+      recognition.start();
+      setVoiceListening(true);
+      setStatus("Listening...");
+    } catch (error) {
+      recognitionRef.current = null;
+      setStatus(error?.message || "Could not start voice input.");
+    }
+  }
+
+  function speakMessage(message) {
+    if (speakingMessageId === message.id) {
+      window.speechSynthesis?.cancel();
+      setSpeakingMessageId("");
+      setStatus("Voice playback stopped.");
+      return;
+    }
+
+    if (!window.speechSynthesis || !window.SpeechSynthesisUtterance) {
+      setStatus("Voice playback is not supported in this browser.");
+      return;
+    }
+
+    recognitionRef.current?.stop();
+    setVoiceListening(false);
+    window.speechSynthesis.cancel();
+    const utterance = new window.SpeechSynthesisUtterance(
+      normalizeMessageContent(message),
+    );
+    utterance.onend = () => {
+      setSpeakingMessageId("");
+      setStatus("Ready.");
+    };
+    utterance.onerror = (event) => {
+      setSpeakingMessageId("");
+      setStatus(event.error === "canceled" ? "Ready." : "Voice playback failed.");
+    };
+    setSpeakingMessageId(message.id);
+    setStatus("Speaking reply...");
+    window.speechSynthesis.speak(utterance);
+  }
 
   useEffect(() => {
     function handlePaste(event) {
@@ -1300,6 +1495,10 @@ export default function SnaGptTool({ onBack }) {
 
   function clearChat() {
     requestRef.current?.abort();
+    recognitionRef.current?.stop();
+    window.speechSynthesis?.cancel();
+    setVoiceListening(false);
+    setSpeakingMessageId("");
     setBusy(false);
     setAttachments([]);
     setFreeMode(false);
@@ -1367,6 +1566,10 @@ export default function SnaGptTool({ onBack }) {
       return;
     }
 
+    recognitionRef.current?.stop();
+    setVoiceListening(false);
+    window.speechSynthesis?.cancel();
+    setSpeakingMessageId("");
     const content = rawContent || "Analyze the attached file(s).";
     const messageAttachments = attachments;
     const userMessage = createMessage("user", content, messageAttachments);
@@ -1401,6 +1604,7 @@ export default function SnaGptTool({ onBack }) {
 
       setMessages([...nextMessages, assistantMessage]);
       setAnimatedMessageId(assistantMessage.id);
+      triggerBotGesture("success");
       setModel(result.model || publicModelName);
       setFreeMode(!uploadSupported);
       setHideFreeModeNote(false);
@@ -1439,10 +1643,13 @@ export default function SnaGptTool({ onBack }) {
         : rawMessage;
       const shouldUseFreeTextMode = /SNA Version 26\.5 Free|file upload is not supported/i.test(message);
 
+      const errorMessage = createMessage("assistant", message);
       setMessages([
         ...nextMessages,
-        createMessage("assistant", message),
+        errorMessage,
       ]);
+      setAnimatedMessageId(errorMessage.id);
+      triggerBotGesture("error");
       if (shouldUseFreeTextMode) {
         setFreeMode(true);
         setHideFreeModeNote(false);
@@ -1614,6 +1821,17 @@ export default function SnaGptTool({ onBack }) {
             {busy ? <RefreshCw size={15} strokeWidth={2.2} /> : null}
             <span>{status}</span>
           </div>
+          <div className="sna-bot-actions" aria-label="Bot gestures">
+            <button type="button" onClick={() => triggerBotGesture("wave")} aria-label="Make the bot wave" title="Wave">
+              <Hand size={17} />
+            </button>
+            <button type="button" onClick={() => triggerBotGesture("celebrate")} aria-label="Make the bot celebrate" title="Celebrate">
+              <PartyPopper size={17} />
+            </button>
+            <button type="button" onClick={() => triggerBotGesture("dance")} aria-label="Make the bot dance" title="Dance">
+              <Music2 size={17} />
+            </button>
+          </div>
           <button
             className="sna-theme-toggle"
             type="button"
@@ -1638,13 +1856,12 @@ export default function SnaGptTool({ onBack }) {
               onCopy={copyText}
               onDone={clearAnimatedMessage}
               onStep={scrollMessagesToBottom}
+              onSpeak={speakMessage}
+              speaking={speakingMessageId === message.id}
             />
           ))}
           {busy ? (
             <article className="sna-message is-assistant">
-              <span className="sna-message-avatar" aria-hidden="true">
-                <img src={snaGptLogo} alt="" />
-              </span>
               <div className="sna-message-bubble sna-typing">
                 <span />
                 <span />
@@ -1693,6 +1910,16 @@ export default function SnaGptTool({ onBack }) {
                 rows={1}
                 value={draft}
               />
+              <button
+                className={`sna-voice-button${voiceListening ? " is-listening" : ""}`}
+                type="button"
+                onClick={startVoiceInput}
+                disabled={busy}
+                aria-label={voiceListening ? "Stop voice input" : "Start voice input"}
+                title={voiceListening ? "Stop voice input" : "Speak to SNA GPT"}
+              >
+                <Mic size={19} strokeWidth={2.3} />
+              </button>
               <div className="sna-response-mode" ref={responseModeRef}>
                 <button
                   aria-expanded={responseMenuOpen}
