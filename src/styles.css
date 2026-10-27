@@ -1045,6 +1045,18 @@ img {
   color: #334155;
 }
 
+.acumatica-reason-code-groups {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 360px), 1fr));
+  gap: 16px;
+}
+
+.acumatica-reason-code-section h2 {
+  margin: 0 0 8px;
+  color: #091047;
+  font-size: 1rem;
+}
+
 .acumatica-reason-code-wrap {
   width: min(100%, 720px);
   overflow-x: auto;

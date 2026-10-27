@@ -143,6 +143,10 @@ const adjustmentReasonCodes = [
   { variance: "Sale", reasonCode: "SALE" },
 ];
 
+const normalReasonCodes = [
+  { variance: "Receipt to AP", reasonCode: "DRECEIPT" },
+];
+
 function parseAccessRightText(text) {
   const sections = [];
   let currentSection = null;
@@ -319,14 +323,14 @@ function getProcessStage(sectionTitle, processNo) {
 export default function AcumaticaFlowTool() {
   const sections = useMemo(() => [
     ...parseAccessRightText(accessRightText),
-    { id: "adjus-reason-code", title: "Adjus reason code", processes: [] },
+    { id: "use-reason-code", title: "Use Reason Code", processes: [] },
   ], []);
   const [activeSectionId, setActiveSectionId] = useState(sections[0]?.id || "");
   const activeSection = sections.find((section) => section.id === activeSectionId) || sections[0];
   const filteredProcesses = activeSection.processes;
   const isPettyCash = activeSection.title.includes("Petty Cash");
   const isWrongEntry = isWrongEntrySection(activeSection.title);
-  const isReasonCodeSection = activeSection.id === "adjus-reason-code";
+  const isReasonCodeSection = activeSection.id === "use-reason-code";
 
   return (
     <section className="acumatica-flow-tool" aria-labelledby="acumatica-flow-title">
@@ -358,23 +362,33 @@ export default function AcumaticaFlowTool() {
       </div>
 
       {isReasonCodeSection ? (
-        <div className="acumatica-reason-code-wrap">
-          <table className="acumatica-reason-code-table">
-            <thead>
-              <tr>
-                <th scope="col">Transaction</th>
-                <th scope="col">Reason Code</th>
-              </tr>
-            </thead>
-            <tbody>
-              {adjustmentReasonCodes.map(({ variance, reasonCode }) => (
-                <tr key={variance}>
-                  <td>{variance}</td>
-                  <td>{reasonCode}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+        <div className="acumatica-reason-code-groups">
+          {[
+            { title: "Adjustment", reasonCodes: adjustmentReasonCodes },
+            { title: "Normal", reasonCodes: normalReasonCodes },
+          ].map(({ title, reasonCodes }) => (
+            <section className="acumatica-reason-code-section" key={title}>
+              <h2>{title}</h2>
+              <div className="acumatica-reason-code-wrap">
+                <table className="acumatica-reason-code-table">
+                  <thead>
+                    <tr>
+                      <th scope="col">Transaction</th>
+                      <th scope="col">Reason Code</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {reasonCodes.map(({ variance, reasonCode }) => (
+                      <tr key={variance}>
+                        <td>{variance}</td>
+                        <td>{reasonCode}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </section>
+          ))}
         </div>
       ) : isWrongEntry ? (
         <div className="acumatica-flow-notes">
