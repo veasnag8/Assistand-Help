@@ -3655,6 +3655,7 @@ button.khmer-calendar-cell:hover {
 }
 
 .sna-bot-companion.is-greeting-visible .sna-bot-caption {
+  display: none !important;
   visibility: hidden;
   opacity: 0;
 }
@@ -4062,6 +4063,7 @@ button.khmer-calendar-cell:hover {
 }
 
 .sna-bot-caption {
+  display: none !important;
   position: absolute;
   bottom: -15px;
   left: 50%;

@@ -1310,29 +1310,6 @@ function FloatingBot({ mood, gesture, customMessage = "", onOpen, preferences, o
 
   const currentAction = gesture || autoGesture;
 
-  let captionText = "ចុចដើម្បីជជែក · អូសដើម្បីផ្លាស់ទី";
-  if (mood === "thinking") {
-    captionText = "ខ្ញុំកំពុងគិត...";
-  } else if (mood === "listening") {
-    captionText = "កំពុងស្ដាប់...";
-  } else if (mood === "speaking") {
-    captionText = "កំពុងឆ្លើយតប...";
-  } else if (gesture === "error") {
-    captionText = "មានបញ្ហា (Error)!";
-  } else if (gesture === "success" || gesture === "happy") {
-    captionText = "ជោគជ័យ!";
-  } else if (gesture === "hungry") {
-    captionText = "ឃ្លានបាយហើយ!";
-  } else if (gesture === "angry") {
-    captionText = "ខឹងហើយណា!";
-  } else if (gesture === "sleep") {
-    captionText = "ងងុយគេងណាស់...";
-  } else if (gesture === "tired") {
-    captionText = "ហត់នឿយណាស់...";
-  } else if (gesture === "working") {
-    captionText = "កំពុងធ្វើការ...";
-  }
-
   let currentGreeting = customMessage;
   if (!currentGreeting) {
     if (mood === "thinking") {
@@ -1377,7 +1354,6 @@ function FloatingBot({ mood, gesture, customMessage = "", onOpen, preferences, o
         onPointerCancel={handlePointerUp}
         onContextMenu={handleContextMenu}
       />
-      <span className="sna-bot-caption">{captionText}</span>
       <span className="sna-bot-greeting" role="status">
         {currentGreeting}
       </span>
