@@ -1,7 +1,7 @@
 import { defineConfig, loadEnv } from "vite";
 import react from "@vitejs/plugin-react";
 
-const localFunctionNames = new Set(["sna-gpt", "video-download"]);
+const localFunctionNames = new Set(["sna-gpt", "video-download", "khmer-tts"]);
 
 function readRequestBody(request) {
   return new Promise((resolve, reject) => {
@@ -19,6 +19,7 @@ async function runLocalFunction(functionName, request, response) {
     `./netlify/functions/${functionName}.js?dev=${Date.now()}`,
     import.meta.url,
   );
+  const requestUrl = new URL(request.url || "", "http://localhost");
   const { handler } = await import(functionUrl.href);
   const result = await handler({
     body,
@@ -26,6 +27,7 @@ async function runLocalFunction(functionName, request, response) {
     httpMethod: request.method,
     isBase64Encoded: false,
     path: `/.netlify/functions/${functionName}`,
+    queryStringParameters: Object.fromEntries(requestUrl.searchParams.entries()),
     rawUrl: request.url,
   });
 
@@ -35,7 +37,11 @@ async function runLocalFunction(functionName, request, response) {
     response.setHeader(key, value);
   });
 
-  response.end(result.body || "");
+  if (result.isBase64Encoded) {
+    response.end(Buffer.from(result.body || "", "base64"));
+  } else {
+    response.end(result.body || "");
+  }
 }
 
 function localNetlifyFunctions() {

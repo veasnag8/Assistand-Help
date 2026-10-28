@@ -119,12 +119,17 @@ export async function handler(event) {
     }
   }
 
-  // Strip markdown, code blocks, URLs, and excessive symbols
+  // Strip markdown, code blocks, URLs, and all emojis
   text = String(text || "")
     .replace(/```[\s\S]*?```/g, "")
     .replace(/`[^`]*`/g, "")
     .replace(/https?:\/\/\S+/g, "")
+    .replace(/[\u{1F600}-\u{1F64F}\u{1F300}-\u{1F5FF}\u{1F680}-\u{1F6FF}\u{1F1E0}-\u{1F1FF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}\u{1F900}-\u{1F9FF}\u{1FA70}-\u{1FAFF}\u{200D}\u{FE0F}]/gu, "")
     .replace(/[*#_~[\]()]/g, " ")
+    .replace(/\bSNA\s+BOT\b/gi, "សនា បូត")
+    .replace(/\bSNA\b/gi, "សនា")
+    .replace(/\bBOT\b/gi, "បូត")
+    .replace(/\bAI\b/gi, "អេអាយ")
     .replace(/\s+/g, " ")
     .trim();
 
