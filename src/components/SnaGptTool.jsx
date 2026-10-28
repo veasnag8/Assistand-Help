@@ -68,7 +68,7 @@ const supportedAttachmentTypes =
   "image/*,application/pdf,.pdf,.docx,.txt,.csv,.md,.json,.html,.xml,.log";
 
 const providerCapacityMessage =
-  "SNA GPT is busy because the model is experiencing high demand. Please try again in a moment.";
+  "SNA BOT is busy because the model is experiencing high demand. Please try again in a moment.";
 
 const languageAliases = {
   bash: "bash",
@@ -230,7 +230,7 @@ function createMessage(role, content, attachments = []) {
 function createWelcomeMessage() {
   return createMessage(
     "assistant",
-    "Hello, I am SNA GPT. I was created by \u179F\u1784 \u179C\u17B6\u179F\u1793\u17B6. How can I help today?",
+    "Hello, I am SNA BOT. I was created by \u179F\u1784 \u179C\u17B6\u179F\u1793\u17B6. How can I help today?",
   );
 }
 
@@ -423,7 +423,7 @@ async function readJsonResponse(response, fallbackMessage) {
 
   if (looksLikeHtml) {
     throw new Error(
-      "SNA GPT server returned the app page instead of JSON. Restart the app and try again.",
+      "SNA BOT server returned the app page instead of JSON. Restart the app and try again.",
     );
   }
 
@@ -461,13 +461,13 @@ async function sendSnaGptMessage(messages, responseMode, signal) {
       throw error;
     }
 
-    throw new Error("SNA GPT server is not available. Restart the app and try again.");
+    throw new Error("SNA BOT server is not available. Restart the app and try again.");
   }
 
-  const result = await readJsonResponse(response, "Could not reach SNA GPT.");
+  const result = await readJsonResponse(response, "Could not reach SNA BOT.");
 
   if (!response.ok) {
-    const error = new Error(result?.error || "Could not reach SNA GPT.");
+    const error = new Error(result?.error || "Could not reach SNA BOT.");
     error.code = result?.code || "";
     throw error;
   }
@@ -510,7 +510,7 @@ async function sendSnaGptMessageWithRetry(messages, responseMode, signal, onRetr
     await wait(retryDelays[attempt], signal);
   }
 
-  throw new Error("Could not reach SNA GPT.");
+  throw new Error("Could not reach SNA BOT.");
 }
 
 function readFileAsText(file) {
@@ -1123,9 +1123,9 @@ function ChatMessage({
       ) : null}
       <div className="sna-message-bubble">
         <div className="sna-message-top">
-          <strong>{isUser ? "You" : "SNA GPT"}</strong>
+          <strong>{isUser ? "You" : "SNA BOT"}</strong>
           {!isUser ? (
-            <span className="sna-message-verify-icon" aria-label="Verified SNA GPT" title="Verified SNA GPT">
+            <span className="sna-message-verify-icon" aria-label="Verified SNA BOT" title="Verified SNA BOT">
               <BadgeCheck size={16} strokeWidth={2.6} />
             </span>
           ) : null}
@@ -1157,7 +1157,7 @@ function ChatMessage({
               className="sna-copy-button"
               type="button"
               onClick={() => onCopy(displayMessage.content)}
-              aria-label="Copy SNA GPT message"
+              aria-label="Copy SNA BOT message"
               title="Copy"
             >
               <Copy size={15} strokeWidth={2.2} />
@@ -1222,8 +1222,8 @@ export function BotAvatar({
       onPointerUp={onPointerUp}
       onPointerCancel={onPointerCancel}
       onContextMenu={onContextMenu}
-      aria-label="SNA GPT assistant. Drag to move or click to open chat."
-      title="Drag to move · Click to open SNA GPT"
+      aria-label="SNA BOT assistant. Drag to move or click to open chat."
+      title="Drag to move · Click to open SNA BOT"
     >
       <span
         className={`sna-bot-motion is-${mood} is-${activeAction}`}
@@ -1568,7 +1568,7 @@ export default function SnaGptTool({ onBack, onBotGesture, onBotMoodChange }) {
         controller.signal,
         (attempt) => setStatus(`Still working... retry ${attempt}`),
       );
-      const reply = result.reply || "SNA GPT did not return a response.";
+      const reply = result.reply || "SNA BOT did not return a response.";
 
       if (isProviderCapacityReply(reply)) {
         throw new Error(providerCapacityMessage);
@@ -1605,7 +1605,7 @@ export default function SnaGptTool({ onBack, onBotGesture, onBotMoodChange }) {
         return;
       }
 
-      const rawMessage = error?.message || "Could not reach SNA GPT.";
+      const rawMessage = error?.message || "Could not reach SNA BOT.";
       const isCapacityFailure = isProviderCapacityReply(rawMessage);
 
       if (isCapacityFailure) {
@@ -1615,7 +1615,7 @@ export default function SnaGptTool({ onBack, onBotGesture, onBotMoodChange }) {
       }
 
       const message = isProviderCapacityReply(rawMessage)
-        ? "SNA GPT could not finish that request yet. Please send it again."
+        ? "SNA BOT could not finish that request yet. Please send it again."
         : rawMessage;
       const shouldUseFreeTextMode = /SNA Version 26\.5 Free|file upload is not supported/i.test(message);
 
@@ -1691,7 +1691,7 @@ export default function SnaGptTool({ onBack, onBotGesture, onBotMoodChange }) {
           type="button"
           onClick={() => setSidebarCollapsed((current) => !current)}
           aria-expanded={!sidebarCollapsed}
-          aria-label={sidebarCollapsed ? "Show SNA GPT sidebar" : "Hide SNA GPT sidebar"}
+          aria-label={sidebarCollapsed ? "Show SNA BOT sidebar" : "Hide SNA BOT sidebar"}
           title={sidebarCollapsed ? "Show" : "Hide"}
         >
           {sidebarCollapsed ? (
@@ -1706,14 +1706,14 @@ export default function SnaGptTool({ onBack, onBotGesture, onBotMoodChange }) {
             <img src={snaGptLogo} alt="" />
           </span>
           <div>
-            <p className="eyebrow">SNA GPT</p>
-            <h1 id="sna-gpt-title">SNA GPT</h1>
+            <p className="eyebrow">SNA BOT</p>
+            <h1 id="sna-gpt-title">SNA BOT</h1>
             <span>Created by {"\u179F\u1784 \u179C\u17B6\u179F\u1793\u17B6"}</span>
           </div>
         </div>
 
         <div className="sna-side-actions">
-          <div className="sna-usage-panel" aria-label="SNA GPT usage">
+          <div className="sna-usage-panel" aria-label="SNA BOT usage">
             <div className="sna-usage-title">
               <Gauge size={16} strokeWidth={2.2} />
               <span>Usage</span>
@@ -1780,7 +1780,7 @@ export default function SnaGptTool({ onBack, onBotGesture, onBotMoodChange }) {
             </button>
             <div className="sna-chat-title">
               <strong className="sna-chat-name">
-                <span>SNA GPT</span>
+                <span>SNA BOT</span>
                 {isProMode ? (
                   <>
                     <span className="sna-pro-word">Pro</span>
@@ -1890,11 +1890,11 @@ export default function SnaGptTool({ onBack, onBotGesture, onBotMoodChange }) {
               </button>
               <textarea
                 ref={textareaRef}
-                aria-label="Message SNA GPT"
+                aria-label="Message SNA BOT"
                 maxLength={maxPromptLength}
                 onChange={(event) => setDraft(event.target.value)}
                 onKeyDown={handleKeyDown}
-                placeholder="Message SNA GPT"
+                placeholder="Message SNA BOT"
                 rows={1}
                 value={draft}
               />
@@ -1904,7 +1904,7 @@ export default function SnaGptTool({ onBack, onBotGesture, onBotMoodChange }) {
                 onClick={startVoiceInput}
                 disabled={busy}
                 aria-label={voiceListening ? "Stop voice input" : "Start voice input"}
-                title={voiceListening ? "Stop voice input" : "Speak to SNA GPT"}
+                title={voiceListening ? "Stop voice input" : "Speak to SNA BOT"}
               >
                 <Mic size={19} strokeWidth={2.3} />
               </button>

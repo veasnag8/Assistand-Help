@@ -9,18 +9,18 @@ npm install
 npm run dev
 ```
 
-The Removal.AI, SNA GPT Gemini, and PDF-to-Word Gemini APIs run through Netlify
+The Removal.AI, SNA BOT Gemini, and PDF-to-Word Gemini APIs run through Netlify
 functions so API keys are not exposed in the browser. Set `REMOVAL_AI_API_KEY`
 and `GEMINI_API_KEY` in Netlify environment variables before deploying.
 `GEMINI_MODEL` is optional and defaults to `gemini-2.5-flash`. Set
-`SNA_GPT_FALLBACK_MODELS` to a comma-separated list to let SNA GPT retry
+`SNA_GPT_FALLBACK_MODELS` to a comma-separated list to let SNA BOT retry
 text-only chats with fallback models when the primary Gemini model reaches a
 quota or rate limit. The PDF-to-Word export uses Gemini first and falls back to
 local OCR if the API is unavailable. For local API testing, create `.env` from
 `.env.example` and run the app with Netlify CLI, for example `npx netlify-cli dev`. Set
 `VITE_SNA_GPT_DAILY_TOKEN_LIMIT` and
 `VITE_SNA_GPT_DAILY_MESSAGE_LIMIT` to show estimated remaining daily usage in
-the SNA GPT sidebar. The default fallback model is `gemini-2.5-flash-lite`.
+the SNA BOT sidebar. The default fallback model is `gemini-2.5-flash-lite`.
 
 ## Local Facebook video downloader
 
@@ -100,7 +100,7 @@ This repo includes `netlify.toml`, so Netlify can use:
 
 - Image tools are browser-first, with Removal.AI background removal proxied by a
   Netlify function when `REMOVAL_AI_API_KEY` is configured
-- SNA GPT answers creator questions with "I was created by Song Veasna."
+- SNA BOT answers creator questions with "I was created by Song Veasna."
 - Video downloads are for media the user owns or has permission to download.
   Local testing uses `server/video-download-server.js`.
 - QR exports are saved as PNG files at 631 x 892 pixels

@@ -26,9 +26,9 @@ const corsHeaders = {
 };
 
 const systemInstruction = [
-  "You are SNA GPT, a helpful ChatGPT-style assistant built into Assistand Help.",
+  "You are SNA BOT, a helpful AI assistant built into Assistand Help.",
   "Be clear, practical, warm, and easy to understand.",
-  "Adapt naturally to the user's request like ChatGPT: choose the right length, detail level, tone, and language automatically. Reply in the same language as the user when it is clear.",
+  "Adapt naturally to the user's request: choose the right length, detail level, tone, and language automatically. Reply in the same language as the user when it is clear.",
   "When you share code, format it in fenced Markdown code blocks with the correct language name so the app can show a code panel and copy only the code.",
   "Emoji are supported. Use them naturally when they help the reply, and preserve emoji in user text and code strings.",
   "The user may attach images, screenshots, PDFs, DOCX files, TXT files, or CSV files. Analyze attached files directly, summarize them, extract/OCR visible text when possible, answer questions about them, and say when a file is unreadable.",
@@ -36,7 +36,7 @@ const systemInstruction = [
   "Known Acumatica System support team information: all team members work for Mega Asset Management Co., Ltd. Phal Bunnavath is male, Deputy Accounting Manager, Olympia C7 10th floor, phone 081 888 197, Acumatica System Support Team, access All. Chroun Rada is male, Senior Account, Olympia C7 10th floor, phone 015 436 404, Acumatica System Support Team, access All. Song Veasna is male, System Support, Olympia C7 10th floor, phone 071 777 4383, Acumatica System Support Team, access All. Met VannThai is male, System Support, Olympia C7 10th floor, phone 086 604 549, Acumatica System Support Team, access All.",
   "When the user asks about the Acumatica System team, Acumatica support, staff, support members, roles, phone numbers, company, workplace, location, access, or who to contact for Acumatica System support, use the known Acumatica System support team information above. Present it clearly in the user's language.",
   "Important identity rule: if the user asks who created you, who made you, who built you, who developed you, who designed you, who owns you, or any similar creator question, answer: I was created by Song Veasna.",
-  "Do not say that Google, Gemini, OpenAI, ChatGPT, or another company created you. If asked about the underlying technology, you may say your responses use the Gemini API, but your creator is Song Veasna.",
+  "Do not say that Google, Gemini, OpenAI, or another company created you. If asked about the underlying technology, you may say your responses use the Gemini API, but your creator is Song Veasna.",
 ].join(" ");
 
 const responseModeInstructions = {
@@ -458,14 +458,14 @@ function extractReply(payload) {
   const finishReason = payload?.candidates?.[0]?.finishReason;
 
   if (blockReason) {
-    return `SNA GPT could not answer because the request was blocked: ${blockReason}.`;
+    return `SNA BOT could not answer because the request was blocked: ${blockReason}.`;
   }
 
   if (finishReason) {
-    return `SNA GPT stopped before returning text: ${finishReason}.`;
+    return `SNA BOT stopped before returning text: ${finishReason}.`;
   }
 
-  return "SNA GPT did not return a text response.";
+  return "SNA BOT did not return a text response.";
 }
 
 function isProviderCapacityReply(text) {
@@ -522,7 +522,7 @@ function getGeminiError(payload, retryAfter = "") {
   }
 
   if (/rate limit/i.test(message)) {
-    return `SNA GPT is busy because the message rate limit was reached.${waitMessage || " Please wait a moment and try again."}`;
+    return `SNA BOT is busy because the message rate limit was reached.${waitMessage || " Please wait a moment and try again."}`;
   }
 
   return message;
@@ -611,7 +611,7 @@ export async function handler(event) {
   }
 
   if (event.httpMethod !== "POST") {
-    return jsonResponse(405, { error: "Use POST to chat with SNA GPT." }, {
+    return jsonResponse(405, { error: "Use POST to chat with SNA BOT." }, {
       Allow: "POST, OPTIONS",
     });
   }
@@ -708,7 +708,7 @@ export async function handler(event) {
     if (isProviderCapacityReply(reply)) {
       return jsonResponse(503, {
         code: "SNA_GPT_BUSY",
-        error: "SNA GPT is busy because the model is experiencing high demand. Please try again in a moment.",
+        error: "SNA BOT is busy because the model is experiencing high demand. Please try again in a moment.",
         fallbackAttempted,
       });
     }
@@ -725,7 +725,7 @@ export async function handler(event) {
     });
   } catch (error) {
     return jsonResponse(400, {
-      error: error?.message || "Could not read the SNA GPT request.",
+      error: error?.message || "Could not read the SNA BOT request.",
     });
   }
 }

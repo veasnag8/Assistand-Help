@@ -170,9 +170,9 @@ const categories = [
   },
   {
     id: "sna-gpt",
-    title: "SNA GPT",
-    tabTitle: "SNA GPT",
-    description: "Chat with your custom GPT assistant created by Song Veasna.",
+    title: "SNA BOT",
+    tabTitle: "SNA BOT",
+    description: "Chat with your custom AI assistant created by Song Veasna.",
     icon: BotMessageSquare,
     logo: snaGptLogo,
     tone: "orange",
