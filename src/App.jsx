@@ -21,7 +21,6 @@ import {
   ScanText as ScanTextIcon,
   Scissors,
   Settings,
-  Sparkles,
   UserRoundPlus,
   Workflow,
   X,
@@ -1283,7 +1282,7 @@ function FloatingBot({ mood, gesture, customMessage = "", onOpen, preferences, o
   function handleContextMenu(event) {
     event.preventDefault();
     const menuWidth = settingsOpen ? 270 : 190;
-    const menuHeight = settingsOpen ? 250 : 104;
+    const menuHeight = settingsOpen ? 250 : 72;
     setContextMenu({
       x: Math.max(8, Math.min(event.clientX, window.innerWidth - menuWidth - 8)),
       y: Math.max(8, Math.min(event.clientY, window.innerHeight - menuHeight - 8)),
@@ -1434,26 +1433,6 @@ function FloatingBot({ mood, gesture, customMessage = "", onOpen, preferences, o
             </>
           ) : (
             <>
-              <button
-                type="button"
-                className="sna-bot-menu-item"
-                onClick={() => {
-                  const pool = RANDOM_BOT_REACTIONS.filter((r) => r !== lastReactionRef.current);
-                  const chosen = pool[Math.floor(Math.random() * pool.length)] || RANDOM_BOT_REACTIONS[0];
-                  lastReactionRef.current = chosen;
-                  setAutoGesture(chosen);
-                  setIsGreetingVisible(true);
-                  const duration = chosen === "sleep" ? 4200 : chosen === "hungry" ? 3800 : 3400;
-                  window.setTimeout(() => {
-                    setAutoGesture("");
-                    setIsGreetingVisible(false);
-                  }, duration);
-                  setContextMenu(null);
-                }}
-              >
-                <Sparkles size={17} />
-                <span>Reaction (ចៃដន្យ)</span>
-              </button>
               <button
                 type="button"
                 className="sna-bot-menu-item"
