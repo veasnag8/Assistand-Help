@@ -31,25 +31,8 @@ import {
   formatFileSize,
   getClipboardImageFile,
 } from "../lib/ocr-utils";
-import botIdle from "../image/bot-idle.png";
-import botIdleBlink from "../image/bot-idle-blink.png";
-import botHello from "../image/bot-hello.png";
-import botSurprised from "../image/bot-surprised.png";
-import botThinking from "../image/bot-thinking.png";
-import botSad from "../image/bot-sad.png";
-import botSuccess from "../image/bot-success.png";
-import botError from "../image/bot-error.png";
 import snaGptLogo from "../image/sna-gpt.png";
-
-const botReactionImages = {
-  idle: botIdle,
-  hello: botHello,
-  surprised: botSurprised,
-  thinking: botThinking,
-  sad: botSad,
-  success: botSuccess,
-  error: botError,
-};
+import SnaBotCharacter from "./SnaBotCharacter";
 const snaGptEndpointPath = "/.netlify/functions/sna-gpt";
 const chatStorageKey = "sna-gpt-chat-v1";
 const sidebarStorageKey = "sna-gpt-sidebar-collapsed-v2";
@@ -1225,26 +1208,11 @@ export function BotAvatar({
   onPointerCancel,
   onContextMenu,
 }) {
-  const reaction = {
-    wave: "hello",
-    celebrate: "success",
-    dance: "success",
-    react: "surprised",
-  }[gesture] || gesture || mood;
-  const hasReactionPose = Boolean(botReactionImages[reaction]);
-  const pose = hasReactionPose
-    ? reaction
-    : mood === "thinking" || mood === "listening"
-      ? "thinking"
-      : "idle";
-  const poseClass = hasReactionPose && mood !== pose ? ` is-${pose}` : "";
-  const gestureClass = gesture && gesture !== pose && gesture !== mood
-    ? ` is-${gesture}`
-    : "";
+  const activeAction = gesture || (mood === "thinking" || mood === "listening" || mood === "speaking" ? mood : "idle");
 
   return (
     <button
-      className={`sna-bot-avatar ${className} is-${mood}${poseClass}${gestureClass}`}
+      className={`sna-bot-avatar ${className} is-${mood} is-${activeAction}${gesture ? ` is-${gesture}` : ""}`}
       type="button"
       onClick={onClick}
       onKeyDown={onKeyDown}
@@ -1257,34 +1225,10 @@ export function BotAvatar({
       title="Drag to move · Click to open SNA GPT"
     >
       <span
-        className={`sna-bot-motion is-${mood}${poseClass}${gestureClass}`}
+        className={`sna-bot-motion is-${mood} is-${activeAction}`}
         aria-hidden="true"
       >
-        <span className={`sna-bot-action${poseClass}${gestureClass}`}>
-          {Object.entries(botReactionImages)
-            .filter(([name]) => name !== "idle")
-            .map(([name, src]) => (
-              <img
-                key={name}
-                className={`sna-bot-art is-${name}${pose === name ? " is-active" : ""}`}
-                src={src}
-                alt=""
-                draggable="false"
-              />
-            ))}
-          <img
-            className={`sna-bot-art is-idle${pose === "idle" ? " is-active" : ""}`}
-            src={botIdle}
-            alt=""
-            draggable="false"
-          />
-          <img
-            className={`sna-bot-art sna-bot-blink-art${pose === "idle" ? " is-active" : ""}`}
-            src={botIdleBlink}
-            alt=""
-            draggable="false"
-          />
-        </span>
+        <SnaBotCharacter mood={mood} gesture={gesture} />
       </span>
     </button>
   );

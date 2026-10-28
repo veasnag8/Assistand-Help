@@ -63,11 +63,14 @@ function getPlatformLabel(value) {
     const { hostname } = new URL(value);
     const host = hostname.toLowerCase().replace(/^www\./, "");
 
-    if (host === "youtu.be" || host.includes("youtube.")) return "YouTube";
-    if (host.includes("tiktok.")) return "TikTok";
-    if (host.includes("facebook.") || host === "fb.watch" || host.includes("fb.com")) {
-      return "Facebook";
-    }
+    if (
+      host === "facebook.com" ||
+      host.endsWith(".facebook.com") ||
+      host === "fb.watch" ||
+      host.endsWith(".fb.watch") ||
+      host === "fb.com" ||
+      host.endsWith(".fb.com")
+    ) return "Facebook";
 
     return "Unsupported";
   } catch {
@@ -116,7 +119,7 @@ export default function VideoDownloadTool() {
   const [hasPermission, setHasPermission] = useState(false);
   const [busy, setBusy] = useState(false);
   const [result, setResult] = useState(null);
-  const [status, setStatus] = useState("Paste a Facebook, YouTube, or TikTok URL.");
+  const [status, setStatus] = useState("Paste a Facebook video URL.");
   const [statusKind, setStatusKind] = useState("neutral");
   const [copiedUrl, setCopiedUrl] = useState("");
   const [progress, setProgress] = useState(0);
@@ -124,7 +127,7 @@ export default function VideoDownloadTool() {
 
   const platform = useMemo(() => getPlatformLabel(url), [url]);
   const resultItems = getResultItems(result);
-  const canPrepare = url.trim() && hasPermission && !busy;
+  const canPrepare = platform === "Facebook" && url.trim() && hasPermission && !busy;
   const showProgress = busy || progress > 0 || resultItems.length > 0;
 
   async function pollDownloadJob(statusUrl) {
@@ -159,6 +162,12 @@ export default function VideoDownloadTool() {
 
   async function handleSubmit(event) {
     event.preventDefault();
+
+    if (platform !== "Facebook") {
+      setStatus("Not supported. Please paste a Facebook video URL.");
+      setStatusKind("error");
+      return;
+    }
 
     if (!hasPermission) {
       setStatus("Confirm permission before preparing a download.");
@@ -229,7 +238,7 @@ export default function VideoDownloadTool() {
         <Panel
           eyebrow="Downloader"
           title="Video Download"
-          description="Download authorized media with the local Node server."
+          description="Download authorized Facebook media."
         >
           <form className="video-download-form" onSubmit={handleSubmit}>
             <label className="field video-url-field">
@@ -245,7 +254,7 @@ export default function VideoDownloadTool() {
 
             <div className="video-platform-strip">
               <span className={`video-platform-pill is-${platform.toLowerCase()}`}>
-                {platform}
+                {platform === "Unsupported" ? "Not supported" : platform}
               </span>
             </div>
 

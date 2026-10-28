@@ -120,25 +120,6 @@ function getPlatform(url) {
   const hostName = url.hostname.toLowerCase().replace(/^www\./, "");
 
   if (
-    hostName === "youtu.be" ||
-    hostName === "youtube.com" ||
-    hostName.endsWith(".youtube.com") ||
-    hostName === "youtube-nocookie.com" ||
-    hostName.endsWith(".youtube-nocookie.com")
-  ) {
-    return "YouTube";
-  }
-
-  if (
-    hostName === "tiktok.com" ||
-    hostName.endsWith(".tiktok.com") ||
-    hostName === "vm.tiktok.com" ||
-    hostName === "vt.tiktok.com"
-  ) {
-    return "TikTok";
-  }
-
-  if (
     hostName === "facebook.com" ||
     hostName.endsWith(".facebook.com") ||
     hostName === "fb.watch" ||
@@ -522,7 +503,7 @@ function validateDownloadPayload(payload) {
   }
 
   if (!mediaUrl || !platform) {
-    throw new Error("Paste a valid Facebook, YouTube, or TikTok video URL.");
+    throw new Error("Not supported. Paste a valid Facebook video URL.");
   }
 
   if (!["mp4", "mp3"].includes(format)) {

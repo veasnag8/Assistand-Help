@@ -1087,6 +1087,7 @@ function loadBotPreferences() {
 function FloatingBot({ mood, gesture, onOpen, preferences, onPreferencesChange }) {
   const [position, setPosition] = useState(() => clampBotPosition(loadBotPosition(), preferences.size));
   const [autoGesture, setAutoGesture] = useState("");
+  const [isDragging, setIsDragging] = useState(false);
   const [contextMenu, setContextMenu] = useState(null);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const pointerStartRef = useRef(null);
@@ -1143,25 +1144,26 @@ function FloatingBot({ mood, gesture, onOpen, preferences, onPreferencesChange }
       return undefined;
     }
 
-    const gestures = ["wave", "react", "thinking", "sad", "celebrate", "dance", "error"];
+    // Friendly occasional micro-gestures instead of chaotic slide loop
+    const friendlyIdleGestures = ["wave", "react"];
     let gestureIndex = 0;
     let timeoutId;
 
-    function playNextGesture() {
-      if (pointerStartRef.current) {
-        timeoutId = window.setTimeout(playNextGesture, 1200);
+    function playOccasionalGreeting() {
+      if (pointerStartRef.current || didDragRef.current) {
+        timeoutId = window.setTimeout(playOccasionalGreeting, 4000);
         return;
       }
 
-      setAutoGesture(gestures[gestureIndex % gestures.length]);
+      setAutoGesture(friendlyIdleGestures[gestureIndex % friendlyIdleGestures.length]);
       gestureIndex += 1;
       timeoutId = window.setTimeout(() => {
         setAutoGesture("");
-        timeoutId = window.setTimeout(playNextGesture, 4600);
-      }, 1900);
+        timeoutId = window.setTimeout(playOccasionalGreeting, 18000);
+      }, 2000);
     }
 
-    timeoutId = window.setTimeout(playNextGesture, 2800);
+    timeoutId = window.setTimeout(playOccasionalGreeting, 12000);
     return () => window.clearTimeout(timeoutId);
   }, [contextMenu, gesture, mood]);
 
@@ -1192,6 +1194,7 @@ function FloatingBot({ mood, gesture, onOpen, preferences, onPreferencesChange }
     const deltaY = event.clientY - start.pointerY;
     if (Math.abs(deltaX) > 4 || Math.abs(deltaY) > 4) {
       didDragRef.current = true;
+      setIsDragging(true);
     }
     setPosition(clampBotPosition(
       { x: start.x + deltaX, y: start.y + deltaY },
@@ -1202,6 +1205,7 @@ function FloatingBot({ mood, gesture, onOpen, preferences, onPreferencesChange }
   function handlePointerUp(event) {
     if (pointerStartRef.current?.pointerId === event.pointerId) {
       pointerStartRef.current = null;
+      setIsDragging(false);
     }
   }
 
@@ -1276,7 +1280,7 @@ function FloatingBot({ mood, gesture, onOpen, preferences, onPreferencesChange }
       }}
     >
       <BotAvatar
-        className="is-companion"
+        className={`is-companion${isDragging ? " is-dragging" : ""}`}
         gesture={gesture || autoGesture}
         mood={mood}
         onClick={handleClick}
@@ -1390,7 +1394,7 @@ export default function App() {
   const triggerBotGesture = useCallback((gesture) => {
     window.clearTimeout(botGestureTimeoutRef.current);
     setBotGesture(gesture);
-    botGestureTimeoutRef.current = window.setTimeout(() => setBotGesture(""), 1200);
+    botGestureTimeoutRef.current = window.setTimeout(() => setBotGesture(""), 2200);
   }, []);
 
   const updateBotMood = useCallback((mood) => {

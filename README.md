@@ -22,10 +22,11 @@ local OCR if the API is unavailable. For local API testing, create `.env` from
 `VITE_SNA_GPT_DAILY_MESSAGE_LIMIT` to show estimated remaining daily usage in
 the SNA GPT sidebar. The default fallback model is `gemini-2.5-flash-lite`.
 
-## Local video downloader
+## Local Facebook video downloader
 
-The Video Download tool can run locally without Cobalt by using the included
-Node server, `yt-dlp`, and `ffmpeg-static`.
+The Video Download tool supports Facebook links only. YouTube, TikTok, and
+other platforms are not supported. It can run locally without Cobalt by using
+the included Node server, `yt-dlp`, and `ffmpeg-static`.
 
 Install `yt-dlp` once:
 
@@ -49,32 +50,6 @@ backend URL instead of the Netlify function:
 VITE_VIDEO_SERVER_URL=https://your-node-video-backend.example.com
 ```
 
-On the Node video backend host, YouTube may require a JavaScript runtime and
-signed-in cookies. The video server passes its Node 22+ executable path to
-yt-dlp and enables yt-dlp's recommended remote EJS challenge component by
-default. For local development, set this in `.env` and restart `npm run dev:all`:
-
-```bash
-YTDLP_COOKIES_FROM_BROWSER=chrome
-```
-
-For hosted Node backends without a browser profile, export YouTube cookies as a
-Netscape cookies file, base64 encode that file, and set:
-
-```bash
-YTDLP_COOKIES_BASE64=base64_encoded_cookies_txt
-```
-
-On Render, the YouTube-related backend variables should include:
-
-```bash
-YTDLP_JS_RUNTIMES=node
-YTDLP_REMOTE_COMPONENTS=ejs:github
-YTDLP_COOKIES_BASE64=base64_encoded_cookies_txt
-```
-
-Use only cookies from an account and media you are authorized to access.
-
 ## Telegram video downloader bot
 
 The Node video server can also run a Telegram bot by long polling. Set the bot
@@ -85,7 +60,8 @@ TELEGRAM_BOT_TOKEN=your_telegram_bot_token
 TELEGRAM_BOT_ENABLED=true
 ```
 
-Send the bot a Facebook, YouTube, or TikTok URL to prepare a 720p MP4 download.
+Send the bot a Facebook URL to prepare a 720p MP4 download. Other platforms are
+not supported.
 Use `/mp3 https://...` for audio or `/mp4 https://...` for video. The bot
 returns the same public download link used by the web app, and links expire
 after about 1 hour.
