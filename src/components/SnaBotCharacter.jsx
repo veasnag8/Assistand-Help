@@ -595,6 +595,28 @@ export default function SnaBotCharacter({
               <path className="sna-bot-drool" d="M 64 47 C 64 47 65 52 64 53 C 63 54 62 53 62 52 C 62 50 64 47 64 47 Z" fill="#38bdf8" />
             </g>
 
+            {/* L. Yawning / Waking Eyes & Mouth (Squint with cute sleepiness tear and yawning mouth) */}
+            <g className="sna-bot-eyes-yawn">
+              <path
+                d="M 42 38 Q 47 33 52 38"
+                stroke="#38bdf8"
+                strokeWidth="3.2"
+                strokeLinecap="round"
+                fill="none"
+              />
+              <path
+                d="M 68 38 Q 73 33 78 38"
+                stroke="#38bdf8"
+                strokeWidth="3.2"
+                strokeLinecap="round"
+                fill="none"
+              />
+              <circle cx="79.5" cy="41" r="1.4" fill="#38bdf8" />
+              {/* Wide cute yawning mouth inside visor */}
+              <ellipse cx="60" cy="47" rx="4.8" ry="6" fill="#0b0f20" stroke="#38bdf8" strokeWidth="1.4" />
+              <path d="M 57 48 Q 60 51.5 63 48" stroke="#f472b6" strokeWidth="1.6" strokeLinecap="round" fill="none" />
+            </g>
+
             {/* Speech Waveform Equalizer (Animated during speaking mood) */}
             <g className="sna-bot-voice-bars">
               <rect className="sna-voice-bar vb-1" x="51.5" y="47" width="2.8" height="4" rx="1.4" fill="#38bdf8" />
@@ -617,6 +639,36 @@ export default function SnaBotCharacter({
             <path className="sna-bot-food-steam s1" d="M 89 20 Q 91 16 89 13" stroke="#38bdf8" strokeWidth="1.2" strokeLinecap="round" fill="none" />
             <path className="sna-bot-food-steam s2" d="M 94 19 Q 96 15 94 12" stroke="#38bdf8" strokeWidth="1.2" strokeLinecap="round" fill="none" />
             <path className="sna-bot-food-steam s3" d="M 99 20 Q 101 16 99 13" stroke="#38bdf8" strokeWidth="1.2" strokeLinecap="round" fill="none" />
+          </g>
+
+          {/* Coffee Mug FX (Warm coffee & rising steam) */}
+          <g className="sna-bot-coffee-fx" aria-hidden="true">
+            {/* Mug Body */}
+            <rect
+              className="sna-bot-coffee-mug"
+              x="83"
+              y="22"
+              width="15"
+              height="14"
+              rx="3"
+              fill="#f8fafc"
+              stroke="#38bdf8"
+              strokeWidth="1.2"
+            />
+            {/* Mug Handle */}
+            <path
+              className="sna-bot-coffee-handle"
+              d="M 98 24.5 C 102 24.5 102 32.5 98 32.5"
+              stroke="#38bdf8"
+              strokeWidth="1.3"
+              fill="none"
+            />
+            {/* Dark Rich Coffee liquid */}
+            <ellipse cx="90.5" cy="23" rx="6" ry="2" fill="#78350f" />
+            {/* Warm Coffee Steams */}
+            <path className="sna-bot-coffee-steam cs1" d="M 87 20 Q 89 16 87 13" stroke="#38bdf8" strokeWidth="1.2" strokeLinecap="round" fill="none" />
+            <path className="sna-bot-coffee-steam cs2" d="M 91 19 Q 93 15 91 12" stroke="#38bdf8" strokeWidth="1.2" strokeLinecap="round" fill="none" />
+            <path className="sna-bot-coffee-steam cs3" d="M 95 20 Q 97 16 95 13" stroke="#38bdf8" strokeWidth="1.2" strokeLinecap="round" fill="none" />
           </g>
 
           {/* Anger Pulsing Tick Mark */}

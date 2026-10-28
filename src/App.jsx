@@ -1085,15 +1085,16 @@ function loadBotPreferences() {
 }
 
 const RANDOM_BOT_REACTIONS = [
-  "angry",   // ខឹង
   "smile",   // ញញឹម
   "happy",   // សប្បាយ
   "hungry",  // ឃ្លានបាយ
+  "coffee",  // ផឹកកាហ្វេ (8AM - 2PM)
   "tired",   // ហត់
-  "sleep",   // គេង
+  "sleep",   // គេង (កំពុងគេង!!)
   "working", // ធ្វើការ
+  "hello",   // សួរស្ដី
+  "angry",   // ខឹង
   "error",   // Error
-  "hello",   // សួរស្ដី (បង្ហាញអក្សរ)
 ];
 
 const BOT_REACTION_MESSAGES = {
@@ -1102,8 +1103,11 @@ const BOT_REACTION_MESSAGES = {
   smile: "ញញឹមស្រស់ស្រាយ! មានកម្លាំងចិត្តធ្វើការ!",
   happy: "សប្បាយរីករាយណាស់! ហេងហេងទាំងអស់គ្នា!",
   hungry: "ឃ្លានបាយហើយ! ទៅញ៉ាំអីសិនទៅ?",
+  coffee: "(ញាំកាហ្វេ ឬនៅ?)",
   tired: "ហត់នឿយណាស់! សម្រាកបន្តិចសិនទៅ...",
-  sleep: "ងងុយគេងណាស់... Zzz...",
+  sleep: "កំពុងគេង!!",
+  yawn: "ទើបភ្ញាក់... ស្ងាបមួយសិន! 🥱",
+  wake: "ទើបភ្ញាក់... ស្ងាបមួយសិន! 🥱",
   working: "កំពុងផ្ដោតអារម្មណ៍ធ្វើការ...",
   angry: "ខឹងហើយណា! កុំមកលេងសើច!",
   error: "មានបញ្ហាខុសបច្ចេកទេសហើយ! (Error)",
@@ -1126,6 +1130,7 @@ function FloatingBot({ mood, gesture, customMessage = "", onOpen, preferences, o
   const didDragRef = useRef(false);
   const contextMenuRef = useRef(null);
   const lastReactionRef = useRef("");
+  const autoReactionTimeoutRef = useRef(null);
 
   useEffect(() => {
     window.localStorage.setItem(botPositionStorageKey, JSON.stringify(position));
@@ -1175,38 +1180,83 @@ function FloatingBot({ mood, gesture, customMessage = "", onOpen, preferences, o
     if (mood !== "idle" || gesture || contextMenu) {
       setAutoGesture("");
       setIsGreetingVisible(false);
+      window.clearTimeout(autoReactionTimeoutRef.current);
       return undefined;
     }
 
-    let timeoutId;
+    function scheduleNext(delay) {
+      window.clearTimeout(autoReactionTimeoutRef.current);
+      autoReactionTimeoutRef.current = window.setTimeout(playRandomReaction, delay);
+    }
 
     function playRandomReaction() {
       if (pointerStartRef.current || didDragRef.current) {
-        timeoutId = window.setTimeout(playRandomReaction, 3000);
+        scheduleNext(5000);
         return;
       }
 
-      // Pick randomly from the 8 emotions, different from the last one
-      const pool = RANDOM_BOT_REACTIONS.filter((r) => r !== lastReactionRef.current);
-      const chosen = pool[Math.floor(Math.random() * pool.length)] || RANDOM_BOT_REACTIONS[0];
+      // Check current hour: 8:00 AM to 2:00 PM for Coffee reaction
+      const currentHour = new Date().getHours();
+      const isCoffeeTime = currentHour >= 8 && currentHour < 14;
+
+      const pool = [
+        "smile",
+        "happy",
+        "hungry",
+        "tired",
+        "sleep",
+        "working",
+        "hello",
+      ];
+
+      if (isCoffeeTime) {
+        // Include Coffee during 8 AM - 2 PM
+        pool.push("coffee", "coffee");
+      }
+
+      const available = pool.filter((r) => r !== lastReactionRef.current);
+      const chosen = available[Math.floor(Math.random() * available.length)] || pool[0];
       lastReactionRef.current = chosen;
 
       setAutoGesture(chosen);
       setIsGreetingVisible(true);
 
-      const duration = chosen === "sleep" ? 4200 : chosen === "hungry" ? 3800 : 3400;
+      // Sleep lasts longer (18 seconds) so user can see it sleeping and can wake it up;
+      // Coffee 5.5s, Hungry 5s, others 4.5s
+      const duration =
+        chosen === "sleep"
+          ? 18000
+          : chosen === "coffee"
+            ? 5500
+            : chosen === "hungry"
+              ? 5000
+              : 4500;
 
-      timeoutId = window.setTimeout(() => {
-        setAutoGesture("");
-        setIsGreetingVisible(false);
-        // Wait random 7s to 12s before next random reaction
-        const nextDelay = 7000 + Math.floor(Math.random() * 5000);
-        timeoutId = window.setTimeout(playRandomReaction, nextDelay);
+      window.clearTimeout(autoReactionTimeoutRef.current);
+      autoReactionTimeoutRef.current = window.setTimeout(() => {
+        if (chosen === "sleep") {
+          // Naturally wake up with a yawn after sleeping!
+          setAutoGesture("yawn");
+          setIsGreetingVisible(true);
+          autoReactionTimeoutRef.current = window.setTimeout(() => {
+            setAutoGesture("");
+            setIsGreetingVisible(false);
+            const nextDelay = 20000 + Math.floor(Math.random() * 15000);
+            scheduleNext(nextDelay);
+          }, 4200);
+        } else {
+          setAutoGesture("");
+          setIsGreetingVisible(false);
+          // Stay calm/idle for 18s to 32s before next reaction (no rushing)
+          const nextDelay = 18000 + Math.floor(Math.random() * 14000);
+          scheduleNext(nextDelay);
+        }
       }, duration);
     }
 
-    timeoutId = window.setTimeout(playRandomReaction, 3500);
-    return () => window.clearTimeout(timeoutId);
+    // Peaceful initial delay before first random reaction
+    scheduleNext(16000);
+    return () => window.clearTimeout(autoReactionTimeoutRef.current);
   }, [contextMenu, gesture, mood]);
 
   function handlePointerDown(event) {
@@ -1254,6 +1304,18 @@ function FloatingBot({ mood, gesture, customMessage = "", onOpen, preferences, o
   function handleClick() {
     if (didDragRef.current) {
       didDragRef.current = false;
+      return;
+    }
+
+    // If bot is currently sleeping, clicking it wakes it up with yawning reaction!
+    if (autoGesture === "sleep" || gesture === "sleep") {
+      window.clearTimeout(autoReactionTimeoutRef.current);
+      setAutoGesture("yawn");
+      setIsGreetingVisible(true);
+      autoReactionTimeoutRef.current = window.setTimeout(() => {
+        setAutoGesture("");
+        setIsGreetingVisible(false);
+      }, 4200);
       return;
     }
 

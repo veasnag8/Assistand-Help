@@ -2998,11 +2998,13 @@ button.khmer-calendar-cell:hover {
 .sna-bot-eyes-sleep,
 .sna-bot-eyes-working,
 .sna-bot-eyes-hungry,
+.sna-bot-eyes-yawn,
 .sna-bot-anger-fx,
 .sna-bot-sweat-fx,
 .sna-bot-zzz-group,
 .sna-bot-work-hud,
 .sna-bot-food-fx,
+.sna-bot-coffee-fx,
 .sna-bot-voice-bars,
 .sna-bot-sparkles {
   opacity: 0;
@@ -3607,6 +3609,110 @@ button.khmer-calendar-cell:hover {
 .sna-bot-zzz.z2 { animation: sna-zzz-rise 2.4s ease-out 0.6s infinite; }
 .sna-bot-zzz.z3 { animation: sna-zzz-rise 2.4s ease-out 1.2s infinite; }
 
+/* GESTURE / MOOD: COFFEE (ផឹកកាហ្វេ) */
+.sna-bot-svg.is-action-coffee .sna-bot-rig,
+.sna-bot-svg.is-mood-coffee .sna-bot-rig,
+.sna-bot-avatar.is-coffee .sna-bot-rig {
+  animation: sna-coffee-sip 2.6s ease-in-out infinite alternate !important;
+}
+
+.sna-bot-svg.is-action-coffee .sna-bot-arm-left,
+.sna-bot-svg.is-mood-coffee .sna-bot-arm-left,
+.sna-bot-avatar.is-coffee .sna-bot-arm-left {
+  transform: rotate(-38deg) translateY(-2px);
+  animation: sna-coffee-arm-l 2.6s ease-in-out infinite alternate !important;
+}
+
+.sna-bot-svg.is-action-coffee .sna-bot-arm-right,
+.sna-bot-svg.is-mood-coffee .sna-bot-arm-right,
+.sna-bot-avatar.is-coffee .sna-bot-arm-right {
+  transform: rotate(40deg) translateY(-3px);
+  animation: sna-coffee-arm-r 2.6s ease-in-out infinite alternate !important;
+}
+
+.sna-bot-svg.is-action-coffee .sna-bot-head-group,
+.sna-bot-svg.is-mood-coffee .sna-bot-head-group,
+.sna-bot-avatar.is-coffee .sna-bot-head-group {
+  transform: rotate(-3.5deg) translateY(1px);
+}
+
+.sna-bot-svg.is-action-coffee .sna-bot-eyes-normal,
+.sna-bot-svg.is-mood-coffee .sna-bot-eyes-normal,
+.sna-bot-avatar.is-coffee .sna-bot-eyes-normal {
+  opacity: 0;
+}
+
+.sna-bot-svg.is-action-coffee .sna-bot-eyes-happy,
+.sna-bot-svg.is-mood-coffee .sna-bot-eyes-happy,
+.sna-bot-avatar.is-coffee .sna-bot-eyes-happy,
+.sna-bot-svg.is-action-coffee .sna-bot-blush,
+.sna-bot-svg.is-mood-coffee .sna-bot-blush,
+.sna-bot-avatar.is-coffee .sna-bot-blush,
+.sna-bot-svg.is-action-coffee .sna-bot-coffee-fx,
+.sna-bot-svg.is-mood-coffee .sna-bot-coffee-fx,
+.sna-bot-avatar.is-coffee .sna-bot-coffee-fx {
+  opacity: 1;
+}
+
+.sna-bot-coffee-steam.cs1 { animation: sna-steam-rise 1.4s ease-out infinite; }
+.sna-bot-coffee-steam.cs2 { animation: sna-steam-rise 1.4s ease-out 0.45s infinite; }
+.sna-bot-coffee-steam.cs3 { animation: sna-steam-rise 1.4s ease-out 0.9s infinite; }
+
+/* GESTURE / MOOD: YAWN / WAKE (ងើបពីគេង ស្ងាប) */
+.sna-bot-svg.is-action-yawn .sna-bot-rig,
+.sna-bot-svg.is-mood-yawn .sna-bot-rig,
+.sna-bot-avatar.is-yawn .sna-bot-rig,
+.sna-bot-svg.is-action-wake .sna-bot-rig,
+.sna-bot-svg.is-mood-wake .sna-bot-rig,
+.sna-bot-avatar.is-wake .sna-bot-rig {
+  animation: sna-yawn-stretch 3.2s ease-in-out infinite alternate !important;
+}
+
+.sna-bot-svg.is-action-yawn .sna-bot-arm-left,
+.sna-bot-svg.is-mood-yawn .sna-bot-arm-left,
+.sna-bot-avatar.is-yawn .sna-bot-arm-left,
+.sna-bot-svg.is-action-wake .sna-bot-arm-left,
+.sna-bot-svg.is-mood-wake .sna-bot-arm-left,
+.sna-bot-avatar.is-wake .sna-bot-arm-left {
+  animation: sna-arm-stretch-l 3.2s ease-in-out infinite alternate !important;
+}
+
+.sna-bot-svg.is-action-yawn .sna-bot-arm-right,
+.sna-bot-svg.is-mood-yawn .sna-bot-arm-right,
+.sna-bot-avatar.is-yawn .sna-bot-arm-right,
+.sna-bot-svg.is-action-wake .sna-bot-arm-right,
+.sna-bot-svg.is-mood-wake .sna-bot-arm-right,
+.sna-bot-avatar.is-wake .sna-bot-arm-right {
+  animation: sna-arm-stretch-r 3.2s ease-in-out infinite alternate !important;
+}
+
+.sna-bot-svg.is-action-yawn .sna-bot-head-group,
+.sna-bot-svg.is-mood-yawn .sna-bot-head-group,
+.sna-bot-avatar.is-yawn .sna-bot-head-group,
+.sna-bot-svg.is-action-wake .sna-bot-head-group,
+.sna-bot-svg.is-mood-wake .sna-bot-head-group,
+.sna-bot-avatar.is-wake .sna-bot-head-group {
+  animation: sna-head-yawn 3.2s ease-in-out infinite alternate !important;
+}
+
+.sna-bot-svg.is-action-yawn .sna-bot-eyes-normal,
+.sna-bot-svg.is-mood-yawn .sna-bot-eyes-normal,
+.sna-bot-avatar.is-yawn .sna-bot-eyes-normal,
+.sna-bot-svg.is-action-wake .sna-bot-eyes-normal,
+.sna-bot-svg.is-mood-wake .sna-bot-eyes-normal,
+.sna-bot-avatar.is-wake .sna-bot-eyes-normal {
+  opacity: 0;
+}
+
+.sna-bot-svg.is-action-yawn .sna-bot-eyes-yawn,
+.sna-bot-svg.is-mood-yawn .sna-bot-eyes-yawn,
+.sna-bot-avatar.is-yawn .sna-bot-eyes-yawn,
+.sna-bot-svg.is-action-wake .sna-bot-eyes-yawn,
+.sna-bot-svg.is-mood-wake .sna-bot-eyes-yawn,
+.sna-bot-avatar.is-wake .sna-bot-eyes-yawn {
+  opacity: 1;
+}
+
 /* GESTURE / MOOD: WORKING (ធ្វើការ) */
 .sna-bot-svg.is-action-working .sna-bot-arm-left,
 .sna-bot-svg.is-mood-working .sna-bot-arm-left,
@@ -3879,6 +3985,45 @@ button.khmer-calendar-cell:hover {
   0% { transform: translateY(0); opacity: 0; }
   40% { opacity: 0.9; }
   100% { transform: translateY(-7px); opacity: 0; }
+}
+
+@keyframes sna-coffee-sip {
+  0%, 100% { transform: translateY(0) scale(1); }
+  50% { transform: translateY(-3px) scale(1.02); }
+}
+
+@keyframes sna-coffee-arm-l {
+  0%, 100% { transform: rotate(-36deg) translateY(-1px); }
+  50% { transform: rotate(-42deg) translateY(-3px); }
+}
+
+@keyframes sna-coffee-arm-r {
+  0%, 100% { transform: rotate(38deg) translateY(-2px); }
+  50% { transform: rotate(44deg) translateY(-4px); }
+}
+
+@keyframes sna-yawn-stretch {
+  0% { transform: translateY(0) scale(1); }
+  45%, 65% { transform: translateY(-5px) scale(1.03); }
+  100% { transform: translateY(0) scale(1); }
+}
+
+@keyframes sna-arm-stretch-l {
+  0% { transform: rotate(-10deg); }
+  45%, 65% { transform: rotate(-115deg) translateY(-4px); }
+  100% { transform: rotate(-10deg); }
+}
+
+@keyframes sna-arm-stretch-r {
+  0% { transform: rotate(10deg); }
+  45%, 65% { transform: rotate(115deg) translateY(-4px); }
+  100% { transform: rotate(10deg); }
+}
+
+@keyframes sna-head-yawn {
+  0% { transform: rotate(0) translateY(0); }
+  45%, 65% { transform: rotate(-6deg) translateY(-2px); }
+  100% { transform: rotate(0) translateY(0); }
 }
 
 .sna-bot-companion {
@@ -4233,6 +4378,26 @@ button.khmer-calendar-cell:hover {
   box-shadow: 0 8px 24px rgba(100, 116, 139, 0.18) !important;
 }
 
+/* COFFEE -> Warm Coffee Amber / Caramel */
+.sna-bot-companion.is-reaction-coffee .sna-bot-greeting,
+.sna-bot-companion.is-reaction-coffee .sna-bot-caption {
+  color: #78350f !important;
+  border-color: rgba(217, 119, 6, 0.45) !important;
+  background: rgba(255, 251, 235, 0.98) !important;
+  box-shadow: 0 8px 24px rgba(180, 83, 9, 0.2) !important;
+}
+
+/* YAWN / WAKE -> Soft Lavender Purple */
+.sna-bot-companion.is-reaction-yawn .sna-bot-greeting,
+.sna-bot-companion.is-reaction-yawn .sna-bot-caption,
+.sna-bot-companion.is-reaction-wake .sna-bot-greeting,
+.sna-bot-companion.is-reaction-wake .sna-bot-caption {
+  color: #4f46e5 !important;
+  border-color: rgba(99, 102, 241, 0.45) !important;
+  background: rgba(238, 242, 255, 0.98) !important;
+  box-shadow: 0 8px 24px rgba(99, 102, 241, 0.2) !important;
+}
+
 /* TIRED -> Muted Warm Taupe */
 .sna-bot-companion.is-reaction-tired .sna-bot-greeting,
 .sna-bot-companion.is-reaction-tired .sna-bot-caption {
@@ -4280,6 +4445,22 @@ button.khmer-calendar-cell:hover {
   color: #fde68a !important;
   border-color: rgba(245, 158, 11, 0.4) !important;
   background: rgba(69, 26, 3, 0.96) !important;
+}
+
+.sna-gpt-tool.is-dark-mode .sna-bot-companion.is-reaction-coffee .sna-bot-greeting,
+.sna-gpt-tool.is-dark-mode .sna-bot-companion.is-reaction-coffee .sna-bot-caption {
+  color: #fde68a !important;
+  border-color: rgba(245, 158, 11, 0.4) !important;
+  background: rgba(69, 26, 3, 0.96) !important;
+}
+
+.sna-gpt-tool.is-dark-mode .sna-bot-companion.is-reaction-yawn .sna-bot-greeting,
+.sna-gpt-tool.is-dark-mode .sna-bot-companion.is-reaction-yawn .sna-bot-caption,
+.sna-gpt-tool.is-dark-mode .sna-bot-companion.is-reaction-wake .sna-bot-greeting,
+.sna-gpt-tool.is-dark-mode .sna-bot-companion.is-reaction-wake .sna-bot-caption {
+  color: #c7d2fe !important;
+  border-color: rgba(99, 102, 241, 0.4) !important;
+  background: rgba(30, 27, 75, 0.96) !important;
 }
 
 .sna-gpt-tool.is-dark-mode .sna-bot-companion.is-reaction-angry .sna-bot-greeting,
