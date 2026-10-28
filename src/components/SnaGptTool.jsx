@@ -19,6 +19,7 @@ import {
   RefreshCw,
   Send,
   Gauge,
+  Sparkles,
   Sun,
   Trash2,
   UserRound,
@@ -1797,6 +1798,18 @@ export default function SnaGptTool({ onBack, onBotGesture, onBotMoodChange }) {
             <span>{status}</span>
           </div>
           <div className="sna-bot-actions" aria-label="Bot gestures">
+            <button
+              type="button"
+              onClick={() => {
+                const reactions = ["angry", "smile", "happy", "hungry", "tired", "sleep", "working", "error", "hello"];
+                const r = reactions[Math.floor(Math.random() * reactions.length)];
+                triggerBotGesture(r);
+              }}
+              aria-label="Random bot reaction"
+              title="Random Reaction (ចៃដន្យ)"
+            >
+              <Sparkles size={17} />
+            </button>
             <button type="button" onClick={() => triggerBotGesture("wave")} aria-label="Make the bot wave" title="Wave">
               <Hand size={17} />
             </button>

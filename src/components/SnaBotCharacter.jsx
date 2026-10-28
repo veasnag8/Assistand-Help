@@ -532,6 +532,69 @@ export default function SnaBotCharacter({
               />
             </g>
 
+            {/* G. Angry Eyes (\ /) & Head Anger Mark */}
+            <g className="sna-bot-eyes-angry">
+              <path
+                d="M 43 33 L 52 38 L 44 42"
+                stroke="#ef4444"
+                strokeWidth="3.2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                fill="none"
+              />
+              <path
+                d="M 77 33 L 68 38 L 76 42"
+                stroke="#ef4444"
+                strokeWidth="3.2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                fill="none"
+              />
+            </g>
+
+            {/* H. Tired Eyes & Sweat Drop */}
+            <g className="sna-bot-eyes-tired">
+              <line x1="42" y1="36" x2="52" y2="39" stroke="#38bdf8" strokeWidth="2.8" strokeLinecap="round" />
+              <path d="M 43 41 Q 47 43 51 41" stroke="#38bdf8" strokeWidth="2" strokeLinecap="round" fill="none" />
+              <line x1="78" y1="36" x2="68" y2="39" stroke="#38bdf8" strokeWidth="2.8" strokeLinecap="round" />
+              <path d="M 69 41 Q 73 43 77 41" stroke="#38bdf8" strokeWidth="2" strokeLinecap="round" fill="none" />
+            </g>
+
+            {/* I. Sleepy Closed Eyes (- -) */}
+            <g className="sna-bot-eyes-sleep">
+              <path
+                d="M 42 39 Q 47 44 52 39"
+                stroke="#38bdf8"
+                strokeWidth="3"
+                strokeLinecap="round"
+                fill="none"
+              />
+              <path
+                d="M 68 39 Q 73 44 78 39"
+                stroke="#38bdf8"
+                strokeWidth="3"
+                strokeLinecap="round"
+                fill="none"
+              />
+            </g>
+
+            {/* J. Working / Focused Cyber HUD Eyes */}
+            <g className="sna-bot-eyes-working">
+              <rect x="42.5" y="33" width="8" height="11" rx="2" fill="#38bdf8" />
+              <rect x="69.5" y="33" width="8" height="11" rx="2" fill="#38bdf8" />
+              <line className="sna-bot-working-scan" x1="39" y1="38" x2="81" y2="38" stroke="#67e8f9" strokeWidth="1.5" strokeDasharray="3 2" />
+            </g>
+
+            {/* K. Hungry Eyes (Eager wide eyes with longing drool) */}
+            <g className="sna-bot-eyes-hungry">
+              <circle cx="47" cy="38" r="6.2" fill="#38bdf8" />
+              <circle cx="49" cy="35.5" r="2.2" fill="#ffffff" />
+              <circle cx="73" cy="38" r="6.2" fill="#38bdf8" />
+              <circle cx="75" cy="35.5" r="2.2" fill="#ffffff" />
+              <path d="M 56 46 Q 60 52 64 46" stroke="#38bdf8" strokeWidth="2.2" strokeLinecap="round" fill="none" />
+              <path className="sna-bot-drool" d="M 64 47 C 64 47 65 52 64 53 C 63 54 62 53 62 52 C 62 50 64 47 64 47 Z" fill="#38bdf8" />
+            </g>
+
             {/* Speech Waveform Equalizer (Animated during speaking mood) */}
             <g className="sna-bot-voice-bars">
               <rect className="sna-voice-bar vb-1" x="51.5" y="47" width="2.8" height="4" rx="1.4" fill="#38bdf8" />
@@ -540,6 +603,61 @@ export default function SnaBotCharacter({
               <rect className="sna-voice-bar vb-4" x="65.5" y="47" width="2.8" height="4" rx="1.4" fill="#38bdf8" />
             </g>
           </g>
+
+          {/* Hungry Food / Rice Bowl FX */}
+          <g className="sna-bot-food-fx" aria-hidden="true">
+            <path
+              className="sna-bot-rice-bowl"
+              d="M 83 23 C 83 28 89 31 94 31 C 99 31 105 28 105 23 Z"
+              fill="#f8fafc"
+              stroke="#38bdf8"
+              strokeWidth="1.2"
+            />
+            <path d="M 81 23 L 107 23" stroke="#38bdf8" strokeWidth="1.2" strokeLinecap="round" />
+            <path className="sna-bot-food-steam s1" d="M 89 20 Q 91 16 89 13" stroke="#38bdf8" strokeWidth="1.2" strokeLinecap="round" fill="none" />
+            <path className="sna-bot-food-steam s2" d="M 94 19 Q 96 15 94 12" stroke="#38bdf8" strokeWidth="1.2" strokeLinecap="round" fill="none" />
+            <path className="sna-bot-food-steam s3" d="M 99 20 Q 101 16 99 13" stroke="#38bdf8" strokeWidth="1.2" strokeLinecap="round" fill="none" />
+          </g>
+
+          {/* Anger Pulsing Tick Mark */}
+          <g className="sna-bot-anger-fx" aria-hidden="true">
+            <path
+              className="sna-bot-anger-cross"
+              d="M 76 17 L 84 17 M 80 13 L 80 21"
+              stroke="#ef4444"
+              strokeWidth="2.4"
+              strokeLinecap="round"
+            />
+          </g>
+
+          {/* Tired Sweat Drop */}
+          <g className="sna-bot-sweat-fx" aria-hidden="true">
+            <path
+              className="sna-bot-sweat-drop"
+              d="M 87 26 C 87 23 90 19 90 19 C 90 19 93 23 93 26 C 93 28 92 29.5 90 29.5 C 88 29.5 87 28 87 26 Z"
+              fill="#38bdf8"
+              filter="url(#sna-bot-glow)"
+            />
+          </g>
+
+          {/* Sleep Floating Zzz Group */}
+          <g className="sna-bot-zzz-group" aria-hidden="true">
+            <text x="86" y="22" className="sna-bot-zzz z1" fill="#38bdf8" fontSize="8" fontWeight="bold">z</text>
+            <text x="95" y="15" className="sna-bot-zzz z2" fill="#38bdf8" fontSize="11" fontWeight="bold">Z</text>
+            <text x="105" y="7" className="sna-bot-zzz z3" fill="#38bdf8" fontSize="14" fontWeight="bold">Z</text>
+          </g>
+        </g>
+
+        {/* Holographic Working HUD (Keyboard & Cyber Screen) */}
+        <g className="sna-bot-work-hud" aria-hidden="true">
+          <polygon
+            points="34,103 86,103 94,115 26,115"
+            fill="rgba(56, 189, 248, 0.22)"
+            stroke="#38bdf8"
+            strokeWidth="1.2"
+          />
+          <line x1="38" y1="107" x2="82" y2="107" stroke="#67e8f9" strokeWidth="1.2" strokeDasharray="3 2" />
+          <line x1="31" y1="111" x2="89" y2="111" stroke="#67e8f9" strokeWidth="1.2" strokeDasharray="4 3" />
         </g>
 
         {/* 3. Celebration / Magic Sparkles (Twinkle during celebrate / success) */}

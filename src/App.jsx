@@ -21,6 +21,7 @@ import {
   ScanText as ScanTextIcon,
   Scissors,
   Settings,
+  Sparkles,
   UserRoundPlus,
   Workflow,
   X,
@@ -1084,15 +1085,44 @@ function loadBotPreferences() {
   }
 }
 
+const RANDOM_BOT_REACTIONS = [
+  "angry",   // ខឹង
+  "smile",   // ញញឹម
+  "happy",   // សប្បាយ
+  "hungry",  // ឃ្លានបាយ
+  "tired",   // ហត់
+  "sleep",   // គេង
+  "working", // ធ្វើការ
+  "error",   // Error
+  "hello",   // សួរស្ដី (បង្ហាញអក្សរ)
+];
+
+const BOT_REACTION_MESSAGES = {
+  hello: "សួស្តី! តើខ្ញុំអាចជួយអ្វីបានខ្លះ?",
+  wave: "សួស្តី! តើខ្ញុំអាចជួយអ្វីបានខ្លះ?",
+  smile: "ញញឹមស្រស់ស្រាយ! មានកម្លាំងចិត្តធ្វើការ!",
+  happy: "សប្បាយរីករាយណាស់! ហេងហេងទាំងអស់គ្នា!",
+  hungry: "ឃ្លានបាយហើយ! ទៅញ៉ាំអីសិនទៅ?",
+  tired: "ហត់នឿយណាស់! សម្រាកបន្តិចសិនទៅ...",
+  sleep: "ងងុយគេងណាស់... Zzz...",
+  working: "កំពុងផ្ដោតអារម្មណ៍ធ្វើការ...",
+  angry: "ខឹងហើយណា! កុំមកលេងសើច!",
+  error: "មានបញ្ហាខុសបច្ចេកទេសហើយ! (Error)",
+  celebrate: "សប្បាយរីករាយណាស់! ហេងហេងទាំងអស់គ្នា!",
+  dance: "រាំលេងកម្សាន្តសប្បាយៗ!",
+};
+
 function FloatingBot({ mood, gesture, onOpen, preferences, onPreferencesChange }) {
   const [position, setPosition] = useState(() => clampBotPosition(loadBotPosition(), preferences.size));
   const [autoGesture, setAutoGesture] = useState("");
+  const [isGreetingVisible, setIsGreetingVisible] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
   const [contextMenu, setContextMenu] = useState(null);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const pointerStartRef = useRef(null);
   const didDragRef = useRef(false);
   const contextMenuRef = useRef(null);
+  const lastReactionRef = useRef("");
 
   useEffect(() => {
     window.localStorage.setItem(botPositionStorageKey, JSON.stringify(position));
@@ -1141,29 +1171,38 @@ function FloatingBot({ mood, gesture, onOpen, preferences, onPreferencesChange }
   useEffect(() => {
     if (mood !== "idle" || gesture || contextMenu) {
       setAutoGesture("");
+      setIsGreetingVisible(false);
       return undefined;
     }
 
-    // Friendly occasional micro-gestures instead of chaotic slide loop
-    const friendlyIdleGestures = ["wave", "react"];
-    let gestureIndex = 0;
     let timeoutId;
 
-    function playOccasionalGreeting() {
+    function playRandomReaction() {
       if (pointerStartRef.current || didDragRef.current) {
-        timeoutId = window.setTimeout(playOccasionalGreeting, 4000);
+        timeoutId = window.setTimeout(playRandomReaction, 3000);
         return;
       }
 
-      setAutoGesture(friendlyIdleGestures[gestureIndex % friendlyIdleGestures.length]);
-      gestureIndex += 1;
+      // Pick randomly from the 8 emotions, different from the last one
+      const pool = RANDOM_BOT_REACTIONS.filter((r) => r !== lastReactionRef.current);
+      const chosen = pool[Math.floor(Math.random() * pool.length)] || RANDOM_BOT_REACTIONS[0];
+      lastReactionRef.current = chosen;
+
+      setAutoGesture(chosen);
+      setIsGreetingVisible(true);
+
+      const duration = chosen === "sleep" ? 4200 : chosen === "hungry" ? 3800 : 3400;
+
       timeoutId = window.setTimeout(() => {
         setAutoGesture("");
-        timeoutId = window.setTimeout(playOccasionalGreeting, 18000);
-      }, 2000);
+        setIsGreetingVisible(false);
+        // Wait random 7s to 12s before next random reaction
+        const nextDelay = 7000 + Math.floor(Math.random() * 5000);
+        timeoutId = window.setTimeout(playRandomReaction, nextDelay);
+      }, duration);
     }
 
-    timeoutId = window.setTimeout(playOccasionalGreeting, 12000);
+    timeoutId = window.setTimeout(playRandomReaction, 3500);
     return () => window.clearTimeout(timeoutId);
   }, [contextMenu, gesture, mood]);
 
@@ -1266,9 +1305,13 @@ function FloatingBot({ mood, gesture, onOpen, preferences, onPreferencesChange }
     );
   }
 
+  const currentAction = gesture || autoGesture;
+  const currentGreeting = BOT_REACTION_MESSAGES[currentAction] || "សួស្តី! តើខ្ញុំអាចជួយអ្វីបានខ្លះ?";
+  const showGreetingBubble = isGreetingVisible || Boolean(gesture);
+
   return (
     <div
-      className="sna-bot-companion"
+      className={`sna-bot-companion${showGreetingBubble ? " is-greeting-visible" : ""}`}
       style={{
         left: `${position.x}px`,
         top: `${position.y}px`,
@@ -1291,9 +1334,9 @@ function FloatingBot({ mood, gesture, onOpen, preferences, onPreferencesChange }
         onPointerCancel={handlePointerUp}
         onContextMenu={handleContextMenu}
       />
-      <span className="sna-bot-caption">Click to chat · Drag to move</span>
+      <span className="sna-bot-caption">ចុចដើម្បីជជែក · អូសដើម្បីផ្លាស់ទី</span>
       <span className="sna-bot-greeting" role="status">
-        Hello! Can I help you?
+        {currentGreeting}
       </span>
       {contextMenu ? (
         <div
@@ -1351,6 +1394,26 @@ function FloatingBot({ mood, gesture, onOpen, preferences, onPreferencesChange }
                 type="button"
                 className="sna-bot-menu-item"
                 onClick={() => {
+                  const pool = RANDOM_BOT_REACTIONS.filter((r) => r !== lastReactionRef.current);
+                  const chosen = pool[Math.floor(Math.random() * pool.length)] || RANDOM_BOT_REACTIONS[0];
+                  lastReactionRef.current = chosen;
+                  setAutoGesture(chosen);
+                  setIsGreetingVisible(true);
+                  const duration = chosen === "sleep" ? 4200 : chosen === "hungry" ? 3800 : 3400;
+                  window.setTimeout(() => {
+                    setAutoGesture("");
+                    setIsGreetingVisible(false);
+                  }, duration);
+                  setContextMenu(null);
+                }}
+              >
+                <Sparkles size={17} />
+                <span>Reaction (ចៃដន្យ)</span>
+              </button>
+              <button
+                type="button"
+                className="sna-bot-menu-item"
+                onClick={() => {
                   updatePreference("hidden", true);
                   setContextMenu(null);
                 }}
@@ -1394,7 +1457,7 @@ export default function App() {
   const triggerBotGesture = useCallback((gesture) => {
     window.clearTimeout(botGestureTimeoutRef.current);
     setBotGesture(gesture);
-    botGestureTimeoutRef.current = window.setTimeout(() => setBotGesture(""), 2200);
+    botGestureTimeoutRef.current = window.setTimeout(() => setBotGesture(""), 3200);
   }, []);
 
   const updateBotMood = useCallback((mood) => {

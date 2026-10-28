@@ -1,4 +1,4 @@
-@import url("https://fonts.googleapis.com/css2?family=Fraunces:wght@600;700&family=Manrope:wght@400;500;600;700&family=Noto+Sans+Khmer:wght@700&display=swap");
+@import url("https://fonts.googleapis.com/css2?family=Fraunces:wght@600;700&family=Manrope:wght@400;500;600;700&family=Noto+Sans+Khmer:wght@700&family=Moul&display=swap");
 
 :root {
   color-scheme: light;
@@ -2993,6 +2993,16 @@ button.khmer-calendar-cell:hover {
 .sna-bot-eyes-surprised,
 .sna-bot-eyes-sad,
 .sna-bot-eyes-error,
+.sna-bot-eyes-angry,
+.sna-bot-eyes-tired,
+.sna-bot-eyes-sleep,
+.sna-bot-eyes-working,
+.sna-bot-eyes-hungry,
+.sna-bot-anger-fx,
+.sna-bot-sweat-fx,
+.sna-bot-zzz-group,
+.sna-bot-work-hud,
+.sna-bot-food-fx,
 .sna-bot-voice-bars,
 .sna-bot-sparkles {
   opacity: 0;
@@ -3341,6 +3351,314 @@ button.khmer-calendar-cell:hover {
   fill: #f43f5e !important;
 }
 
+/* GESTURE / MOOD: ANGRY (ខឹង) */
+.sna-bot-svg.is-action-angry .sna-bot-rig,
+.sna-bot-svg.is-mood-angry .sna-bot-rig,
+.sna-bot-avatar.is-angry .sna-bot-rig {
+  animation: sna-angry-shake 220ms ease-in-out infinite alternate !important;
+}
+
+.sna-bot-svg.is-action-angry .sna-bot-arm-left,
+.sna-bot-svg.is-mood-angry .sna-bot-arm-left,
+.sna-bot-avatar.is-angry .sna-bot-arm-left {
+  transform: rotate(28deg) !important;
+}
+
+.sna-bot-svg.is-action-angry .sna-bot-arm-right,
+.sna-bot-svg.is-mood-angry .sna-bot-arm-right,
+.sna-bot-avatar.is-angry .sna-bot-arm-right {
+  transform: rotate(-28deg) !important;
+}
+
+.sna-bot-svg.is-action-angry .sna-bot-head-group,
+.sna-bot-svg.is-mood-angry .sna-bot-head-group,
+.sna-bot-avatar.is-angry .sna-bot-head-group {
+  transform: rotate(3deg) translateY(2px);
+}
+
+.sna-bot-svg.is-action-angry .sna-bot-eyes-normal,
+.sna-bot-svg.is-mood-angry .sna-bot-eyes-normal,
+.sna-bot-avatar.is-angry .sna-bot-eyes-normal {
+  opacity: 0;
+}
+
+.sna-bot-svg.is-action-angry .sna-bot-eyes-angry,
+.sna-bot-svg.is-mood-angry .sna-bot-eyes-angry,
+.sna-bot-avatar.is-angry .sna-bot-eyes-angry,
+.sna-bot-svg.is-action-angry .sna-bot-anger-fx,
+.sna-bot-svg.is-mood-angry .sna-bot-anger-fx,
+.sna-bot-avatar.is-angry .sna-bot-anger-fx {
+  opacity: 1;
+}
+
+.sna-bot-svg.is-action-angry .sna-bot-anger-cross {
+  animation: sna-anger-pulse 420ms ease-in-out infinite alternate;
+}
+
+.sna-bot-svg.is-action-angry .sna-bot-antenna-orb,
+.sna-bot-svg.is-mood-angry .sna-bot-antenna-orb,
+.sna-bot-avatar.is-angry .sna-bot-antenna-orb,
+.sna-bot-svg.is-action-angry .sna-bot-reactor-mid,
+.sna-bot-svg.is-mood-angry .sna-bot-reactor-mid,
+.sna-bot-avatar.is-angry .sna-bot-reactor-mid {
+  fill: #ef4444 !important;
+}
+
+/* GESTURE / MOOD: SMILE (ញញឹម) */
+.sna-bot-svg.is-action-smile .sna-bot-eyes-normal,
+.sna-bot-svg.is-mood-smile .sna-bot-eyes-normal,
+.sna-bot-avatar.is-smile .sna-bot-eyes-normal {
+  opacity: 0;
+}
+
+.sna-bot-svg.is-action-smile .sna-bot-eyes-happy,
+.sna-bot-svg.is-mood-smile .sna-bot-eyes-happy,
+.sna-bot-avatar.is-smile .sna-bot-eyes-happy {
+  opacity: 1;
+}
+
+.sna-bot-svg.is-action-smile .sna-bot-blush,
+.sna-bot-svg.is-mood-smile .sna-bot-blush,
+.sna-bot-avatar.is-smile .sna-bot-blush {
+  opacity: 0.85;
+}
+
+.sna-bot-svg.is-action-smile .sna-bot-head-group,
+.sna-bot-svg.is-mood-smile .sna-bot-head-group,
+.sna-bot-avatar.is-smile .sna-bot-head-group {
+  transform: rotate(3.5deg);
+}
+
+/* GESTURE / MOOD: HAPPY (សប្បាយ) */
+.sna-bot-svg.is-action-happy .sna-bot-rig,
+.sna-bot-avatar.is-happy .sna-bot-rig {
+  animation: sna-celebrate-jump 440ms cubic-bezier(0.18, 0.89, 0.32, 1.28) infinite alternate !important;
+}
+
+.sna-bot-svg.is-action-happy .sna-bot-arm-left,
+.sna-bot-avatar.is-happy .sna-bot-arm-left {
+  animation: sna-arm-cheer-l 320ms ease-in-out infinite alternate !important;
+}
+
+.sna-bot-svg.is-action-happy .sna-bot-arm-right,
+.sna-bot-avatar.is-happy .sna-bot-arm-right {
+  animation: sna-arm-cheer-r 320ms ease-in-out infinite alternate !important;
+}
+
+.sna-bot-svg.is-action-happy .sna-bot-eyes-normal,
+.sna-bot-avatar.is-happy .sna-bot-eyes-normal {
+  opacity: 0;
+}
+
+.sna-bot-svg.is-action-happy .sna-bot-eyes-happy,
+.sna-bot-avatar.is-happy .sna-bot-eyes-happy {
+  opacity: 1;
+}
+
+.sna-bot-svg.is-action-happy .sna-bot-blush,
+.sna-bot-avatar.is-happy .sna-bot-blush {
+  opacity: 0.85;
+}
+
+.sna-bot-svg.is-action-happy .sna-bot-sparkles,
+.sna-bot-avatar.is-happy .sna-bot-sparkles {
+  opacity: 1;
+}
+
+.sna-bot-svg.is-action-happy .sna-bot-sparkle,
+.sna-bot-avatar.is-happy .sna-bot-sparkle {
+  animation: sna-sparkle-spin 700ms ease-in-out infinite alternate;
+}
+
+/* GESTURE / MOOD: TIRED (ហត់) */
+.sna-bot-svg.is-action-tired .sna-bot-rig,
+.sna-bot-svg.is-mood-tired .sna-bot-rig,
+.sna-bot-avatar.is-tired .sna-bot-rig {
+  animation: sna-tired-pant 900ms ease-in-out infinite alternate !important;
+}
+
+.sna-bot-svg.is-action-tired .sna-bot-head-group,
+.sna-bot-svg.is-mood-tired .sna-bot-head-group,
+.sna-bot-avatar.is-tired .sna-bot-head-group {
+  transform: rotate(4deg) translateY(4px);
+}
+
+.sna-bot-svg.is-action-tired .sna-bot-arm-left,
+.sna-bot-svg.is-mood-tired .sna-bot-arm-left,
+.sna-bot-avatar.is-tired .sna-bot-arm-left {
+  transform: rotate(12deg) !important;
+}
+
+.sna-bot-svg.is-action-tired .sna-bot-arm-right,
+.sna-bot-svg.is-mood-tired .sna-bot-arm-right,
+.sna-bot-avatar.is-tired .sna-bot-arm-right {
+  transform: rotate(-12deg) !important;
+}
+
+.sna-bot-svg.is-action-tired .sna-bot-eyes-normal,
+.sna-bot-svg.is-mood-tired .sna-bot-eyes-normal,
+.sna-bot-avatar.is-tired .sna-bot-eyes-normal {
+  opacity: 0;
+}
+
+.sna-bot-svg.is-action-tired .sna-bot-eyes-tired,
+.sna-bot-svg.is-mood-tired .sna-bot-eyes-tired,
+.sna-bot-avatar.is-tired .sna-bot-eyes-tired,
+.sna-bot-svg.is-action-tired .sna-bot-sweat-fx,
+.sna-bot-svg.is-mood-tired .sna-bot-sweat-fx,
+.sna-bot-avatar.is-tired .sna-bot-sweat-fx {
+  opacity: 1;
+}
+
+.sna-bot-svg.is-action-tired .sna-bot-sweat-drop {
+  animation: sna-sweat-drip 1.3s ease-in-out infinite;
+}
+
+/* GESTURE / MOOD: HUNGRY (ឃ្លានបាយ) */
+.sna-bot-svg.is-action-hungry .sna-bot-rig,
+.sna-bot-svg.is-mood-hungry .sna-bot-rig,
+.sna-bot-avatar.is-hungry .sna-bot-rig {
+  animation: sna-hungry-float 1.8s ease-in-out infinite alternate !important;
+}
+
+.sna-bot-svg.is-action-hungry .sna-bot-arm-left,
+.sna-bot-svg.is-mood-hungry .sna-bot-arm-left,
+.sna-bot-avatar.is-hungry .sna-bot-arm-left {
+  transform: rotate(-48deg) translateY(-2px);
+  animation: sna-tummy-rub 750ms ease-in-out infinite alternate !important;
+}
+
+.sna-bot-svg.is-action-hungry .sna-bot-arm-right,
+.sna-bot-svg.is-mood-hungry .sna-bot-arm-right,
+.sna-bot-avatar.is-hungry .sna-bot-arm-right {
+  transform: rotate(45deg) translateY(-2px);
+}
+
+.sna-bot-svg.is-action-hungry .sna-bot-head-group,
+.sna-bot-svg.is-mood-hungry .sna-bot-head-group,
+.sna-bot-avatar.is-hungry .sna-bot-head-group {
+  transform: rotate(-4deg) translateY(1px);
+}
+
+.sna-bot-svg.is-action-hungry .sna-bot-eyes-normal,
+.sna-bot-svg.is-mood-hungry .sna-bot-eyes-normal,
+.sna-bot-avatar.is-hungry .sna-bot-eyes-normal {
+  opacity: 0;
+}
+
+.sna-bot-svg.is-action-hungry .sna-bot-eyes-hungry,
+.sna-bot-svg.is-mood-hungry .sna-bot-eyes-hungry,
+.sna-bot-avatar.is-hungry .sna-bot-eyes-hungry,
+.sna-bot-svg.is-action-hungry .sna-bot-food-fx,
+.sna-bot-svg.is-mood-hungry .sna-bot-food-fx,
+.sna-bot-avatar.is-hungry .sna-bot-food-fx {
+  opacity: 1;
+}
+
+.sna-bot-drool {
+  animation: sna-drool-drop 950ms ease-in-out infinite;
+}
+
+.sna-bot-food-steam.s1 { animation: sna-steam-rise 1.2s ease-out infinite; }
+.sna-bot-food-steam.s2 { animation: sna-steam-rise 1.2s ease-out 0.4s infinite; }
+.sna-bot-food-steam.s3 { animation: sna-steam-rise 1.2s ease-out 0.8s infinite; }
+
+/* GESTURE / MOOD: SLEEP (គេង) */
+.sna-bot-svg.is-action-sleep .sna-bot-rig,
+.sna-bot-svg.is-mood-sleep .sna-bot-rig,
+.sna-bot-avatar.is-sleep .sna-bot-rig {
+  animation: sna-sleep-float 3.8s ease-in-out infinite !important;
+}
+
+.sna-bot-svg.is-action-sleep .sna-bot-head-group,
+.sna-bot-svg.is-mood-sleep .sna-bot-head-group,
+.sna-bot-avatar.is-sleep .sna-bot-head-group {
+  transform: rotate(9deg) translateY(2px);
+}
+
+.sna-bot-svg.is-action-sleep .sna-bot-arm-left,
+.sna-bot-svg.is-mood-sleep .sna-bot-arm-left,
+.sna-bot-avatar.is-sleep .sna-bot-arm-left {
+  transform: rotate(-6deg) !important;
+}
+
+.sna-bot-svg.is-action-sleep .sna-bot-arm-right,
+.sna-bot-svg.is-mood-sleep .sna-bot-arm-right,
+.sna-bot-avatar.is-sleep .sna-bot-arm-right {
+  transform: rotate(6deg) !important;
+}
+
+.sna-bot-svg.is-action-sleep .sna-bot-eyes-normal,
+.sna-bot-svg.is-mood-sleep .sna-bot-eyes-normal,
+.sna-bot-avatar.is-sleep .sna-bot-eyes-normal {
+  opacity: 0;
+}
+
+.sna-bot-svg.is-action-sleep .sna-bot-eyes-sleep,
+.sna-bot-svg.is-mood-sleep .sna-bot-eyes-sleep,
+.sna-bot-avatar.is-sleep .sna-bot-eyes-sleep,
+.sna-bot-svg.is-action-sleep .sna-bot-zzz-group,
+.sna-bot-svg.is-mood-sleep .sna-bot-zzz-group,
+.sna-bot-avatar.is-sleep .sna-bot-zzz-group {
+  opacity: 1;
+}
+
+.sna-bot-zzz.z1 { animation: sna-zzz-rise 2.4s ease-out infinite; }
+.sna-bot-zzz.z2 { animation: sna-zzz-rise 2.4s ease-out 0.6s infinite; }
+.sna-bot-zzz.z3 { animation: sna-zzz-rise 2.4s ease-out 1.2s infinite; }
+
+/* GESTURE / MOOD: WORKING (ធ្វើការ) */
+.sna-bot-svg.is-action-working .sna-bot-arm-left,
+.sna-bot-svg.is-mood-working .sna-bot-arm-left,
+.sna-bot-avatar.is-working .sna-bot-arm-left {
+  transform: rotate(-58deg) translateY(-2px);
+  animation: sna-typing-hand-l 220ms ease-in-out infinite alternate !important;
+}
+
+.sna-bot-svg.is-action-working .sna-bot-arm-right,
+.sna-bot-svg.is-mood-working .sna-bot-arm-right,
+.sna-bot-avatar.is-working .sna-bot-arm-right {
+  transform: rotate(58deg) translateY(-2px);
+  animation: sna-typing-hand-r 220ms ease-in-out 110ms infinite alternate !important;
+}
+
+.sna-bot-svg.is-action-working .sna-bot-eyes-normal,
+.sna-bot-svg.is-mood-working .sna-bot-eyes-normal,
+.sna-bot-avatar.is-working .sna-bot-eyes-normal {
+  opacity: 0;
+}
+
+.sna-bot-svg.is-action-working .sna-bot-eyes-working,
+.sna-bot-svg.is-mood-working .sna-bot-eyes-working,
+.sna-bot-avatar.is-working .sna-bot-eyes-working,
+.sna-bot-svg.is-action-working .sna-bot-work-hud,
+.sna-bot-svg.is-mood-working .sna-bot-work-hud,
+.sna-bot-avatar.is-working .sna-bot-work-hud {
+  opacity: 1;
+}
+
+.sna-bot-working-scan {
+  animation: sna-hud-scan 850ms ease-in-out infinite alternate;
+}
+
+.sna-bot-svg.is-action-working .sna-bot-work-hud {
+  animation: sna-hud-glow 1.4s ease-in-out infinite alternate;
+}
+
+/* GREETING TEXT VISIBILITY (សួរស្ដី បង្ហាញអក្សរ) */
+.sna-bot-companion.is-greeting-visible .sna-bot-greeting,
+.sna-bot-companion:hover .sna-bot-greeting,
+.sna-bot-companion:focus-within .sna-bot-greeting {
+  visibility: visible;
+  opacity: 1;
+  transform: translate(-50%, 0) scale(1);
+}
+
+.sna-bot-companion.is-greeting-visible .sna-bot-caption {
+  visibility: hidden;
+  opacity: 0;
+}
+
 /* ==========================================================================
    KEYFRAME ANIMATIONS - ORGANIC PHYSICS & NATURAL MOVEMENT
    ========================================================================== */
@@ -3486,6 +3804,80 @@ button.khmer-calendar-cell:hover {
 @keyframes sna-ear-flash {
   0% { opacity: 0.4; }
   100% { opacity: 1; }
+}
+
+@keyframes sna-angry-shake {
+  0% { transform: translateY(0) rotate(-1.5deg); }
+  100% { transform: translateY(-1.5px) rotate(1.5deg); }
+}
+
+@keyframes sna-anger-pulse {
+  0% { transform: scale(0.85); opacity: 0.7; }
+  100% { transform: scale(1.25); opacity: 1; }
+}
+
+@keyframes sna-tired-pant {
+  0% { transform: translateY(0) scaleY(0.96); }
+  100% { transform: translateY(3px) scaleY(1.02); }
+}
+
+@keyframes sna-sweat-drip {
+  0% { transform: translateY(0); opacity: 0; }
+  25% { opacity: 1; }
+  85% { transform: translateY(6px); opacity: 1; }
+  100% { transform: translateY(9px); opacity: 0; }
+}
+
+@keyframes sna-sleep-float {
+  0%, 100% { transform: translateY(0) scale(0.98); }
+  50% { transform: translateY(-4px) scale(1.01); }
+}
+
+@keyframes sna-zzz-rise {
+  0% { transform: translate(0, 0) scale(0.6); opacity: 0; }
+  30% { opacity: 1; }
+  100% { transform: translate(6px, -14px) scale(1.1); opacity: 0; }
+}
+
+@keyframes sna-typing-hand-l {
+  0% { transform: rotate(-55deg) translateY(-1px); }
+  100% { transform: rotate(-62deg) translateY(2px); }
+}
+
+@keyframes sna-typing-hand-r {
+  0% { transform: rotate(55deg) translateY(-1px); }
+  100% { transform: rotate(62deg) translateY(2px); }
+}
+
+@keyframes sna-hud-scan {
+  0% { transform: translateY(-3px); opacity: 0.4; }
+  100% { transform: translateY(4px); opacity: 1; }
+}
+
+@keyframes sna-hud-glow {
+  0% { opacity: 0.75; transform: scale(0.98); }
+  100% { transform: scale(1.02); opacity: 1; }
+}
+
+@keyframes sna-hungry-float {
+  0% { transform: translateY(0); }
+  100% { transform: translateY(-3.5px) scale(0.99); }
+}
+
+@keyframes sna-tummy-rub {
+  0% { transform: rotate(-42deg) translateY(-1px); }
+  100% { transform: rotate(-54deg) translateY(-4px); }
+}
+
+@keyframes sna-drool-drop {
+  0% { transform: translateY(0) scaleY(0.8); opacity: 0.6; }
+  100% { transform: translateY(3px) scaleY(1.3); opacity: 1; }
+}
+
+@keyframes sna-steam-rise {
+  0% { transform: translateY(0); opacity: 0; }
+  40% { opacity: 0.9; }
+  100% { transform: translateY(-7px); opacity: 0; }
 }
 
 .sna-bot-companion {
@@ -3692,17 +4084,21 @@ button.khmer-calendar-cell:hover {
   z-index: 2;
   bottom: calc(100% - 5px);
   left: 50%;
-  max-width: min(220px, calc(100vw - 24px));
+  width: max-content;
+  max-width: min(320px, calc(100vw - 24px));
   border: 1px solid rgba(55, 105, 219, 0.18);
   border-radius: 16px 16px 16px 5px;
   background: rgba(255, 255, 255, 0.98);
   box-shadow: 0 10px 24px rgba(34, 65, 130, 0.18);
   color: #24449d;
-  font-size: 0.78rem;
-  font-weight: 850;
-  line-height: 1.25;
-  padding: 9px 12px;
-  white-space: nowrap;
+  font-family: "Khmer OS Muol Light", "Khmer OS Muol", "Moul", "Noto Sans Khmer", sans-serif;
+  font-size: 0.74rem;
+  font-weight: normal;
+  letter-spacing: 0.02em;
+  line-height: 1.45;
+  padding: 8px 12px;
+  text-align: center;
+  white-space: normal;
   visibility: hidden;
   opacity: 0;
   pointer-events: none;
