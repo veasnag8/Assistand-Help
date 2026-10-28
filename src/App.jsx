@@ -1221,11 +1221,11 @@ function FloatingBot({ mood, gesture, customMessage = "", onOpen, preferences, o
       setAutoGesture(chosen);
       setIsGreetingVisible(true);
 
-      // Sleep lasts longer (18 seconds) so user can see it sleeping and can wake it up;
-      // Coffee 5.5s, Hungry 5s, others 4.5s
+      // Sleep lasts 5 minutes (5 * 60 * 1000ms), giving plenty of time to see it sleeping
+      // and click to wake it up; Coffee 5.5s, Hungry 5s, others 4.5s
       const duration =
         chosen === "sleep"
-          ? 18000
+          ? 5 * 60 * 1000
           : chosen === "coffee"
             ? 5500
             : chosen === "hungry"
@@ -1241,21 +1241,22 @@ function FloatingBot({ mood, gesture, customMessage = "", onOpen, preferences, o
           autoReactionTimeoutRef.current = window.setTimeout(() => {
             setAutoGesture("");
             setIsGreetingVisible(false);
-            const nextDelay = 20000 + Math.floor(Math.random() * 15000);
+            // After waking up, stay idle for around 3 to 5 minutes
+            const nextDelay = 3 * 60 * 1000 + Math.floor(Math.random() * (2 * 60 * 1000));
             scheduleNext(nextDelay);
           }, 4200);
         } else {
           setAutoGesture("");
           setIsGreetingVisible(false);
-          // Stay calm/idle for 18s to 32s before next reaction (no rushing)
-          const nextDelay = 18000 + Math.floor(Math.random() * 14000);
+          // Stay calm/idle for around 3 to 5 minutes before next reaction (not too long, not 14 min)
+          const nextDelay = 3 * 60 * 1000 + Math.floor(Math.random() * (2 * 60 * 1000));
           scheduleNext(nextDelay);
         }
       }, duration);
     }
 
-    // Peaceful initial delay before first random reaction
-    scheduleNext(16000);
+    // Initial wait before first random reaction (around 2 to 3 minutes)
+    scheduleNext(2.5 * 60 * 1000);
     return () => window.clearTimeout(autoReactionTimeoutRef.current);
   }, [contextMenu, gesture, mood]);
 
@@ -1315,6 +1316,11 @@ function FloatingBot({ mood, gesture, customMessage = "", onOpen, preferences, o
       autoReactionTimeoutRef.current = window.setTimeout(() => {
         setAutoGesture("");
         setIsGreetingVisible(false);
+        // After waking up, schedule next random reaction in 3 to 5 minutes
+        const nextDelay = 3 * 60 * 1000 + Math.floor(Math.random() * (2 * 60 * 1000));
+        autoReactionTimeoutRef.current = window.setTimeout(() => {
+          // Trigger next reaction
+        }, nextDelay);
       }, 4200);
       return;
     }
