@@ -1258,6 +1258,7 @@ export default function SnaGptTool({ onBack, onBotGesture, onBotMoodChange }) {
   const textareaRef = useRef(null);
   const requestRef = useRef(null);
   const recognitionRef = useRef(null);
+  const audioPlayerRef = useRef(null);
 
   const canSend = (draft.trim().length > 0 || attachments.length > 0) && !busy;
   const botMood = voiceListening
@@ -1355,6 +1356,21 @@ export default function SnaGptTool({ onBack, onBotGesture, onBotMoodChange }) {
     requestRef.current?.abort();
     recognitionRef.current?.stop();
     window.speechSynthesis?.cancel();
+    if (audioPlayerRef.current) {
+      audioPlayerRef.current.pause();
+      audioPlayerRef.current = null;
+    }
+  }, []);
+
+  useEffect(() => {
+    if (typeof window !== "undefined" && window.speechSynthesis) {
+      window.speechSynthesis.getVoices();
+      const onVoicesChanged = () => window.speechSynthesis.getVoices();
+      window.speechSynthesis.onvoiceschanged = onVoicesChanged;
+      return () => {
+        if (window.speechSynthesis) window.speechSynthesis.onvoiceschanged = null;
+      };
+    }
   }, []);
 
   function triggerBotGesture(gesture) {
@@ -1378,7 +1394,8 @@ export default function SnaGptTool({ onBack, onBotGesture, onBotMoodChange }) {
     window.speechSynthesis?.cancel();
     setSpeakingMessageId("");
     const recognition = new SpeechRecognition();
-    recognition.lang = navigator.language || "en-US";
+    // Support Khmer voice input
+    recognition.lang = navigator.language?.toLowerCase().includes("km") ? "km-KH" : "km-KH";
     recognition.interimResults = false;
     recognition.maxAlternatives = 1;
     recognition.onresult = (event) => {
@@ -1416,25 +1433,125 @@ export default function SnaGptTool({ onBack, onBotGesture, onBotMoodChange }) {
     }
   }
 
-  function speakMessage(message) {
+  function findKhmerVoice() {
+    if (typeof window === "undefined" || !window.speechSynthesis) return null;
+    const voices = window.speechSynthesis.getVoices() || [];
+    return (
+      voices.find((v) => v.name?.toLowerCase().includes("piseth")) ||
+      voices.find((v) => v.lang?.toLowerCase().replace(/_/g, "-").startsWith("km")) ||
+      voices.find((v) => v.name?.toLowerCase().includes("khmer") || v.name?.toLowerCase().includes("sreymom")) ||
+      null
+    );
+  }
+
+  async function speakMessage(message) {
     if (speakingMessageId === message.id) {
+      if (audioPlayerRef.current) {
+        audioPlayerRef.current.pause();
+        audioPlayerRef.current = null;
+      }
       window.speechSynthesis?.cancel();
       setSpeakingMessageId("");
       setStatus("Voice playback stopped.");
       return;
     }
 
+    if (audioPlayerRef.current) {
+      audioPlayerRef.current.pause();
+      audioPlayerRef.current = null;
+    }
+    window.speechSynthesis?.cancel();
+    recognitionRef.current?.stop();
+    setVoiceListening(false);
+
+    const rawText = normalizeMessageContent(message);
+    const cleanText = rawText
+      .replace(new RegExp("```[\\s\\S]*?```", "g"), "")
+      .replace(new RegExp("`[^`]*`", "g"), "")
+      .replace(/https?:\/\/\S+/g, "")
+      .replace(/[*#_~[\]()]/g, " ")
+      .replace(/\s+/g, " ")
+      .trim();
+
+    if (!cleanText) {
+      return;
+    }
+
+    const hasKhmer = /[\u1780-\u17FF]/.test(cleanText);
+
+    // 1. If text contains Khmer characters:
+    if (hasKhmer) {
+      // Check if browser has Piseth AI or Khmer voice installed locally (e.g. Microsoft Edge)
+      const localKhmerVoice = findKhmerVoice();
+      if (localKhmerVoice && window.SpeechSynthesisUtterance) {
+        const utterance = new window.SpeechSynthesisUtterance(cleanText);
+        utterance.voice = localKhmerVoice;
+        utterance.lang = localKhmerVoice.lang || "km-KH";
+        utterance.onend = () => {
+          setSpeakingMessageId("");
+          setStatus("Ready.");
+        };
+        utterance.onerror = (event) => {
+          setSpeakingMessageId("");
+          setStatus(event.error === "canceled" ? "Ready." : "Voice playback failed.");
+        };
+        setSpeakingMessageId(message.id);
+        setStatus("Speaking reply with " + localKhmerVoice.name + "...");
+        window.speechSynthesis.speak(utterance);
+        return;
+      }
+
+      // If no native Khmer voice in browser (e.g. Google Chrome), use Piseth AI / Khmer TTS API
+      try {
+        setSpeakingMessageId(message.id);
+        setStatus("Generating Piseth AI Khmer voice...");
+
+        const response = await fetch("/.netlify/functions/khmer-tts", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ text: cleanText }),
+        });
+
+        if (!response.ok) {
+          throw new Error("Could not load Khmer voice audio.");
+        }
+
+        const blob = await response.blob();
+        const audioUrl = URL.createObjectURL(blob);
+        const audio = new Audio(audioUrl);
+        audioPlayerRef.current = audio;
+
+        audio.onended = () => {
+          setSpeakingMessageId("");
+          setStatus("Ready.");
+          URL.revokeObjectURL(audioUrl);
+          audioPlayerRef.current = null;
+        };
+
+        audio.onerror = () => {
+          setSpeakingMessageId("");
+          setStatus("Khmer voice playback failed.");
+          URL.revokeObjectURL(audioUrl);
+          audioPlayerRef.current = null;
+        };
+
+        await audio.play();
+        setStatus("Speaking reply with Piseth AI...");
+      } catch (error) {
+        console.error("Khmer TTS error:", error);
+        setSpeakingMessageId("");
+        setStatus("Voice playback failed: Could not load Khmer audio.");
+      }
+      return;
+    }
+
+    // 2. For non-Khmer text (English, etc.), use standard Web Speech Synthesis
     if (!window.speechSynthesis || !window.SpeechSynthesisUtterance) {
       setStatus("Voice playback is not supported in this browser.");
       return;
     }
 
-    recognitionRef.current?.stop();
-    setVoiceListening(false);
-    window.speechSynthesis.cancel();
-    const utterance = new window.SpeechSynthesisUtterance(
-      normalizeMessageContent(message),
-    );
+    const utterance = new window.SpeechSynthesisUtterance(cleanText);
     utterance.onend = () => {
       setSpeakingMessageId("");
       setStatus("Ready.");
