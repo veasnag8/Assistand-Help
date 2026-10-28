@@ -1110,9 +1110,13 @@ const BOT_REACTION_MESSAGES = {
   error: "មានបញ្ហាខុសបច្ចេកទេសហើយ! (Error)",
   celebrate: "សប្បាយរីករាយណាស់! ហេងហេងទាំងអស់គ្នា!",
   dance: "រាំលេងកម្សាន្តសប្បាយៗ!",
+  success: "ជោគជ័យហើយ! រួចរាល់ដោយរលូន!",
+  thinking: "ខ្ញុំកំពុងគិត... សូមរង់ចាំបន្តិច!",
+  listening: "កំពុងស្ដាប់... សូមនិយាយមក!",
+  speaking: "កំពុងឆ្លើយតប...",
 };
 
-function FloatingBot({ mood, gesture, onOpen, preferences, onPreferencesChange }) {
+function FloatingBot({ mood, gesture, customMessage = "", onOpen, preferences, onPreferencesChange }) {
   const [position, setPosition] = useState(() => clampBotPosition(loadBotPosition(), preferences.size));
   const [autoGesture, setAutoGesture] = useState("");
   const [isGreetingVisible, setIsGreetingVisible] = useState(false);
@@ -1306,12 +1310,52 @@ function FloatingBot({ mood, gesture, onOpen, preferences, onPreferencesChange }
   }
 
   const currentAction = gesture || autoGesture;
-  const currentGreeting = BOT_REACTION_MESSAGES[currentAction] || "សួស្តី! តើខ្ញុំអាចជួយអ្វីបានខ្លះ?";
-  const showGreetingBubble = isGreetingVisible || Boolean(gesture);
+
+  let captionText = "ចុចដើម្បីជជែក · អូសដើម្បីផ្លាស់ទី";
+  if (mood === "thinking") {
+    captionText = "ខ្ញុំកំពុងគិត...";
+  } else if (mood === "listening") {
+    captionText = "កំពុងស្ដាប់...";
+  } else if (mood === "speaking") {
+    captionText = "កំពុងឆ្លើយតប...";
+  } else if (gesture === "error") {
+    captionText = "មានបញ្ហា (Error)!";
+  } else if (gesture === "success" || gesture === "happy") {
+    captionText = "ជោគជ័យ!";
+  } else if (gesture === "hungry") {
+    captionText = "ឃ្លានបាយហើយ!";
+  } else if (gesture === "angry") {
+    captionText = "ខឹងហើយណា!";
+  } else if (gesture === "sleep") {
+    captionText = "ងងុយគេងណាស់...";
+  } else if (gesture === "tired") {
+    captionText = "ហត់នឿយណាស់...";
+  } else if (gesture === "working") {
+    captionText = "កំពុងធ្វើការ...";
+  }
+
+  let currentGreeting = customMessage;
+  if (!currentGreeting) {
+    if (mood === "thinking") {
+      currentGreeting = "ខ្ញុំកំពុងគិត... សូមរង់ចាំបន្តិច!";
+    } else if (mood === "listening") {
+      currentGreeting = "កំពុងស្ដាប់... សូមនិយាយមក!";
+    } else if (mood === "speaking") {
+      currentGreeting = "កំពុងឆ្លើយតប...";
+    } else {
+      currentGreeting = BOT_REACTION_MESSAGES[currentAction] || "សួស្តី! តើខ្ញុំអាចជួយអ្វីបានខ្លះ?";
+    }
+  }
+
+  const showGreetingBubble = isGreetingVisible || Boolean(gesture) || Boolean(customMessage) || mood === "thinking" || mood === "listening";
+  const hasReaction = Boolean(currentAction) || Boolean(customMessage) || Boolean(gesture);
+  const reactionClass = currentAction ? ` is-reaction-${currentAction}` : "";
+  const moodClass = mood ? ` is-mood-${mood}` : "";
+  const reactionFlagClass = hasReaction ? " has-reaction" : "";
 
   return (
     <div
-      className={`sna-bot-companion${showGreetingBubble ? " is-greeting-visible" : ""}`}
+      className={`sna-bot-companion${showGreetingBubble ? " is-greeting-visible" : ""}${reactionClass}${moodClass}${reactionFlagClass}`}
       style={{
         left: `${position.x}px`,
         top: `${position.y}px`,
@@ -1334,7 +1378,7 @@ function FloatingBot({ mood, gesture, onOpen, preferences, onPreferencesChange }
         onPointerCancel={handlePointerUp}
         onContextMenu={handleContextMenu}
       />
-      <span className="sna-bot-caption">ចុចដើម្បីជជែក · អូសដើម្បីផ្លាស់ទី</span>
+      <span className="sna-bot-caption">{captionText}</span>
       <span className="sna-bot-greeting" role="status">
         {currentGreeting}
       </span>
@@ -1451,13 +1495,19 @@ export default function App() {
   });
   const [botMood, setBotMood] = useState("idle");
   const [botGesture, setBotGesture] = useState("");
+  const [customBotMessage, setCustomBotMessage] = useState("");
   const [botPreferences, setBotPreferences] = useState(loadBotPreferences);
   const botGestureTimeoutRef = useRef(null);
 
-  const triggerBotGesture = useCallback((gesture) => {
+  const triggerBotGesture = useCallback((gesture, customMessage = "") => {
     window.clearTimeout(botGestureTimeoutRef.current);
     setBotGesture(gesture);
-    botGestureTimeoutRef.current = window.setTimeout(() => setBotGesture(""), 3200);
+    setCustomBotMessage(customMessage || "");
+    const duration = gesture === "sleep" ? 4500 : gesture === "error" ? 4000 : 3400;
+    botGestureTimeoutRef.current = window.setTimeout(() => {
+      setBotGesture("");
+      setCustomBotMessage("");
+    }, duration);
   }, []);
 
   const updateBotMood = useCallback((mood) => {
@@ -1465,6 +1515,54 @@ export default function App() {
   }, []);
 
   useEffect(() => () => window.clearTimeout(botGestureTimeoutRef.current), []);
+
+  useEffect(() => {
+    window.triggerBotReaction = (gesture, message = "") => {
+      triggerBotGesture(gesture, message);
+    };
+
+    window.triggerBotMood = (mood) => {
+      setBotMood(mood);
+    };
+
+    function handleBotAction(e) {
+      const { gesture, mood, message } = e.detail || {};
+      if (gesture) triggerBotGesture(gesture, message);
+      if (mood) setBotMood(mood);
+    }
+
+    function handleGlobalError(e) {
+      triggerBotGesture("error", "មានបញ្ហាខុសបច្ចេកទេសហើយ! (Error)");
+    }
+
+    function handleUnhandledRejection(e) {
+      triggerBotGesture("error", "មានបញ្ហាខុសបច្ចេកទេសហើយ! (Error)");
+    }
+
+    function handleOnline() {
+      triggerBotGesture("happy", "ភ្ជាប់អ៊ីនធឺណិតឡើងវិញហើយ!");
+    }
+
+    function handleOffline() {
+      triggerBotGesture("tired", "បាត់បង់ការតភ្ជាប់អ៊ីនធឺណិត!");
+    }
+
+    window.addEventListener("sna-bot-reaction", handleBotAction);
+    window.addEventListener("error", handleGlobalError);
+    window.addEventListener("unhandledrejection", handleUnhandledRejection);
+    window.addEventListener("online", handleOnline);
+    window.addEventListener("offline", handleOffline);
+
+    return () => {
+      delete window.triggerBotReaction;
+      delete window.triggerBotMood;
+      window.removeEventListener("sna-bot-reaction", handleBotAction);
+      window.removeEventListener("error", handleGlobalError);
+      window.removeEventListener("unhandledrejection", handleUnhandledRejection);
+      window.removeEventListener("online", handleOnline);
+      window.removeEventListener("offline", handleOffline);
+    };
+  }, [triggerBotGesture]);
 
   useEffect(() => {
     window.localStorage.setItem(botPreferencesStorageKey, JSON.stringify(botPreferences));
@@ -1516,6 +1614,7 @@ export default function App() {
         )}
       </main>
       <FloatingBot
+        customMessage={customBotMessage}
         gesture={botGesture}
         mood={botMood}
         onOpen={() => {
